@@ -102,3 +102,63 @@ def test_fetch_rawg_returns_metacritic_genres_tags():
             "genres": ["action", "shooter"],
             "tags": ["singleplayer", "fps"],
         }
+
+
+def test_fetch_steam_reviews_returns_none_on_non_200():
+    with patch("fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 500
+        import fetch
+        assert fetch.fetch_steam_reviews(220) is None
+
+
+def test_fetch_steam_reviews_returns_none_when_zero_reviews():
+    with patch("fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "query_summary": {"total_reviews": 0, "total_positive": 0}
+        }
+        import fetch
+        assert fetch.fetch_steam_reviews(220) is None
+
+
+def test_fetch_steam_reviews_returns_positive_pct():
+    with patch("fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "query_summary": {
+                "total_reviews": 1000,
+                "total_positive": 970,
+            }
+        }
+        import fetch
+        result = fetch.fetch_steam_reviews(220)
+        assert result == {"positive_pct": 97, "total_reviews": 1000}
+
+
+def test_get_steam_games_parses_response():
+    with patch("fetch.requests.get") as mock_get:
+        mock_get.return_value.raise_for_status = MagicMock()
+        mock_get.return_value.json.return_value = {
+            "response": {
+                "games": [
+                    {"name": "Half-Life 2", "appid": 220, "playtime_forever": 120},
+                    {"name": "Portal 2",    "appid": 620, "playtime_forever": 0},
+                ]
+            }
+        }
+        import fetch
+        games = fetch.get_steam_games("KEY", "STEAMID")
+        assert len(games) == 2
+        assert games[0] == {"name": "Half-Life 2", "appid": 220, "hours_played": 2.0}
+        assert games[1] == {"name": "Portal 2",    "appid": 620, "hours_played": 0.0}
+
+
+def test_resolve_steamid_raises_on_failure():
+    with patch("fetch.requests.get") as mock_get:
+        mock_get.return_value.raise_for_status = MagicMock()
+        mock_get.return_value.json.return_value = {
+            "response": {"success": 42, "message": "No match"}
+        }
+        import fetch
+        with pytest.raises(ValueError, match="not found"):
+            fetch.resolve_steamid("KEY", "unknownuser")

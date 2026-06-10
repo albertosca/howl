@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import requests
 from howlongtobeatpy import HowLongToBeat
@@ -50,3 +51,93 @@ def fetch_rawg(rawg_key: str, name: str) -> dict | None:
         "genres": [g["name"].lower() for g in game.get("genres", [])],
         "tags": [t["name"].lower() for t in game.get("tags", [])],
     }
+
+
+def fetch_steam_reviews(appid: int) -> dict | None:
+    resp = requests.get(
+        f"https://store.steampowered.com/appreviews/{appid}",
+        params={"json": 1, "language": "all", "purchase_type": "all"},
+    )
+    if resp.status_code != 200:
+        return None
+    summary = resp.json().get("query_summary", {})
+    total = summary.get("total_reviews", 0)
+    if total == 0:
+        return None
+    positive = summary.get("total_positive", 0)
+    return {
+        "positive_pct": round(positive / total * 100),
+        "total_reviews": total,
+    }
+
+
+def get_api_key(env_var: str, prompt: str) -> str:
+    key = os.environ.get(env_var)
+    if not key:
+        key = input(f"{prompt}: ").strip()
+    return key
+
+
+def resolve_steamid(api_key: str, username: str) -> str:
+    resp = requests.get(
+        "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/",
+        params={"key": api_key, "vanityurl": username},
+    )
+    resp.raise_for_status()
+    data = resp.json()["response"]
+    if data["success"] != 1:
+        raise ValueError(f"Username '{username}' not found on Steam.")
+    return data["steamid"]
+
+
+def get_steam_games(api_key: str, steamid: str) -> list:
+    resp = requests.get(
+        "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
+        params={
+            "key": api_key,
+            "steamid": steamid,
+            "include_appinfo": True,
+            "include_played_free_games": True,
+        },
+    )
+    resp.raise_for_status()
+    games = resp.json()["response"].get("games", [])
+    return [
+        {
+            "name": g["name"],
+            "appid": g["appid"],
+            "hours_played": round(g.get("playtime_forever", 0) / 60, 1),
+        }
+        for g in games
+    ]
+
+
+def build_library(
+    steam_key: str, rawg_key: str, username: str, cache: dict, refresh: bool = False
+) -> tuple:
+    steamid = resolve_steamid(steam_key, username)
+    steam_games = get_steam_games(steam_key, steamid)
+    total = len(steam_games)
+    print(f"{total} games in library. {len(cache)} already cached.\n")
+    for idx, game in enumerate(steam_games, 1):
+        name = game["name"]
+        appid = game["appid"]
+        if name in cache and not refresh:
+            print(f"[{idx}/{total}] {name} (cache)")
+            continue
+        print(f"[{idx}/{total}] {name}")
+        hltb = fetch_hltb(name)
+        if not hltb:
+            cache[name] = {"hltb": None, "rawg": None, "steam": None}
+            save_cache(cache)
+            continue
+        rawg = fetch_rawg(rawg_key, name)
+        steam_reviews = fetch_steam_reviews(appid)
+        time.sleep(0.25)
+        cache[name] = {
+            "hltb": hltb,
+            "rawg": rawg,
+            "steam": {"appid": appid, **(steam_reviews or {})},
+        }
+        save_cache(cache)
+    return cache, steam_games
