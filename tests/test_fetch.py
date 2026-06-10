@@ -68,3 +68,37 @@ def test_fetch_hltb_returns_zero_for_negative_times():
         assert result["main_story"] == 0
         assert result["main_extra"] == 0
         assert result["completionist"] == 5
+
+
+def test_fetch_rawg_returns_none_on_non_200():
+    with patch("fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 404
+        import fetch
+        assert fetch.fetch_rawg("RAWG_KEY", "Half-Life 2") is None
+
+
+def test_fetch_rawg_returns_none_when_no_results():
+    with patch("fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"results": []}
+        import fetch
+        assert fetch.fetch_rawg("RAWG_KEY", "Half-Life 2") is None
+
+
+def test_fetch_rawg_returns_metacritic_genres_tags():
+    with patch("fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "results": [{
+                "metacritic": 96,
+                "genres": [{"name": "Action"}, {"name": "Shooter"}],
+                "tags": [{"name": "Singleplayer"}, {"name": "FPS"}],
+            }]
+        }
+        import fetch
+        result = fetch.fetch_rawg("RAWG_KEY", "Half-Life 2")
+        assert result == {
+            "metacritic": 96,
+            "genres": ["action", "shooter"],
+            "tags": ["singleplayer", "fps"],
+        }
