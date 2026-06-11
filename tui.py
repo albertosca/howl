@@ -1,144 +1,285 @@
-from rich.console import Console
-from rich.table import Table
-from rich.prompt import Prompt
-from rich import box
+from textual.app import App, ComposeResult
+from textual.widgets import DataTable, Input, Select, Footer, Header, Label, Static
+from textual.containers import Horizontal, Vertical
+from textual.binding import Binding
+from textual.reactive import reactive
 
 from classify import apply_filters
 from score import compute_score, SORT_OPTIONS
 
-console = Console()
 
-DEFAULT_FILTERS = {
-    "genre": None,
-    "genre_any": None,
-    "exclude_genre": None,
-    "progress": "default",
-    "category": "all",
-    "min_hours": None,
-    "max_hours": None,
-    "sort": "hltb_short",
-    "top": 10,
-    "weights": {"mc": 0.5, "steam": 0.5},
-}
+class FilterPanel(Vertical):
+    DEFAULT_CSS = """
+    FilterPanel {
+        width: 34;
+        background: $panel;
+        border-left: solid $accent;
+        padding: 1 2;
+        display: none;
+        overflow-y: auto;
+    }
+    FilterPanel Label {
+        margin-top: 1;
+        color: $text-muted;
+    }
+    FilterPanel Input {
+        margin-bottom: 0;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield Label("── Filtros ──────────────")
+        yield Label("Sort")
+        yield Select(
+            [(opt, opt) for opt in SORT_OPTIONS],
+            id="sort-select",
+            value="hltb_short",
+        )
+        yield Label("Top N")
+        yield Input(value="10", id="top-input")
+        yield Label("Gêneros (vírgula-sep)")
+        yield Input(placeholder="action, rpg", id="genre-input")
+        yield Label("Excluir gêneros")
+        yield Input(placeholder="sports", id="exclude-genre-input")
+        yield Label("Progress")
+        yield Select(
+            [
+                ("default", "default"),
+                ("not_started", "not_started"),
+                ("in_progress", "in_progress"),
+                ("all", "all"),
+            ],
+            id="progress-select",
+            value="default",
+        )
+        yield Label("Categoria")
+        yield Select(
+            [("all", "all"), ("singleplayer", "singleplayer"), ("coop", "coop")],
+            id="category-select",
+            value="all",
+        )
+        yield Label("Min horas")
+        yield Input(placeholder="0", id="min-hours-input")
+        yield Label("Max horas")
+        yield Input(placeholder="100", id="max-hours-input")
 
 
-def _render(games: list, filters: dict) -> None:
-    console.clear()
+class SteamHLTBApp(App):
+    CSS = """
+    Screen {
+        layout: vertical;
+    }
+    #main-container {
+        layout: horizontal;
+        height: 1fr;
+    }
+    #game-table {
+        width: 1fr;
+    }
+    #status-bar {
+        height: 1;
+        background: $panel;
+        color: $text-muted;
+        padding: 0 1;
+    }
+    """
 
-    active = []
-    if filters["genre"]:         active.append(f"gênero={','.join(filters['genre'])}")
-    if filters["genre_any"]:     active.append(f"genre-any={','.join(filters['genre_any'])}")
-    if filters["exclude_genre"]: active.append(f"excluir={','.join(filters['exclude_genre'])}")
-    if filters["progress"] != "default": active.append(f"progresso={filters['progress']}")
-    if filters["category"] != "all":     active.append(f"categoria={filters['category']}")
-    if filters["min_hours"]:     active.append(f"min={filters['min_hours']}h")
-    if filters["max_hours"]:     active.append(f"max={filters['max_hours']}h")
-    active.append(f"sort={filters['sort']}")
+    BINDINGS = [
+        Binding("q", "quit", "Sair"),
+        Binding("f", "toggle_filters", "Filtros"),
+        Binding("g", "toggle_genres", "Gêneros"),
+        Binding("t", "toggle_tags", "Tags"),
+        Binding("s", "save", "Salvar"),
+    ]
 
-    console.print(f"[bold cyan]Filtros:[/] {' | '.join(active) if active else 'nenhum'}")
-    console.print(f"[bold cyan]Jogos:[/] {len(games)} após filtros\n")
+    show_genres: reactive[bool] = reactive(False)
+    show_tags: reactive[bool] = reactive(False)
 
-    table = Table(box=box.SIMPLE_HEAVY, show_header=True, header_style="bold magenta")
-    table.add_column("#",       justify="right", width=4)
-    table.add_column("Nome",    width=45)
-    table.add_column("MC",      justify="right", width=4)
-    table.add_column("Steam",   justify="right", width=7)
-    table.add_column("HLTB",    justify="right", width=6)
-    table.add_column("Jogadas", justify="right", width=8)
-    table.add_column("Score",   justify="right", width=8)
+    def __init__(self, all_games: list, initial_filters: dict | None = None):
+        super().__init__()
+        self.all_games = all_games
+        self.filters = (initial_filters or {}).copy()
+        self.filters.setdefault("genre", None)
+        self.filters.setdefault("genre_any", None)
+        self.filters.setdefault("exclude_genre", None)
+        self.filters.setdefault("progress", "default")
+        self.filters.setdefault("category", "all")
+        self.filters.setdefault("min_hours", None)
+        self.filters.setdefault("max_hours", None)
+        self.filters.setdefault("sort", "hltb_short")
+        self.filters.setdefault("top", 10)
+        self.filters.setdefault("weights", {"mc": 0.5, "steam": 0.5})
+        self._games: list = []
 
-    for i, g in enumerate(games[:filters["top"]], 1):
-        mc    = str(g["metacritic"]) if g["metacritic"] else "-"
-        steam = f"{g['steam_pct']}%" if g["steam_pct"] else "-"
-        table.add_row(
-            str(i),
-            g["name"],
-            mc,
-            steam,
-            f"{g['main_extra']}h",
-            f"{g['hours_played']}h",
-            f"{g['_score']:.1f}",
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=False)
+        with Horizontal(id="main-container"):
+            yield DataTable(id="game-table", cursor_type="row")
+            yield FilterPanel(id="filter-panel")
+        yield Static("", id="status-bar")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self._setup_columns()
+        self._sync_panel_to_filters()
+        self._rebuild_table()
+
+    def _setup_columns(self) -> None:
+        table = self.query_one(DataTable)
+        table.clear(columns=True)
+        table.add_column("#", width=4)
+        table.add_column("Nome", width=38)
+        table.add_column("MC", width=5)
+        table.add_column("Steam", width=7)
+        table.add_column("HLTB", width=6)
+        table.add_column("Jog", width=6)
+        table.add_column("Score", width=7)
+        if self.show_genres:
+            table.add_column("Gêneros", width=22)
+        if self.show_tags:
+            table.add_column("Tags", width=22)
+
+    def _rebuild_table(self) -> None:
+        rows = apply_filters(
+            self.all_games,
+            genre=self.filters["genre"],
+            genre_any=self.filters["genre_any"],
+            exclude_genre=self.filters["exclude_genre"],
+            progress=self.filters["progress"],
+            category=self.filters["category"],
+            min_hours=self.filters["min_hours"],
+            max_hours=self.filters["max_hours"],
+        )
+        sort_by = self.filters["sort"]
+        weights = self.filters["weights"]
+        for g in rows:
+            g["_score"] = compute_score(g, sort_by, weights)
+        rows.sort(key=lambda g: g["_score"], reverse=True)
+        top_n = self.filters["top"]
+        self._games = rows[:top_n]
+
+        table = self.query_one(DataTable)
+        table.clear()
+        for i, g in enumerate(self._games, 1):
+            mc = str(g["metacritic"]) if g["metacritic"] else "-"
+            steam = f"{g['steam_pct']}%" if g["steam_pct"] else "-"
+            row_data = [
+                str(i),
+                g["name"],
+                mc,
+                steam,
+                f"{g['main_extra']}h",
+                f"{g['hours_played']}h",
+                f"{g['_score']:.1f}",
+            ]
+            if self.show_genres:
+                genres = g.get("genres", [])
+                row_data.append(", ".join(genres[:4]) if genres else "-")
+            if self.show_tags:
+                tags = g.get("tags", [])
+                row_data.append(", ".join(tags[:4]) if tags else "-")
+            table.add_row(*row_data)
+
+        self.query_one("#status-bar", Static).update(
+            f" Mostrando {len(self._games)} de {len(rows)} filtrados · sort: {sort_by}"
         )
 
-    console.print(table)
-    console.print("[bold]\\[f][/] filtros  [bold]\\[s][/] salvar  [bold]\\[q][/] sair")
+    def _sync_panel_to_filters(self) -> None:
+        self.query_one("#top-input", Input).value = str(self.filters["top"])
+        sort_val = self.filters["sort"]
+        if sort_val in SORT_OPTIONS:
+            self.query_one("#sort-select", Select).value = sort_val
+        progress = self.filters["progress"]
+        if progress in ("default", "not_started", "in_progress", "all"):
+            self.query_one("#progress-select", Select).value = progress
+        category = self.filters["category"]
+        if category in ("all", "singleplayer", "coop"):
+            self.query_one("#category-select", Select).value = category
+        if self.filters["genre"]:
+            self.query_one("#genre-input", Input).value = ", ".join(self.filters["genre"])
+        if self.filters["exclude_genre"]:
+            self.query_one("#exclude-genre-input", Input).value = ", ".join(self.filters["exclude_genre"])
+        if self.filters["min_hours"] is not None:
+            self.query_one("#min-hours-input", Input).value = str(self.filters["min_hours"])
+        if self.filters["max_hours"] is not None:
+            self.query_one("#max-hours-input", Input).value = str(self.filters["max_hours"])
+
+    def _read_filters_from_panel(self) -> None:
+        try:
+            raw = self.query_one("#top-input", Input).value.strip()
+            self.filters["top"] = int(raw) if raw.isdigit() else self.filters["top"]
+        except Exception:
+            pass
+        try:
+            val = self.query_one("#sort-select", Select).value
+            if val and val in SORT_OPTIONS:
+                self.filters["sort"] = val
+        except Exception:
+            pass
+        try:
+            raw = self.query_one("#genre-input", Input).value.strip()
+            self.filters["genre"] = [v.strip() for v in raw.split(",") if v.strip()] or None
+        except Exception:
+            pass
+        try:
+            raw = self.query_one("#exclude-genre-input", Input).value.strip()
+            self.filters["exclude_genre"] = [v.strip() for v in raw.split(",") if v.strip()] or None
+        except Exception:
+            pass
+        try:
+            val = self.query_one("#progress-select", Select).value
+            if val and val in ("default", "not_started", "in_progress", "all"):
+                self.filters["progress"] = val
+        except Exception:
+            pass
+        try:
+            val = self.query_one("#category-select", Select).value
+            if val and val in ("all", "singleplayer", "coop"):
+                self.filters["category"] = val
+        except Exception:
+            pass
+        try:
+            raw = self.query_one("#min-hours-input", Input).value.strip()
+            self.filters["min_hours"] = float(raw) if raw else None
+        except Exception:
+            pass
+        try:
+            raw = self.query_one("#max-hours-input", Input).value.strip()
+            self.filters["max_hours"] = float(raw) if raw else None
+        except Exception:
+            pass
+
+    def on_input_changed(self, _: Input.Changed) -> None:
+        self._read_filters_from_panel()
+        self._rebuild_table()
+
+    def on_select_changed(self, _: Select.Changed) -> None:
+        self._read_filters_from_panel()
+        self._rebuild_table()
+
+    def watch_show_genres(self, _: bool) -> None:
+        self._setup_columns()
+        self._rebuild_table()
+
+    def watch_show_tags(self, _: bool) -> None:
+        self._setup_columns()
+        self._rebuild_table()
+
+    def action_toggle_filters(self) -> None:
+        panel = self.query_one(FilterPanel)
+        panel.display = not panel.display
+
+    def action_toggle_genres(self) -> None:
+        self.show_genres = not self.show_genres
+
+    def action_toggle_tags(self) -> None:
+        self.show_tags = not self.show_tags
+
+    def action_save(self) -> None:
+        from main import save_results
+        save_results(self._games, "how_long_to_beat_output")
+        self.notify("Salvo em how_long_to_beat_output.csv e .md")
 
 
-def _apply_and_score(all_games: list, filters: dict) -> list:
-    rows = apply_filters(
-        all_games,
-        genre=filters["genre"],
-        genre_any=filters["genre_any"],
-        exclude_genre=filters["exclude_genre"],
-        progress=filters["progress"],
-        category=filters["category"],
-        min_hours=filters["min_hours"],
-        max_hours=filters["max_hours"],
-    )
-    for g in rows:
-        g["_score"] = compute_score(g, filters["sort"], filters["weights"])
-    rows.sort(key=lambda g: g["_score"], reverse=True)
-    return rows
-
-
-def _csv_or_none(value: str) -> list | None:
-    if not value.strip():
-        return None
-    return [v.strip() for v in value.split(",") if v.strip()]
-
-
-def _edit_filters(filters: dict) -> dict:
-    console.print("\n[bold yellow]Editar filtros[/] (Enter = manter atual)\n")
-
-    def _prompt(label, current):
-        return Prompt.ask(f"  {label}", default=str(current) if current else "")
-
-    genre_raw = _prompt("Gêneros obrigatórios (vírgula-sep)", ",".join(filters["genre"]) if filters["genre"] else "")
-    any_raw   = _prompt("Qualquer gênero (vírgula-sep)", ",".join(filters["genre_any"]) if filters["genre_any"] else "")
-    excl_raw  = _prompt("Excluir gêneros (vírgula-sep)", ",".join(filters["exclude_genre"]) if filters["exclude_genre"] else "")
-    progress  = _prompt(f"Progresso {['default','not_started','in_progress','all']}", filters["progress"])
-    category  = _prompt("Categoria [all/singleplayer/coop]", filters["category"])
-    min_h     = _prompt("Min horas (vazio=sem)", str(filters["min_hours"]) if filters["min_hours"] else "")
-    max_h     = _prompt("Max horas (vazio=sem)", str(filters["max_hours"]) if filters["max_hours"] else "")
-    sort_by   = _prompt(f"Sort [{'/'.join(SORT_OPTIONS)}]", filters["sort"])
-    top_raw   = _prompt("Top N", str(filters["top"]))
-
-    return {
-        "genre":         _csv_or_none(genre_raw),
-        "genre_any":     _csv_or_none(any_raw),
-        "exclude_genre": _csv_or_none(excl_raw),
-        "progress":      progress if progress in ("default", "not_started", "in_progress", "all") else "default",
-        "category":      category if category in ("all", "singleplayer", "coop") else "all",
-        "min_hours":     float(min_h) if min_h else None,
-        "max_hours":     float(max_h) if max_h else None,
-        "sort":          sort_by if sort_by in SORT_OPTIONS else "hltb_short",
-        "top":           int(top_raw) if top_raw.isdigit() else 10,
-        "weights":       filters["weights"],
-    }
-
-
-def run_tui(all_games: list) -> None:
-    filters = DEFAULT_FILTERS.copy()
-    games = _apply_and_score(all_games, filters)
-    _render(games, filters)
-
-    while True:
-        cmd = Prompt.ask("").strip().lower()
-
-        if cmd == "q":
-            console.print("[bold]Saindo.[/]")
-            break
-
-        if cmd == "f":
-            filters = _edit_filters(filters)
-            games = _apply_and_score(all_games, filters)
-            _render(games, filters)
-
-        elif cmd == "s":
-            from main import save_results
-            output = Prompt.ask("Nome base do arquivo", default="how_long_to_beat_output")
-            save_results(games, output)
-            console.print("[green]Salvo![/]")
-
-        else:
-            _render(games, filters)
+def run_tui(all_games: list, initial_filters: dict | None = None) -> None:
+    SteamHLTBApp(all_games, initial_filters).run()

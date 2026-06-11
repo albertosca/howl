@@ -186,7 +186,19 @@ def main() -> None:
         cache = load_cache()
         cache, steam_games = build_library(steam_key, rawg_key, args.username, cache, refresh=args.refresh, verbose=args.verbose)
         rows = build_game_rows(cache, steam_games)
-        run_tui(rows)
+        initial_filters = {
+            "genre":         _csv_list(args.genre),
+            "genre_any":     _csv_list(getattr(args, "genre_any", None)),
+            "exclude_genre": _csv_list(getattr(args, "exclude_genre", None)),
+            "progress":      _progress_mode(args),
+            "category":      args.category,
+            "min_hours":     args.min_hours,
+            "max_hours":     args.max_hours,
+            "sort":          args.sort,
+            "top":           args.top,
+            "weights":       _weights(args),
+        }
+        run_tui(rows, initial_filters)
         return
     if args.interactive:
         from interactive import run_interactive
