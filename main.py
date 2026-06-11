@@ -11,30 +11,63 @@ STEAM_USERNAME = "gabelogannewell"
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Steam game classifier")
-    p.add_argument("--username", default=STEAM_USERNAME)
-    p.add_argument("--sort", default="hltb_short", choices=SORT_OPTIONS)
-    p.add_argument("--genre",         help="Gêneros obrigatórios (vírgula-separados)")
-    p.add_argument("--genre-any",     help="Qualquer um desses gêneros (vírgula-separados)")
-    p.add_argument("--exclude-genre", help="Gêneros a excluir (vírgula-separados)")
+    p = argparse.ArgumentParser(
+        description="Classifica jogos da biblioteca Steam com notas HLTB, Metacritic e Steam.",
+        epilog="""
+Exemplos:
+  python main.py --top 25 --sort metacritic
+  python main.py --genre "action,rpg" --not-started --top 10
+  python main.py --tui --top 25 --sort hltb_short
+  python main.py --min-hours 5 --max-hours 30 --sort composto
+
+Formatos de entrada:
+  --genre / --genre-any / --exclude-genre  nomes separados por vírgula (ex: "action,rpg")
+  --sort                                   hltb_short | hltb_long | metacritic | steam | composto | custom
+  --weight-mc / --weight-steam             pesos de 0.0 a 1.0 que somam 1.0 (ex: 0.6 e 0.4)
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("--username", default=STEAM_USERNAME,
+                   help="Vanity URL do perfil Steam (padrão: %(default)s)")
+    p.add_argument("--sort", default="hltb_short", choices=SORT_OPTIONS,
+                   help="Critério de ordenação (padrão: %(default)s)")
+    p.add_argument("--genre",
+                   help="Gêneros obrigatórios, separados por vírgula (ex: 'action,rpg')")
+    p.add_argument("--genre-any",
+                   help="Pelo menos um desses gêneros (separados por vírgula)")
+    p.add_argument("--exclude-genre",
+                   help="Gêneros a excluir (separados por vírgula)")
 
     prog = p.add_mutually_exclusive_group()
-    prog.add_argument("--not-started",  action="store_true")
-    prog.add_argument("--in-progress",  action="store_true")
-    prog.add_argument("--all-progress", action="store_true")
+    prog.add_argument("--not-started", action="store_true",
+                      help="Somente jogos nunca jogados (0h)")
+    prog.add_argument("--in-progress", action="store_true",
+                      help="Somente jogos iniciados e não zerados")
+    prog.add_argument("--all-progress", action="store_true",
+                      help="Sem filtro de progresso (inclui jogos já zerados)")
 
-    p.add_argument("--category", default="all", choices=["all", "singleplayer", "coop"])
-    p.add_argument("--min-hours", type=float)
-    p.add_argument("--max-hours", type=float)
-    p.add_argument("--top",    type=int, default=10)
-    p.add_argument("--output", default="how_long_to_beat_output")
-    p.add_argument("--weight-mc",    type=float, default=0.5)
-    p.add_argument("--weight-steam", type=float, default=0.5)
-    p.add_argument("--refresh",      action="store_true")
+    p.add_argument("--category", default="all", choices=["all", "singleplayer", "coop"],
+                   help="Filtrar por tipo de jogo (padrão: %(default)s)")
+    p.add_argument("--min-hours", type=float, help="Duração mínima HLTB em horas")
+    p.add_argument("--max-hours", type=float, help="Duração máxima HLTB em horas")
+    p.add_argument("--top", type=int, default=10,
+                   help="Quantos jogos exibir (padrão: %(default)s)")
+    p.add_argument("--output", default="how_long_to_beat_output",
+                   help="Nome base dos arquivos de saída .csv e .md")
+    p.add_argument("--weight-mc", type=float, default=0.5,
+                   help="Peso do Metacritic no score composto (padrão: %(default)s)")
+    p.add_argument("--weight-steam", type=float, default=0.5,
+                   help="Peso do Steam no score composto (padrão: %(default)s)")
+    p.add_argument("--refresh", action="store_true",
+                   help="Ignora o cache e rebusca todos os jogos")
     p.add_argument("-v", "--verbose", action="store_true",
                    help="Exibe progresso detalhado de todos os jogos (inclusive cache)")
-    p.add_argument("--interactive",  action="store_true")
-    p.add_argument("--tui",          action="store_true")
+    p.add_argument("--show-tags", action="store_true",
+                   help="Exibe tags dos jogos na tabela (além de gêneros)")
+    p.add_argument("--interactive", action="store_true",
+                   help="Modo interativo via prompts")
+    p.add_argument("--tui", action="store_true",
+                   help="Abre interface visual interativa (htop-style)")
     return p.parse_args()
 
 
