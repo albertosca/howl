@@ -96,7 +96,7 @@ def _csv_list(value: str | None) -> list | None:
     return [v.strip() for v in value.split(",") if v.strip()]
 
 
-def print_table(games: list, sort_by: str) -> None:
+def print_table(games: list, sort_by: str, show_tags: bool = False) -> None:
     header = f"{'#':>3}  {'Nome':<45}  {'MC':>4}  {'Steam':>6}  {'HLTB':>5}  {'Jogadas':>8}  {'Score':>8}"
     print(header)
     print("-" * len(header))
@@ -107,6 +107,16 @@ def print_table(games: list, sort_by: str) -> None:
         jogou = f"{g['hours_played']}h"
         score = f"{g['_score']:.1f}"
         print(f"{i:>3}  {g['name']:<45}  {mc:>4}  {steam:>6}  {hltb:>5}  {jogou:>8}  {score:>8}")
+        parts = []
+        genres = g.get("genres", [])
+        if genres:
+            parts.append(", ".join(genres[:4]))
+        if show_tags:
+            tags = g.get("tags", [])
+            if tags:
+                parts.append("tags: " + ", ".join(tags[:4]))
+        if parts:
+            print(f"     ↳ {' · '.join(parts)}")
 
 
 def save_results(games: list, output_base: str) -> None:
@@ -159,10 +169,11 @@ def run(args: argparse.Namespace) -> None:
     rows.sort(key=lambda g: g["_score"], reverse=True)
     top = rows[:args.top]
 
+    total_filtered = len(rows)
     print(f"\n{'='*60}")
-    print(f" TOP {args.top} — sort: {args.sort}")
+    print(f" TOP {args.top} — sort: {args.sort}  ({len(top)} de {total_filtered} filtrados)")
     print(f"{'='*60}")
-    print_table(top, args.sort)
+    print_table(top, args.sort, show_tags=args.show_tags)
     save_results(rows, args.output)
 
 
