@@ -113,7 +113,8 @@ def get_steam_games(api_key: str, steamid: str) -> list:
 
 
 def build_library(
-    steam_key: str, rawg_key: str, username: str, cache: dict, refresh: bool = False
+    steam_key: str, rawg_key: str, username: str, cache: dict,
+    refresh: bool = False, verbose: bool = False
 ) -> tuple:
     steamid = resolve_steamid(steam_key, username)
     steam_games = get_steam_games(steam_key, steamid)
@@ -123,9 +124,13 @@ def build_library(
         name = game["name"]
         appid = game["appid"]
         if name in cache and not refresh:
-            print(f"[{idx}/{total}] {name} (cache)")
+            if verbose:
+                print(f"[{idx}/{total}] {name} (cache)")
             continue
-        print(f"[{idx}/{total}] {name}")
+        if verbose:
+            print(f"[{idx}/{total}] {name}")
+        else:
+            print(f"Fetching: {name}")
         hltb = fetch_hltb(name)
         if not hltb:
             cache[name] = {"hltb": None, "rawg": None, "steam": None}

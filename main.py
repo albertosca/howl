@@ -31,6 +31,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--weight-mc",    type=float, default=0.5)
     p.add_argument("--weight-steam", type=float, default=0.5)
     p.add_argument("--refresh",      action="store_true")
+    p.add_argument("--verbose", "-v", action="store_true",
+                   help="Exibe progresso de cada jogo durante o scan (padrão: silencioso)")
     p.add_argument("--interactive",  action="store_true")
     p.add_argument("--tui",          action="store_true")
     return p.parse_args()
@@ -103,7 +105,7 @@ def run(args: argparse.Namespace) -> None:
     rawg_key  = get_api_key("RAWG_API_KEY",  "RAWG API key")
 
     cache = load_cache()
-    cache, steam_games = build_library(steam_key, rawg_key, args.username, cache, refresh=args.refresh)
+    cache, steam_games = build_library(steam_key, rawg_key, args.username, cache, refresh=args.refresh, verbose=args.verbose)
 
     rows = build_game_rows(cache, steam_games)
     rows = apply_filters(
@@ -138,7 +140,7 @@ def main() -> None:
         steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
         rawg_key  = get_api_key("RAWG_API_KEY",  "RAWG API key")
         cache = load_cache()
-        cache, steam_games = build_library(steam_key, rawg_key, args.username, cache, refresh=args.refresh)
+        cache, steam_games = build_library(steam_key, rawg_key, args.username, cache, refresh=args.refresh, verbose=args.verbose)
         rows = build_game_rows(cache, steam_games)
         run_tui(rows)
         return
