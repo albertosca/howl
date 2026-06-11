@@ -206,3 +206,39 @@ def test_build_library_verbose_true_shows_cache_lines(capsys, monkeypatch):
 
     out = capsys.readouterr().out
     assert "[1/1] Half-Life 2 (cache)" in out
+
+
+def test_build_library_verbose_false_prints_fetching_for_new_games(capsys, monkeypatch):
+    monkeypatch.setattr("fetch.resolve_steamid", lambda key, user: "76561198000000")
+    monkeypatch.setattr("fetch.get_steam_games", lambda key, sid: [
+        {"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}
+    ])
+    monkeypatch.setattr("fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("fetch.fetch_hltb", lambda name: None)  # jogo sem HLTB = skip
+
+    cache = {}  # vazio: Half-Life 2 NÃO está no cache
+
+    import fetch
+    fetch.build_library("key", "rawg", "user", cache, verbose=False)
+
+    out = capsys.readouterr().out
+    assert "Fetching: Half-Life 2" in out
+    assert "[1/1] Half-Life 2" not in out
+
+
+def test_build_library_verbose_true_prints_indexed_for_new_games(capsys, monkeypatch):
+    monkeypatch.setattr("fetch.resolve_steamid", lambda key, user: "76561198000000")
+    monkeypatch.setattr("fetch.get_steam_games", lambda key, sid: [
+        {"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}
+    ])
+    monkeypatch.setattr("fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("fetch.fetch_hltb", lambda name: None)
+
+    cache = {}
+
+    import fetch
+    fetch.build_library("key", "rawg", "user", cache, verbose=True)
+
+    out = capsys.readouterr().out
+    assert "[1/1] Half-Life 2" in out
+    assert "Fetching:" not in out.split("\n", 1)[1]  # "Fetching:" não aparece após a 1ª linha

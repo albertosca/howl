@@ -31,8 +31,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--weight-mc",    type=float, default=0.5)
     p.add_argument("--weight-steam", type=float, default=0.5)
     p.add_argument("--refresh",      action="store_true")
-    p.add_argument("--verbose", "-v", action="store_true",
-                   help="Exibe progresso de cada jogo durante o scan (padrão: silencioso)")
+    p.add_argument("-v", "--verbose", action="store_true",
+                   help="Exibe progresso detalhado de todos os jogos (inclusive cache)")
     p.add_argument("--interactive",  action="store_true")
     p.add_argument("--tui",          action="store_true")
     return p.parse_args()
