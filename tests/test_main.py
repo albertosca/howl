@@ -29,3 +29,59 @@ def test_parse_args_show_tags():
 def test_parse_args_top():
     args = _parse(["--top", "25"])
     assert args.top == 25
+
+
+def test_print_table_shows_genres_by_default(capsys):
+    games = [{
+        "name": "Hades",
+        "metacritic": 93,
+        "steam_pct": 97,
+        "main_extra": 22,
+        "hours_played": 0,
+        "_score": 42.1,
+        "genres": ["action", "roguelike", "rpg"],
+        "tags": ["indie", "great soundtrack"],
+    }]
+    from main import print_table
+    print_table(games, "hltb_short", show_tags=False)
+    out = capsys.readouterr().out
+    assert "action" in out
+    assert "roguelike" in out
+    assert "indie" not in out
+
+
+def test_print_table_shows_tags_when_flag(capsys):
+    games = [{
+        "name": "Hades",
+        "metacritic": 93,
+        "steam_pct": 97,
+        "main_extra": 22,
+        "hours_played": 0,
+        "_score": 42.1,
+        "genres": ["action"],
+        "tags": ["indie", "great soundtrack"],
+    }]
+    from main import print_table
+    print_table(games, "hltb_short", show_tags=True)
+    out = capsys.readouterr().out
+    assert "indie" in out
+    assert "great soundtrack" in out
+
+
+def test_print_table_caps_genres_at_four(capsys):
+    games = [{
+        "name": "Game",
+        "metacritic": 80,
+        "steam_pct": 90,
+        "main_extra": 10,
+        "hours_played": 0,
+        "_score": 30.0,
+        "genres": ["a", "b", "c", "d", "e", "f"],
+        "tags": [],
+    }]
+    from main import print_table
+    print_table(games, "hltb_short", show_tags=False)
+    out = capsys.readouterr().out
+    after_arrow = out.split("↳")[1] if "↳" in out else ""
+    assert "e" not in after_arrow
+    assert "f" not in after_arrow
