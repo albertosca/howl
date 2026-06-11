@@ -162,3 +162,47 @@ def test_resolve_steamid_raises_on_failure():
         import fetch
         with pytest.raises(ValueError, match="not found"):
             fetch.resolve_steamid("KEY", "unknownuser")
+
+
+def test_build_library_verbose_false_hides_cache_lines(capsys, monkeypatch):
+    monkeypatch.setattr("fetch.resolve_steamid", lambda key, user: "76561198000000")
+    monkeypatch.setattr("fetch.get_steam_games", lambda key, sid: [
+        {"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}
+    ])
+    monkeypatch.setattr("fetch.save_cache", lambda c: None)
+
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "rawg": None,
+            "steam": {"appid": 220},
+        }
+    }
+
+    import fetch
+    fetch.build_library("key", "rawg", "user", cache, verbose=False)
+
+    out = capsys.readouterr().out
+    assert "[1/1] Half-Life 2 (cache)" not in out
+
+
+def test_build_library_verbose_true_shows_cache_lines(capsys, monkeypatch):
+    monkeypatch.setattr("fetch.resolve_steamid", lambda key, user: "76561198000000")
+    monkeypatch.setattr("fetch.get_steam_games", lambda key, sid: [
+        {"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}
+    ])
+    monkeypatch.setattr("fetch.save_cache", lambda c: None)
+
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "rawg": None,
+            "steam": {"appid": 220},
+        }
+    }
+
+    import fetch
+    fetch.build_library("key", "rawg", "user", cache, verbose=True)
+
+    out = capsys.readouterr().out
+    assert "[1/1] Half-Life 2 (cache)" in out
