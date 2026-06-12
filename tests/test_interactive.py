@@ -58,3 +58,32 @@ def test_interactive_accepts_collection_input(capsys):
     inputs = ["", "", "", "", "", "", "", "", "", "Jogando", ""]
     _run(inputs)
     # não deve crashar
+
+
+def test_interactive_default_sort_is_shortest():
+    """O prompt de sort deve sugerir 'shortest' como default."""
+    prompts_seen = []
+
+    def mock_input(prompt):
+        prompts_seen.append(prompt)
+        return ""
+
+    args = _make_args()
+    with patch("builtins.input", side_effect=mock_input), \
+         patch("steam_hltb.fetch.get_api_key", return_value="fake"), \
+         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE), \
+         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)), \
+         patch("steam_hltb.main.save_results"), \
+         patch("steam_hltb.steam_collections.load_collections", return_value={}):
+        from steam_hltb.interactive import run_interactive
+        run_interactive(args)
+
+    sort_prompts = [p for p in prompts_seen if "Ordenar" in p or "sort" in p.lower()]
+    assert any("shortest" in p for p in sort_prompts)
+
+
+def test_interactive_output_shows_results(capsys):
+    """run_interactive deve imprimir a tabela de resultados."""
+    _run([""] * 15)
+    out = capsys.readouterr().out
+    assert "Half-Life 2" in out or "TOP" in out
