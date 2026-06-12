@@ -88,6 +88,8 @@ Formatos de entrada:
                    help="Lista coleções Steam disponíveis no VDF e sai")
     p.add_argument("--refresh", action="store_true",
                    help="Ignora o cache e rebusca todos os jogos")
+    p.add_argument("--migrate-cache", action="store_true",
+                   help="Preenche steam.genres/categories para entradas legacy (operação lenta, ~15-30 min)")
     p.add_argument("-v", "--verbose", action="store_true",
                    help="Exibe progresso detalhado de todos os jogos (inclusive cache)")
     p.add_argument("--show-tags", action="store_true",
@@ -252,6 +254,12 @@ def run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = parse_args()
+    if args.migrate_cache:
+        from fetch import migrate_steam_details
+        print("⚠  Isso pode demorar 15-30 min. Ctrl+C para interromper (progresso salvo).")
+        migrate_steam_details(load_cache(), verbose=True)
+        print("Migração concluída.")
+        return
     if args.list_tags or args.list_genres or args.list_collections:
         cache = load_cache()
         if args.list_genres:

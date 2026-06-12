@@ -225,6 +225,61 @@ def test_build_library_verbose_true_shows_cache_lines(capsys, monkeypatch):
     assert "[1/1] Half-Life 2 (cache)" in out
 
 
+def test_migrate_steam_details_fills_missing_genres(monkeypatch):
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "steam": {"appid": 220, "positive_pct": 98, "total_reviews": 100000},
+            "rawg": {"metacritic": 96, "genres": ["action"], "tags": []},
+        }
+    }
+    monkeypatch.setattr("fetch.fetch_steam_app_details", lambda appid: {
+        "metacritic": 96, "genres": ["action"], "categories": ["single-player"],
+    })
+    monkeypatch.setattr("fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("fetch.time.sleep", lambda s: None)
+    from fetch import migrate_steam_details
+    updated = migrate_steam_details(cache, verbose=False)
+    steam = updated["Half-Life 2"]["steam"]
+    assert steam["genres"] == ["action"]
+    assert steam["categories"] == ["single-player"]
+    assert steam["metacritic"] == 96
+
+
+def test_migrate_steam_details_skips_already_migrated(monkeypatch):
+    cache = {
+        "Hades": {
+            "hltb": {"game_name": "Hades", "main_story": 20, "main_extra": 22, "completionist": 90},
+            "steam": {"appid": 1145360, "positive_pct": 97, "total_reviews": 50000,
+                      "genres": ["action"], "categories": ["single-player"]},
+        }
+    }
+    called = []
+    monkeypatch.setattr("fetch.fetch_steam_app_details", lambda appid: called.append(appid) or {})
+    monkeypatch.setattr("fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("fetch.time.sleep", lambda s: None)
+    from fetch import migrate_steam_details
+    migrate_steam_details(cache, verbose=False)
+    assert called == []
+
+
+def test_migrate_steam_details_skips_no_appid(monkeypatch):
+    cache = {
+        "GameNoAppid": {
+            "hltb": {"game_name": "X", "main_story": 5, "main_extra": 8, "completionist": 10},
+            "steam": {"positive_pct": 90, "total_reviews": 1000},
+        }
+    }
+    called = []
+    monkeypatch.setattr("fetch.fetch_steam_app_details", lambda appid: called.append(appid) or {})
+    monkeypatch.setattr("fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("fetch.time.sleep", lambda s: None)
+    from fetch import migrate_steam_details
+    migrate_steam_details(cache, verbose=False)
+    assert called == []
+    assert "genres" not in cache["GameNoAppid"]["steam"]
+
+
 def test_build_library_verbose_false_silent_for_new_games(capsys, monkeypatch):
     monkeypatch.setattr("fetch.resolve_steamid", lambda key, user: "76561198000000")
     monkeypatch.setattr("fetch.get_steam_games", lambda key, sid: [
