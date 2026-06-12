@@ -69,6 +69,8 @@ Formatos de entrada:
                    help="Lista todas as tags/categorias disponíveis no cache e sai")
     p.add_argument("--list-genres", action="store_true",
                    help="Lista todos os gêneros disponíveis no cache e sai")
+    p.add_argument("--list-collections", action="store_true",
+                   help="Lista coleções Steam disponíveis no VDF e sai")
     p.add_argument("--refresh", action="store_true",
                    help="Ignora o cache e rebusca todos os jogos")
     p.add_argument("-v", "--verbose", action="store_true",
@@ -128,6 +130,19 @@ def print_table(games: list, sort_by: str, show_tags: bool = False) -> None:
                 parts.append("tags: " + ", ".join(tags[:4]))
         if parts:
             print(f"     ↳ {' · '.join(parts)}")
+
+
+def list_collections_cmd(collection_map: dict) -> None:
+    from collections import Counter
+    counter = Counter(tag for tags in collection_map.values() for tag in tags)
+    if not counter:
+        print("Nenhuma coleção encontrada. Verifique --vdf-path.")
+        return
+    print(f"\n{'─'*40}")
+    print(f" COLEÇÕES disponíveis ({len(counter)} únicas)")
+    print(f"{'─'*40}")
+    for name, count in counter.most_common():
+        print(f"  {count:>4}x  {name}")
 
 
 def list_available(cache: dict, field: str) -> None:
@@ -214,12 +229,15 @@ def run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = parse_args()
-    if args.list_tags or args.list_genres:
+    if args.list_tags or args.list_genres or args.list_collections:
         cache = load_cache()
         if args.list_genres:
             list_available(cache, "genres")
         if args.list_tags:
             list_available(cache, "categories")
+        if args.list_collections:
+            from steam_collections import load_collections
+            list_collections_cmd(load_collections(args.vdf_path))
         return
     if args.tui:
         from tui import run_tui
