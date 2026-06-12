@@ -10,6 +10,21 @@ from steam_collections import load_collections, filter_collection
 
 STEAM_USERNAME = "gabelogannewell"
 
+# Categorias Steam de infraestrutura — não relevantes pra gameplay
+STEAM_NOISE_CATEGORIES = {
+    "steam achievements", "steam cloud", "steam leaderboards",
+    "steam trading cards", "steam workshop", "valve anti-cheat enabled",
+    "stats", "steam turn notifications", "remote play on phone",
+    "remote play on tablet", "remote play on tv", "remote play together",
+    "in-app purchases", "partial controller support",
+}
+
+
+def _gameplay_categories(game: dict) -> list:
+    """Retorna steam.categories filtradas de noise. Não usa rawg.tags."""
+    cats = game.get("tags", [])  # campo 'tags' em rows = steam.categories
+    return [c for c in cats if c.lower() not in STEAM_NOISE_CATEGORIES]
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -125,9 +140,9 @@ def print_table(games: list, sort_by: str, show_tags: bool = False) -> None:
         if genres:
             parts.append(", ".join(genres[:4]))
         if show_tags:
-            tags = g.get("tags", [])
-            if tags:
-                parts.append("tags: " + ", ".join(tags[:4]))
+            cats = _gameplay_categories(g)
+            if cats:
+                parts.append("cat: " + ", ".join(cats[:4]))
         if parts:
             print(f"     ↳ {' · '.join(parts)}")
 
@@ -151,11 +166,16 @@ def list_available(cache: dict, field: str) -> None:
     for entry in cache.values():
         steam = entry.get("steam") or {}
         rawg = entry.get("rawg") or {}
-        values = steam.get(field) or rawg.get(field) or rawg.get("tags" if field == "categories" else field, [])
+        if field == "categories":
+            # steam.categories preferido; RAWG tags descartadas
+            values = steam.get("categories") or []
+        else:
+            values = steam.get(field) or rawg.get(field, [])
         for v in values:
-            counter[v] += 1
+            if v.lower() not in STEAM_NOISE_CATEGORIES:
+                counter[v] += 1
     if not counter:
-        print(f"Nenhum(a) {field} encontrado(a) no cache. Tente --refresh.")
+        print(f"Nenhum(a) {field} encontrado(a) no cache. Tente --refresh ou --migrate-cache.")
         return
     print(f"\n{'─'*40}")
     print(f" {field.upper()} disponíveis ({len(counter)} únicos)")
