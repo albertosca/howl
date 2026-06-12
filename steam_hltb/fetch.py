@@ -159,15 +159,19 @@ def build_library(
 
 
 def migrate_steam_details(cache: dict, verbose: bool = False) -> dict:
-    """Preenche steam.genres/categories/metacritic para entradas sem esses campos."""
+    """Preenche steam.genres/categories/metacritic/release_year para entradas incompletas."""
     import time
+
+    def _needs_migration(steam: dict) -> bool:
+        return "genres" not in steam or "release_year" not in steam
+
     pending = [
         (name, entry["steam"]["appid"])
         for name, entry in cache.items()
-        if entry.get("steam") and entry["steam"].get("appid") and "genres" not in entry.get("steam", {})
+        if entry.get("steam") and entry["steam"].get("appid") and _needs_migration(entry["steam"])
     ]
     if verbose:
-        print(f"Migrando {len(pending)} entradas sem steam.genres...")
+        print(f"Migrando {len(pending)} entradas incompletas (sem genres e/ou release_year)...")
     for idx, (name, appid) in enumerate(pending, 1):
         details = fetch_steam_app_details(appid)
         if details:

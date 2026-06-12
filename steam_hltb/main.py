@@ -28,14 +28,15 @@ def _gameplay_categories(game: dict) -> list:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Classifica jogos da biblioteca Steam com notas HLTB, Metacritic e Steam.",
+        prog="howl",
+        description="HOWL — Hoard Optimizer, What to Launch. Ranqueia sua biblioteca Steam por qualidade × tempo.",
         epilog="""
 Exemplos:
-  python main.py --top 25 --sort rated
-  python main.py --genre "action,rpg" --not-started --top 10
-  python main.py --tui --top 25 --sort shortest
-  python main.py --min-hours 5 --max-hours 30 --sort composto
-  python main.py --era "2010-2015,2015-2020" --sort quick-wins
+  howl --top 25 --sort rated
+  howl --genre "action,rpg" --not-started --top 10
+  howl --tui --top 25 --sort shortest
+  howl --min-hours 5 --max-hours 30 --sort composto
+  howl --era "2010-2015,2015-2020" --sort quick-wins
 
 Formatos de entrada:
   --genre / --genre-any / --exclude-genre  nomes separados por vírgula (ex: "action,rpg")
