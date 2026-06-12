@@ -68,6 +68,48 @@ def test_print_table_shows_tags_when_flag(capsys):
     assert "great soundtrack" in out
 
 
+def test_parse_args_list_tags():
+    args = _parse(["--list-tags"])
+    assert args.list_tags is True
+
+
+def test_parse_args_list_genres():
+    args = _parse(["--list-genres"])
+    assert args.list_genres is True
+
+
+def test_list_available_genres(capsys):
+    cache = {
+        "Hades": {"steam": {"genres": ["action", "roguelike"], "categories": []}, "rawg": None},
+        "Portal 2": {"steam": {"genres": ["puzzle", "action"], "categories": []}, "rawg": None},
+    }
+    from main import list_available
+    list_available(cache, "genres")
+    out = capsys.readouterr().out
+    assert "action" in out
+    assert "roguelike" in out
+    assert "puzzle" in out
+    assert "2x" in out  # action aparece 2x
+
+
+def test_list_available_categories(capsys):
+    cache = {
+        "Hades": {"steam": {"genres": [], "categories": ["single-player", "steam achievements"]}, "rawg": None},
+    }
+    from main import list_available
+    list_available(cache, "categories")
+    out = capsys.readouterr().out
+    assert "single-player" in out
+    assert "steam achievements" in out
+
+
+def test_list_available_empty_cache(capsys):
+    from main import list_available
+    list_available({}, "genres")
+    out = capsys.readouterr().out
+    assert "Tente --refresh" in out
+
+
 def test_print_table_caps_genres_at_four(capsys):
     games = [{
         "name": "Game",
