@@ -6,6 +6,7 @@ import sys
 from fetch import get_api_key, load_cache, build_library
 from score import compute_score, SORT_OPTIONS
 from classify import build_game_rows, apply_filters
+from steam_collections import load_collections, filter_collection
 
 STEAM_USERNAME = "heenett"
 
@@ -58,6 +59,10 @@ Formatos de entrada:
                    help="Peso do Metacritic no score composto (padrão: %(default)s)")
     p.add_argument("--weight-steam", type=float, default=0.5,
                    help="Peso do Steam no score composto (padrão: %(default)s)")
+    p.add_argument("--collection",
+                   help="Filtrar por coleção Steam (ex: 'Terminados', 'Jogando')")
+    p.add_argument("--vdf-path", default="sharedconfig.vdf",
+                   help="Caminho para o sharedconfig.vdf do Steam (padrão: %(default)s)")
     p.add_argument("--refresh", action="store_true",
                    help="Ignora o cache e rebusca todos os jogos")
     p.add_argument("-v", "--verbose", action="store_true",
@@ -145,10 +150,9 @@ def save_results(games: list, output_base: str) -> None:
 
 def run(args: argparse.Namespace) -> None:
     steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
-    rawg_key  = get_api_key("RAWG_API_KEY",  "RAWG API key")
 
     cache = load_cache()
-    cache, steam_games = build_library(steam_key, rawg_key, args.username, cache, refresh=args.refresh, verbose=args.verbose)
+    cache, steam_games = build_library(steam_key, args.username, cache, refresh=args.refresh, verbose=args.verbose)
 
     rows = build_game_rows(cache, steam_games)
     rows = apply_filters(
@@ -161,6 +165,9 @@ def run(args: argparse.Namespace) -> None:
         min_hours=args.min_hours,
         max_hours=args.max_hours,
     )
+    if args.collection:
+        collection_map = load_collections(args.vdf_path)
+        rows = filter_collection(rows, args.collection, collection_map)
 
     weights = _weights(args)
     for g in rows:
@@ -182,9 +189,8 @@ def main() -> None:
     if args.tui:
         from tui import run_tui
         steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
-        rawg_key  = get_api_key("RAWG_API_KEY",  "RAWG API key")
         cache = load_cache()
-        cache, steam_games = build_library(steam_key, rawg_key, args.username, cache, refresh=args.refresh, verbose=args.verbose)
+        cache, steam_games = build_library(steam_key, args.username, cache, refresh=args.refresh, verbose=args.verbose)
         rows = build_game_rows(cache, steam_games)
         initial_filters = {
             "genre":         _csv_list(args.genre),

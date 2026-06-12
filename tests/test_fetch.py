@@ -70,37 +70,43 @@ def test_fetch_hltb_returns_zero_for_negative_times():
         assert result["completionist"] == 5
 
 
-def test_fetch_rawg_returns_none_on_non_200():
+def test_fetch_steam_app_details_returns_none_on_non_200():
     with patch("fetch.requests.get") as mock_get:
-        mock_get.return_value.status_code = 404
+        mock_get.return_value.status_code = 500
         import fetch
-        assert fetch.fetch_rawg("RAWG_KEY", "Half-Life 2") is None
+        assert fetch.fetch_steam_app_details(220) is None
 
 
-def test_fetch_rawg_returns_none_when_no_results():
+def test_fetch_steam_app_details_returns_none_when_not_success():
     with patch("fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = {"results": []}
+        mock_get.return_value.json.return_value = {"220": {"success": False}}
         import fetch
-        assert fetch.fetch_rawg("RAWG_KEY", "Half-Life 2") is None
+        assert fetch.fetch_steam_app_details(220) is None
 
 
-def test_fetch_rawg_returns_metacritic_genres_tags():
+def test_fetch_steam_app_details_returns_metacritic_genres_categories():
     with patch("fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {
-            "results": [{
-                "metacritic": 96,
-                "genres": [{"name": "Action"}, {"name": "Shooter"}],
-                "tags": [{"name": "Singleplayer"}, {"name": "FPS"}],
-            }]
+            "220": {
+                "success": True,
+                "data": {
+                    "metacritic": {"score": 96},
+                    "genres": [{"id": "1", "description": "Action"}],
+                    "categories": [
+                        {"id": 2, "description": "Single-player"},
+                        {"id": 22, "description": "Steam Achievements"},
+                    ],
+                },
+            }
         }
         import fetch
-        result = fetch.fetch_rawg("RAWG_KEY", "Half-Life 2")
+        result = fetch.fetch_steam_app_details(220)
         assert result == {
             "metacritic": 96,
-            "genres": ["action", "shooter"],
-            "tags": ["singleplayer", "fps"],
+            "genres": ["action"],
+            "categories": ["single-player", "steam achievements"],
         }
 
 
@@ -180,7 +186,7 @@ def test_build_library_verbose_false_hides_cache_lines(capsys, monkeypatch):
     }
 
     import fetch
-    fetch.build_library("key", "rawg", "user", cache, verbose=False)
+    fetch.build_library("key", "user", cache, verbose=False)
 
     out = capsys.readouterr().out
     assert "[1/1] Half-Life 2 (cache)" not in out
@@ -202,7 +208,7 @@ def test_build_library_verbose_true_shows_cache_lines(capsys, monkeypatch):
     }
 
     import fetch
-    fetch.build_library("key", "rawg", "user", cache, verbose=True)
+    fetch.build_library("key", "user", cache, verbose=True)
 
     out = capsys.readouterr().out
     assert "[1/1] Half-Life 2 (cache)" in out
@@ -219,7 +225,7 @@ def test_build_library_verbose_false_prints_fetching_for_new_games(capsys, monke
     cache = {}  # vazio: Half-Life 2 NÃO está no cache
 
     import fetch
-    fetch.build_library("key", "rawg", "user", cache, verbose=False)
+    fetch.build_library("key", "user", cache, verbose=False)
 
     out = capsys.readouterr().out
     assert "Fetching: Half-Life 2" in out
@@ -237,7 +243,7 @@ def test_build_library_verbose_true_prints_indexed_for_new_games(capsys, monkeyp
     cache = {}
 
     import fetch
-    fetch.build_library("key", "rawg", "user", cache, verbose=True)
+    fetch.build_library("key", "user", cache, verbose=True)
 
     out = capsys.readouterr().out
     assert "[1/1] Half-Life 2" in out

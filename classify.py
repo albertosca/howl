@@ -1,12 +1,12 @@
-COOP_TAGS = {"co-op", "online co-op", "local co-op", "co-operative", "co-op campaign"}
-MULTIPLAYER_ONLY_TAGS = {"multiplayer", "online multiplayer", "pvp", "mmo"}
+COOP_CATEGORIES = {"co-op", "online co-op", "local co-op", "shared/split screen co-op"}
+MULTIPLAYER_ONLY_CATEGORIES = {"multi-player", "multiplayer", "online pvp", "mmo", "massively multiplayer"}
 
 
-def _category(tags: list, main_story: int) -> str:
-    tag_set = {t.lower() for t in tags}
-    has_coop = bool(tag_set & COOP_TAGS)
-    has_single = "singleplayer" in tag_set or "single-player" in tag_set
-    is_mp_only = bool(tag_set & MULTIPLAYER_ONLY_TAGS) and not has_single and not has_coop
+def _category(categories: list, main_story: int) -> str:
+    cat_set = {c.lower() for c in categories}
+    has_coop = bool(cat_set & COOP_CATEGORIES)
+    has_single = "single-player" in cat_set or "singleplayer" in cat_set
+    is_mp_only = bool(cat_set & MULTIPLAYER_ONLY_CATEGORIES) and not has_single and not has_coop
     if is_mp_only:
         return "multiplayer"
     if has_coop and main_story > 0:
@@ -20,20 +20,30 @@ def build_game_rows(cache: dict, steam_games: list) -> list:
         name = game["name"]
         entry = cache.get(name, {})
         hltb = entry.get("hltb")
-        rawg = entry.get("rawg")
         steam = entry.get("steam")
         if not hltb:
             continue
-        tags = rawg.get("tags", []) if rawg else []
+        # suporte a cache antigo (rawg) e novo (steam com genres/categories)
+        rawg = entry.get("rawg")
+        if steam and "genres" in steam:
+            genres = steam.get("genres", [])
+            categories = steam.get("categories", [])
+            metacritic = steam.get("metacritic")
+        elif rawg:
+            genres = rawg.get("genres", [])
+            categories = rawg.get("tags", [])
+            metacritic = rawg.get("metacritic")
+        else:
+            genres, categories, metacritic = [], [], None
         rows.append({
             "name": hltb["game_name"],
             "steam_name": name,
             "appid": steam.get("appid") if steam else game.get("appid"),
             "hours_played": game["hours_played"],
-            "category": _category(tags, hltb["main_story"]),
-            "genres": [g.lower() for g in (rawg.get("genres", []) if rawg else [])],
-            "tags": tags,
-            "metacritic": rawg.get("metacritic") if rawg else None,
+            "category": _category(categories, hltb["main_story"]),
+            "genres": genres,
+            "tags": categories,
+            "metacritic": metacritic,
             "steam_pct": steam.get("positive_pct") if steam else None,
             "steam_total_reviews": steam.get("total_reviews") if steam else None,
             "main_story": hltb["main_story"],
