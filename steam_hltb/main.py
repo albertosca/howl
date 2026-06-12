@@ -5,7 +5,7 @@ import sys
 
 from .fetch import get_api_key, load_cache, build_library
 from .score import compute_score, SORT_OPTIONS
-from .classify import build_game_rows, apply_filters
+from .classify import build_game_rows, apply_filters, ERA_LABELS
 from .steam_collections import load_collections, filter_collection
 
 STEAM_USERNAME = "heenett"
@@ -31,21 +31,23 @@ def parse_args() -> argparse.Namespace:
         description="Classifica jogos da biblioteca Steam com notas HLTB, Metacritic e Steam.",
         epilog="""
 Exemplos:
-  python main.py --top 25 --sort metacritic
+  python main.py --top 25 --sort rated
   python main.py --genre "action,rpg" --not-started --top 10
-  python main.py --tui --top 25 --sort hltb_short
+  python main.py --tui --top 25 --sort shortest
   python main.py --min-hours 5 --max-hours 30 --sort composto
+  python main.py --era "2010-2015,2015-2020" --sort quick-wins
 
 Formatos de entrada:
   --genre / --genre-any / --exclude-genre  nomes separados por vírgula (ex: "action,rpg")
-  --sort                                   hltb_short | hltb_long | metacritic | steam | composto | custom
+  --sort                                   shortest | longest | rated | loved | quick-wins | hidden-gems | composto
+  --era                                    épocas separadas por vírgula: pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown
   --weight-mc / --weight-steam             pesos de 0.0 a 1.0 que somam 1.0 (ex: 0.6 e 0.4)
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p.add_argument("--username", default=STEAM_USERNAME,
                    help="Vanity URL do perfil Steam (padrão: %(default)s)")
-    p.add_argument("--sort", default="hltb_short", choices=SORT_OPTIONS,
+    p.add_argument("--sort", default="shortest", choices=SORT_OPTIONS,
                    help="Critério de ordenação (padrão: %(default)s)")
     p.add_argument("--genre",
                    help="Gêneros obrigatórios, separados por vírgula (ex: 'action,rpg')")
@@ -66,6 +68,8 @@ Formatos de entrada:
                    help="Filtrar por tipo de jogo (padrão: %(default)s)")
     p.add_argument("--min-hours", type=float, help="Duração mínima HLTB em horas")
     p.add_argument("--max-hours", type=float, help="Duração máxima HLTB em horas")
+    p.add_argument("--era",
+                   help="Épocas de lançamento (vírgula-sep): pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown")
     p.add_argument("--top", type=int, default=10,
                    help="Quantos jogos exibir (padrão: %(default)s)")
     p.add_argument("--output", default="how_long_to_beat_output",
@@ -123,20 +127,22 @@ def _weights(args: argparse.Namespace) -> dict:
 def _csv_list(value: str | None) -> list | None:
     if not value:
         return None
-    return [v.strip() for v in value.split(",") if v.strip()]
+    result = [v.strip() for v in value.split(",") if v.strip()]
+    return result or None
 
 
 def print_table(games: list, sort_by: str, show_tags: bool = False) -> None:
-    header = f"{'#':>3}  {'Nome':<45}  {'MC':>4}  {'Steam':>6}  {'HLTB':>5}  {'Jogadas':>8}  {'Score':>8}"
+    header = f"{'#':>3}  {'Nome':<45}  {'Ano':>4}  {'MC':>4}  {'Steam':>6}  {'HLTB':>5}  {'Jogadas':>8}  {'Score':>8}"
     print(header)
     print("-" * len(header))
     for i, g in enumerate(games, 1):
+        ano   = str(g["release_year"]) if g.get("release_year") else "-"
         mc    = str(g["metacritic"]) if g["metacritic"] else "-"
         steam = f"{g['steam_pct']}%" if g["steam_pct"] else "-"
         hltb  = f"{g['main_extra']}h"
         jogou = f"{g['hours_played']}h"
         score = f"{g['_score']:.1f}"
-        print(f"{i:>3}  {g['name']:<45}  {mc:>4}  {steam:>6}  {hltb:>5}  {jogou:>8}  {score:>8}")
+        print(f"{i:>3}  {g['name']:<45}  {ano:>4}  {mc:>4}  {steam:>6}  {hltb:>5}  {jogou:>8}  {score:>8}")
         parts = []
         genres = g.get("genres", [])
         if genres:
@@ -226,6 +232,7 @@ def run(args: argparse.Namespace) -> None:
         category=args.category,
         min_hours=args.min_hours,
         max_hours=args.max_hours,
+        eras=_csv_list(getattr(args, "era", None)),
     )
     if not getattr(args, "show_finished", False):
         from .steam_collections import exclude_finished
@@ -289,6 +296,7 @@ def main() -> None:
             "weights":       _weights(args),
             "vdf_path":      args.vdf_path,
             "show_finished": getattr(args, "show_finished", False),
+            "eras":          _csv_list(getattr(args, "era", None)),
         }
         run_tui(rows, initial_filters)
         return

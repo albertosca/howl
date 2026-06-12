@@ -1,34 +1,14 @@
 import math
 
-SORT_OPTIONS = ["hltb_short", "hltb_long", "metacritic", "steam", "composto", "custom"]
-
-
-def score_hltb_short(game: dict) -> float:
-    mc = game.get("metacritic")
-    hours = game.get("main_extra", 0)
-    if mc is None:
-        return 0.0
-    if hours and hours > 0:
-        return mc / math.sqrt(hours)
-    return float(mc)
-
-
-def score_hltb_long(game: dict) -> float:
-    mc = game.get("metacritic")
-    hours = game.get("main_extra", 0)
-    if mc is None:
-        return 0.0
-    if hours and hours > 0:
-        return mc * math.sqrt(hours)
-    return float(mc)
-
-
-def score_metacritic(game: dict) -> float:
-    return float(game.get("metacritic") or 0)
-
-
-def score_steam(game: dict) -> float:
-    return float(game.get("steam_pct") or 0)
+SORT_OPTIONS = [
+    "shortest",     # bom e curto: composite / √h
+    "longest",      # bom e longo: composite × √h
+    "rated",        # Metacritic puro
+    "loved",        # Steam % positivo puro
+    "quick-wins",   # qualidade altíssima em pouco tempo: composite² / h
+    "hidden-gems",  # amado pelos players, ignorado pela crítica: steam × (1-mc/100)
+    "composto",     # média ponderada mc+steam configurável
+]
 
 
 def score_composto(game: dict, weights: dict | None = None) -> float:
@@ -49,15 +29,71 @@ def score_composto(game: dict, weights: dict | None = None) -> float:
     return sum(sources[k] * weights.get(k, 0) / total_weight for k in sources)
 
 
+def score_shortest(game: dict, weights: dict | None = None) -> float:
+    """Bons jogos mais curtos: composite / √horas."""
+    score = score_composto(game, weights)
+    hours = game.get("main_extra") or 0
+    if score == 0:
+        return 0.0
+    if hours > 0:
+        return score / math.sqrt(hours)
+    return score
+
+
+def score_longest(game: dict, weights: dict | None = None) -> float:
+    """Bons jogos mais longos: composite × √horas."""
+    score = score_composto(game, weights)
+    hours = game.get("main_extra") or 0
+    if score == 0:
+        return 0.0
+    return score * math.sqrt(max(hours, 1))
+
+
+def score_rated(game: dict) -> float:
+    """Mais aclamados pela crítica: Metacritic puro."""
+    return float(game.get("metacritic") or 0)
+
+
+def score_loved(game: dict) -> float:
+    """Mais amados pelos jogadores: Steam % positivo."""
+    return float(game.get("steam_pct") or 0)
+
+
+def score_quick_wins(game: dict, weights: dict | None = None) -> float:
+    """Qualidade altíssima em pouco tempo: composite² / horas."""
+    score = score_composto(game, weights)
+    hours = game.get("main_extra") or 0
+    if score == 0:
+        return 0.0
+    if hours > 0:
+        return (score ** 2) / hours
+    return score ** 2
+
+
+def score_hidden_gems(game: dict) -> float:
+    """Alta aprovação dos players, baixo hype de crítica: steam × (1 - mc/100)."""
+    steam = game.get("steam_pct")
+    mc = game.get("metacritic")
+    if steam is None:
+        return 0.0
+    if mc is None:
+        return float(steam)
+    return float(steam) * (1 - mc / 100)
+
+
 def compute_score(game: dict, sort_by: str, weights: dict | None = None) -> float:
-    if sort_by == "hltb_short":
-        return score_hltb_short(game)
-    if sort_by == "hltb_long":
-        return score_hltb_long(game)
-    if sort_by == "metacritic":
-        return score_metacritic(game)
-    if sort_by == "steam":
-        return score_steam(game)
+    if sort_by == "shortest":
+        return score_shortest(game, weights)
+    if sort_by == "longest":
+        return score_longest(game, weights)
+    if sort_by == "rated":
+        return score_rated(game)
+    if sort_by == "loved":
+        return score_loved(game)
+    if sort_by == "quick-wins":
+        return score_quick_wins(game, weights)
+    if sort_by == "hidden-gems":
+        return score_hidden_gems(game)
     if sort_by in ("composto", "custom"):
         return score_composto(game, weights)
     raise ValueError(f"Unknown sort: {sort_by}")

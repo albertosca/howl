@@ -44,7 +44,7 @@ def run_interactive(base_args) -> None:
     min_hours_raw = _ask("Mínimo de horas (vazio=sem limite)", default="")
     max_hours_raw = _ask("Máximo de horas (vazio=sem limite)", default="")
 
-    sort_by = _ask("Ordenar por", options=SORT_OPTIONS, default="hltb_short")
+    sort_by = _ask("Ordenar por", options=SORT_OPTIONS, default="shortest")
 
     top_raw = _ask("Quantos jogos mostrar", default="10")
     top = int(top_raw) if top_raw.isdigit() else 10
