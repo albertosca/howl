@@ -109,6 +109,9 @@ class SteamHLTBApp(App):
         self.filters.setdefault("sort", "hltb_short")
         self.filters.setdefault("top", 10)
         self.filters.setdefault("weights", {"mc": 0.5, "steam": 0.5})
+        self.filters.setdefault("vdf_path", "sharedconfig.vdf")
+        self.filters.setdefault("show_finished", False)
+        self.filters.setdefault("collection", None)
         self._games: list = []
 
     def compose(self) -> ComposeResult:
@@ -150,6 +153,9 @@ class SteamHLTBApp(App):
             min_hours=self.filters["min_hours"],
             max_hours=self.filters["max_hours"],
         )
+        if not self.filters.get("show_finished", False):
+            from steam_collections import exclude_finished
+            rows = exclude_finished(rows, self.filters.get("vdf_path", "sharedconfig.vdf"))
         sort_by = self.filters["sort"]
         weights = self.filters["weights"]
         for g in rows:

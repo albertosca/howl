@@ -32,3 +32,18 @@ def filter_collection(games: list, collection: str, collection_map: dict) -> lis
         g for g in games
         if col_lower in [c.lower() for c in collection_map.get(str(g.get("appid", "")), [])]
     ]
+
+
+FINISHED_COLLECTION = "Terminados"
+
+
+def exclude_finished(games: list, vdf_path: str = DEFAULT_VDF_PATH) -> list:
+    """Remove games na coleção 'Terminados'. Silencioso se VDF não existir."""
+    collection_map = load_collections(vdf_path)
+    if not collection_map:
+        return games
+    finished_ids = {
+        appid for appid, tags in collection_map.items()
+        if FINISHED_COLLECTION in tags
+    }
+    return [g for g in games if str(g.get("appid", "")) not in finished_ids]

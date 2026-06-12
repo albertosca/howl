@@ -63,6 +63,8 @@ Formatos de entrada:
                    help="Filtrar por coleção Steam (ex: 'Terminados', 'Jogando')")
     p.add_argument("--vdf-path", default="sharedconfig.vdf",
                    help="Caminho para o sharedconfig.vdf do Steam (padrão: %(default)s)")
+    p.add_argument("--show-finished", action="store_true",
+                   help="Incluir jogos da coleção 'Terminados' (excluídos por padrão)")
     p.add_argument("--list-tags", action="store_true",
                    help="Lista todas as tags/categorias disponíveis no cache e sai")
     p.add_argument("--list-genres", action="store_true",
@@ -188,6 +190,9 @@ def run(args: argparse.Namespace) -> None:
         min_hours=args.min_hours,
         max_hours=args.max_hours,
     )
+    if not getattr(args, "show_finished", False):
+        from steam_collections import exclude_finished
+        rows = exclude_finished(rows, args.vdf_path)
     if args.collection:
         collection_map = load_collections(args.vdf_path)
         rows = filter_collection(rows, args.collection, collection_map)
@@ -233,6 +238,8 @@ def main() -> None:
             "sort":          args.sort,
             "top":           args.top,
             "weights":       _weights(args),
+            "vdf_path":      args.vdf_path,
+            "show_finished": getattr(args, "show_finished", False),
         }
         run_tui(rows, initial_filters)
         return

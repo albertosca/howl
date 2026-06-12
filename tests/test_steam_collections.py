@@ -93,3 +93,31 @@ def test_filter_collection_returns_empty_when_no_match(vdf_file):
     collection_map = load_collections(vdf_file)
     games = [{"appid": 220, "name": "Half-Life 2"}]
     assert filter_collection(games, "NaoExiste", collection_map) == []
+
+
+def test_exclude_finished_removes_terminados(vdf_file):
+    from steam_collections import exclude_finished
+    games = [
+        {"appid": 220, "name": "Half-Life 2"},   # Terminados
+        {"appid": 620, "name": "Portal 2"},       # Jogando + Terminados
+        {"appid": 570, "name": "Dota 2"},         # sem tag
+    ]
+    result = exclude_finished(games, vdf_file)
+    names = [g["name"] for g in result]
+    assert "Half-Life 2" not in names
+    assert "Portal 2" not in names
+    assert "Dota 2" in names
+
+
+def test_exclude_finished_silent_when_vdf_missing():
+    from steam_collections import exclude_finished
+    games = [{"appid": 220, "name": "Half-Life 2"}]
+    result = exclude_finished(games, "/nonexistent/path.vdf")
+    assert result == games
+
+
+def test_exclude_finished_no_op_when_no_terminados(vdf_file):
+    from steam_collections import exclude_finished
+    games = [{"appid": 570, "name": "Dota 2"}]  # sem tag
+    result = exclude_finished(games, vdf_file)
+    assert result == games

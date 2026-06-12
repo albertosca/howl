@@ -41,6 +41,9 @@ INITIAL_FILTERS = {
     "min_hours": None, "max_hours": None,
     "sort": "hltb_short", "top": 10,
     "weights": {"mc": 0.5, "steam": 0.5},
+    "show_finished": True,  # testes não dependem do VDF local
+    "vdf_path": "sharedconfig.vdf",
+    "collection": None,
 }
 
 
