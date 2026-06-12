@@ -4,7 +4,7 @@ import pytest
 
 def _parse(argv):
     sys.argv = ["main.py"] + argv
-    from main import parse_args
+    from steam_hltb.main import parse_args
     return parse_args()
 
 
@@ -42,7 +42,7 @@ def test_print_table_shows_genres_by_default(capsys):
         "genres": ["action", "roguelike", "rpg"],
         "tags": ["indie", "great soundtrack"],
     }]
-    from main import print_table
+    from steam_hltb.main import print_table
     print_table(games, "hltb_short", show_tags=False)
     out = capsys.readouterr().out
     assert "action" in out
@@ -61,7 +61,7 @@ def test_print_table_shows_steam_categories_when_flag(capsys):
         "genres": ["action"],
         "tags": ["single-player", "full controller support", "steam achievements"],
     }]
-    from main import print_table
+    from steam_hltb.main import print_table
     print_table(games, "hltb_short", show_tags=True)
     out = capsys.readouterr().out
     assert "single-player" in out
@@ -84,7 +84,7 @@ def test_list_available_genres(capsys):
         "Hades": {"steam": {"genres": ["action", "roguelike"], "categories": []}, "rawg": None},
         "Portal 2": {"steam": {"genres": ["puzzle", "action"], "categories": []}, "rawg": None},
     }
-    from main import list_available
+    from steam_hltb.main import list_available
     list_available(cache, "genres")
     out = capsys.readouterr().out
     assert "action" in out
@@ -97,7 +97,7 @@ def test_list_available_categories(capsys):
     cache = {
         "Hades": {"steam": {"genres": [], "categories": ["single-player", "steam achievements"]}, "rawg": None},
     }
-    from main import list_available
+    from steam_hltb.main import list_available
     list_available(cache, "categories")
     out = capsys.readouterr().out
     assert "single-player" in out
@@ -105,7 +105,7 @@ def test_list_available_categories(capsys):
 
 
 def test_list_available_empty_cache(capsys):
-    from main import list_available
+    from steam_hltb.main import list_available
     list_available({}, "genres")
     out = capsys.readouterr().out
     assert "Tente --refresh" in out
@@ -117,7 +117,7 @@ def test_parse_args_list_collections():
 
 
 def test_list_collections_cmd_prints_names(capsys):
-    from main import list_collections_cmd
+    from steam_hltb.main import list_collections_cmd
     collection_map = {"220": ["Terminados"], "620": ["Jogando", "Terminados"], "570": ["Multiplayer"]}
     list_collections_cmd(collection_map)
     out = capsys.readouterr().out
@@ -127,7 +127,7 @@ def test_list_collections_cmd_prints_names(capsys):
 
 
 def test_list_collections_cmd_shows_count(capsys):
-    from main import list_collections_cmd
+    from steam_hltb.main import list_collections_cmd
     collection_map = {"220": ["Terminados"], "620": ["Terminados"], "570": ["Jogando"]}
     list_collections_cmd(collection_map)
     out = capsys.readouterr().out
@@ -146,7 +146,7 @@ def test_print_table_caps_genres_at_four(capsys):
         "genres": ["a", "b", "c", "d", "e", "f"],
         "tags": [],
     }]
-    from main import print_table
+    from steam_hltb.main import print_table
     print_table(games, "hltb_short", show_tags=False)
     out = capsys.readouterr().out
     after_arrow = out.split("↳")[1] if "↳" in out else ""

@@ -1,7 +1,7 @@
 import pytest
 import tempfile
 import os
-from steam_collections import load_collections, filter_collection
+from steam_hltb.steam_collections import load_collections, filter_collection
 
 
 SAMPLE_VDF = """
@@ -96,7 +96,7 @@ def test_filter_collection_returns_empty_when_no_match(vdf_file):
 
 
 def test_exclude_finished_removes_terminados(vdf_file):
-    from steam_collections import exclude_finished
+    from steam_hltb.steam_collections import exclude_finished
     games = [
         {"appid": 220, "name": "Half-Life 2"},   # Terminados
         {"appid": 620, "name": "Portal 2"},       # Jogando + Terminados
@@ -110,14 +110,14 @@ def test_exclude_finished_removes_terminados(vdf_file):
 
 
 def test_exclude_finished_silent_when_vdf_missing():
-    from steam_collections import exclude_finished
+    from steam_hltb.steam_collections import exclude_finished
     games = [{"appid": 220, "name": "Half-Life 2"}]
     result = exclude_finished(games, "/nonexistent/path.vdf")
     assert result == games
 
 
 def test_exclude_finished_no_op_when_no_terminados(vdf_file):
-    from steam_collections import exclude_finished
+    from steam_hltb.steam_collections import exclude_finished
     games = [{"appid": 570, "name": "Dota 2"}]  # sem tag
     result = exclude_finished(games, vdf_file)
     assert result == games

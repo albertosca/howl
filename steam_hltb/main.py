@@ -3,10 +3,10 @@ import csv
 import os
 import sys
 
-from fetch import get_api_key, load_cache, build_library
-from score import compute_score, SORT_OPTIONS
-from classify import build_game_rows, apply_filters
-from steam_collections import load_collections, filter_collection
+from .fetch import get_api_key, load_cache, build_library
+from .score import compute_score, SORT_OPTIONS
+from .classify import build_game_rows, apply_filters
+from .steam_collections import load_collections, filter_collection
 
 STEAM_USERNAME = "heenett"
 
@@ -228,7 +228,7 @@ def run(args: argparse.Namespace) -> None:
         max_hours=args.max_hours,
     )
     if not getattr(args, "show_finished", False):
-        from steam_collections import exclude_finished
+        from .steam_collections import exclude_finished
         rows = exclude_finished(rows, args.vdf_path)
     if args.collection:
         collection_map = load_collections(args.vdf_path)
@@ -255,7 +255,7 @@ def run(args: argparse.Namespace) -> None:
 def main() -> None:
     args = parse_args()
     if args.migrate_cache:
-        from fetch import migrate_steam_details
+        from .fetch import migrate_steam_details
         print("⚠  Isso pode demorar 15-30 min. Ctrl+C para interromper (progresso salvo).")
         migrate_steam_details(load_cache(), verbose=True)
         print("Migração concluída.")
@@ -267,11 +267,11 @@ def main() -> None:
         if args.list_tags:
             list_available(cache, "categories")
         if args.list_collections:
-            from steam_collections import load_collections
+            from .steam_collections import load_collections
             list_collections_cmd(load_collections(args.vdf_path))
         return
     if args.tui:
-        from tui import run_tui
+        from .tui import run_tui
         steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
         cache = load_cache()
         cache, steam_games = build_library(steam_key, args.username, cache, refresh=args.refresh, verbose=args.verbose)
@@ -293,7 +293,7 @@ def main() -> None:
         run_tui(rows, initial_filters)
         return
     if args.interactive:
-        from interactive import run_interactive
+        from .interactive import run_interactive
         run_interactive(args)
         return
     run(args)
