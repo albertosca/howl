@@ -3,8 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "steam-hltb"
+name = "howl"
 version = "0.1.0"
+description = "HOWL — Hoard Optimizer, What to Launch. Ranks your Steam backlog by quality × time."
 requires-python = ">=3.11"
 dependencies = [
     "requests",
@@ -21,7 +22,7 @@ dev = [
 ]
 
 [project.scripts]
-hltb = "steam_hltb.main:main"
+howl = "steam_hltb.main:main"
 
 [tool.setuptools.packages.find]
 include = ["steam_hltb*"]

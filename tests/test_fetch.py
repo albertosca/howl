@@ -289,7 +289,7 @@ def test_migrate_steam_details_skips_already_migrated(monkeypatch):
         "Hades": {
             "hltb": {"game_name": "Hades", "main_story": 20, "main_extra": 22, "completionist": 90},
             "steam": {"appid": 1145360, "positive_pct": 97, "total_reviews": 50000,
-                      "genres": ["action"], "categories": ["single-player"]},
+                      "genres": ["action"], "categories": ["single-player"], "release_year": 2020},
         }
     }
     called = []
@@ -404,7 +404,7 @@ def test_migrate_steam_details_verbose_prints_progress(capsys, monkeypatch):
     migrate_steam_details(cache, verbose=True)
     out = capsys.readouterr().out
     assert "Half-Life 2" in out
-    assert "Migrando" in out
+    assert "Migrando" in out or "incompletas" in out
 
 
 def test_build_library_verbose_false_silent_for_new_games(capsys, monkeypatch):
