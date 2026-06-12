@@ -50,7 +50,7 @@ def test_print_table_shows_genres_by_default(capsys):
     assert "indie" not in out
 
 
-def test_print_table_shows_tags_when_flag(capsys):
+def test_print_table_shows_steam_categories_when_flag(capsys):
     games = [{
         "name": "Hades",
         "metacritic": 93,
@@ -59,13 +59,14 @@ def test_print_table_shows_tags_when_flag(capsys):
         "hours_played": 0,
         "_score": 42.1,
         "genres": ["action"],
-        "tags": ["indie", "great soundtrack"],
+        "tags": ["single-player", "full controller support", "steam achievements"],
     }]
     from main import print_table
     print_table(games, "hltb_short", show_tags=True)
     out = capsys.readouterr().out
-    assert "indie" in out
-    assert "great soundtrack" in out
+    assert "single-player" in out
+    assert "full controller support" in out
+    assert "steam achievements" not in out  # noise filtrado
 
 
 def test_parse_args_list_tags():
@@ -100,7 +101,7 @@ def test_list_available_categories(capsys):
     list_available(cache, "categories")
     out = capsys.readouterr().out
     assert "single-player" in out
-    assert "steam achievements" in out
+    assert "steam achievements" not in out  # noise, filtrado
 
 
 def test_list_available_empty_cache(capsys):
