@@ -220,8 +220,11 @@ def run(args: argparse.Namespace) -> None:
     top = rows[:args.top]
 
     total_filtered = len(rows)
+    shown = len(top)
     print(f"\n{'='*60}")
-    print(f" TOP {args.top} — sort: {args.sort}  ({len(top)} de {total_filtered} filtrados)")
+    print(f" TOP {args.top} — sort: {args.sort}  ({shown} de {total_filtered} filtrados)")
+    if shown < args.top and total_filtered < args.top:
+        print(f" ⚠  Apenas {total_filtered} jogos passaram nos filtros (pedido: {args.top})")
     print(f"{'='*60}")
     print_table(top, args.sort, show_tags=args.show_tags)
     save_results(rows, args.output)
