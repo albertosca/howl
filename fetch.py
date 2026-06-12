@@ -35,21 +35,24 @@ def fetch_hltb(name: str) -> dict | None:
     }
 
 
-def fetch_rawg(rawg_key: str, name: str) -> dict | None:
+def fetch_steam_app_details(appid: int) -> dict | None:
     resp = requests.get(
-        "https://api.rawg.io/api/games",
-        params={"key": rawg_key, "search": name, "search_precise": True, "page_size": 5},
+        "https://store.steampowered.com/api/appdetails",
+        params={"appids": appid, "cc": "US", "l": "english"},
     )
     if resp.status_code != 200:
         return None
-    results = resp.json().get("results", [])
-    if not results:
+    result = resp.json().get(str(appid), {})
+    if not result.get("success"):
         return None
-    game = results[0]
+    data = result.get("data", {})
+    mc_data = data.get("metacritic")
+    genres = [g["description"].lower() for g in data.get("genres", [])]
+    categories = [c["description"].lower() for c in data.get("categories", [])]
     return {
-        "metacritic": game.get("metacritic"),
-        "genres": [g["name"].lower() for g in game.get("genres", [])],
-        "tags": [t["name"].lower() for t in game.get("tags", [])],
+        "metacritic": mc_data["score"] if mc_data else None,
+        "genres": genres,
+        "categories": categories,
     }
 
 
@@ -113,7 +116,7 @@ def get_steam_games(api_key: str, steamid: str) -> list:
 
 
 def build_library(
-    steam_key: str, rawg_key: str, username: str, cache: dict,
+    steam_key: str, username: str, cache: dict,
     refresh: bool = False, verbose: bool = False
 ) -> tuple:
     steamid = resolve_steamid(steam_key, username)
@@ -133,16 +136,19 @@ def build_library(
             print(f"Fetching: {name}")
         hltb = fetch_hltb(name)
         if not hltb:
-            cache[name] = {"hltb": None, "rawg": None, "steam": None}
+            cache[name] = {"hltb": None, "steam": None}
             save_cache(cache)
             continue
-        rawg = fetch_rawg(rawg_key, name)
         steam_reviews = fetch_steam_reviews(appid)
-        time.sleep(0.25)
+        steam_details = fetch_steam_app_details(appid)
+        time.sleep(1.0)
         cache[name] = {
             "hltb": hltb,
-            "rawg": rawg,
-            "steam": {"appid": appid, **(steam_reviews or {})},
+            "steam": {
+                "appid": appid,
+                **(steam_reviews or {}),
+                **(steam_details or {}),
+            },
         }
         save_cache(cache)
     return cache, steam_games
