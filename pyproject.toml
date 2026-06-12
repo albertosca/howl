@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "steam-hltb"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "requests",
+    "howlongtobeatpy",
+    "beautifulsoup4",
+    "textual>=0.47.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-mock",
+]
+
+[project.scripts]
+hltb = "steam_hltb.main:main"
+
+[tool.setuptools.packages.find]
+include = ["steam_hltb*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]

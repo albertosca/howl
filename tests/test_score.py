@@ -1,6 +1,6 @@
 import pytest
 import math
-from score import (
+from steam_hltb.score import (
     score_hltb_short, score_hltb_long, score_metacritic,
     score_steam, score_composto, compute_score, SORT_OPTIONS,
 )

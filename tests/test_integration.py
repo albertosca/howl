@@ -1,8 +1,8 @@
 import json
 import os
 import pytest
-from classify import build_game_rows, apply_filters
-from score import compute_score
+from steam_hltb.classify import build_game_rows, apply_filters
+from steam_hltb.score import compute_score
 
 
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "games_cache.json")

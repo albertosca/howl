@@ -21,12 +21,12 @@ def _make_args(**kwargs):
 def _run(inputs, **args_kwargs):
     args = _make_args(**args_kwargs)
     with patch("builtins.input", side_effect=inputs + [""]*20), \
-         patch("fetch.get_api_key", return_value="fake_key"), \
-         patch("fetch.load_cache", return_value=MOCK_CACHE), \
-         patch("fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)), \
-         patch("main.save_results"), \
-         patch("steam_collections.load_collections", return_value={}):
-        from interactive import run_interactive
+         patch("steam_hltb.fetch.get_api_key", return_value="fake_key"), \
+         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE), \
+         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)), \
+         patch("steam_hltb.main.save_results"), \
+         patch("steam_hltb.steam_collections.load_collections", return_value={}):
+        from steam_hltb.interactive import run_interactive
         run_interactive(args)
 
 
@@ -43,12 +43,12 @@ def test_interactive_does_not_ask_rawg_key():
 
     args = _make_args()
     with patch("builtins.input", side_effect=mock_input), \
-         patch("fetch.get_api_key", return_value="fake"), \
-         patch("fetch.load_cache", return_value=MOCK_CACHE), \
-         patch("fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)), \
-         patch("main.save_results"), \
-         patch("steam_collections.load_collections", return_value={}):
-        from interactive import run_interactive
+         patch("steam_hltb.fetch.get_api_key", return_value="fake"), \
+         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE), \
+         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)), \
+         patch("steam_hltb.main.save_results"), \
+         patch("steam_hltb.steam_collections.load_collections", return_value={}):
+        from steam_hltb.interactive import run_interactive
         run_interactive(args)
 
     assert not any("rawg" in a.lower() for a in asked)

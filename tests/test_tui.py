@@ -48,7 +48,7 @@ INITIAL_FILTERS = {
 
 
 async def test_tui_app_starts_and_renders_table():
-    from tui import SteamHLTBApp
+    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import DataTable
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
@@ -57,7 +57,7 @@ async def test_tui_app_starts_and_renders_table():
 
 
 async def test_tui_filter_panel_hidden_by_default():
-    from tui import SteamHLTBApp, FilterPanel
+    from steam_hltb.tui import SteamHLTBApp, FilterPanel
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         panel = app.query_one(FilterPanel)
@@ -65,7 +65,7 @@ async def test_tui_filter_panel_hidden_by_default():
 
 
 async def test_tui_filter_panel_toggles_with_f():
-    from tui import SteamHLTBApp, FilterPanel
+    from steam_hltb.tui import SteamHLTBApp, FilterPanel
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         panel = app.query_one(FilterPanel)

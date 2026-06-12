@@ -1,5 +1,5 @@
 import pytest
-from classify import (
+from steam_hltb.classify import (
     build_game_rows, filter_genre, filter_progress,
     filter_category, filter_time, apply_filters,
     filter_name, _fuzzy,

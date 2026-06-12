@@ -4,8 +4,8 @@ from textual.containers import Horizontal, Vertical
 from textual.binding import Binding
 from textual.reactive import reactive
 
-from classify import apply_filters, filter_name
-from score import compute_score, SORT_OPTIONS
+from .classify import apply_filters, filter_name
+from .score import compute_score, SORT_OPTIONS
 
 
 class FilterPanel(Vertical):
@@ -169,11 +169,11 @@ class SteamHLTBApp(App):
         rows = filter_name(rows, query=self.filters.get("name_query"))
         vdf_path = self.filters.get("vdf_path", "sharedconfig.vdf")
         if not self.filters.get("show_finished", False):
-            from steam_collections import exclude_finished
+            from .steam_collections import exclude_finished
             rows = exclude_finished(rows, vdf_path)
         if self.filters.get("collection"):
             try:
-                from steam_collections import load_collections, filter_collection
+                from .steam_collections import load_collections, filter_collection
                 collection_map = load_collections(vdf_path)
                 rows = filter_collection(rows, self.filters["collection"], collection_map)
             except Exception:
@@ -317,7 +317,7 @@ class SteamHLTBApp(App):
         self.show_tags = not self.show_tags
 
     def action_save(self) -> None:
-        from main import save_results
+        from .main import save_results
         save_results(self._games, "how_long_to_beat_output")
         self.notify("Salvo em how_long_to_beat_output.csv e .md")
 
