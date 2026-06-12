@@ -2,6 +2,7 @@ import pytest
 from classify import (
     build_game_rows, filter_genre, filter_progress,
     filter_category, filter_time, apply_filters,
+    filter_name, _fuzzy,
 )
 
 
@@ -140,6 +141,47 @@ def test_filter_time_min_hours():
     games = [{"main_extra": 5}, {"main_extra": 20}]
     result = filter_time(games, min_hours=10)
     assert len(result) == 1
+
+
+# --- fuzzy name filter ---
+
+def test_fuzzy_subsequence_match():
+    assert _fuzzy("hl2", "Half-Life 2")
+    assert _fuzzy("por", "Portal")
+    assert _fuzzy("dota", "Dota 2")
+    assert _fuzzy("halflife", "Half-Life 2")
+
+
+def test_fuzzy_case_insensitive():
+    assert _fuzzy("PORTAL", "Portal")
+    assert _fuzzy("portal", "Portal")
+
+
+def test_fuzzy_no_match():
+    assert not _fuzzy("xyz", "Portal")
+    assert not _fuzzy("halflife3", "Half-Life 2")
+
+
+def test_filter_name_empty_query_returns_all():
+    games = [{"name": "Portal"}, {"name": "Half-Life 2"}]
+    assert filter_name(games) == games
+    assert filter_name(games, query="") == games
+
+
+def test_filter_name_fuzzy():
+    games = [{"name": "Portal"}, {"name": "Half-Life 2"}, {"name": "Dota 2"}]
+    result = filter_name(games, query="hl2")
+    assert len(result) == 1
+    assert result[0]["name"] == "Half-Life 2"
+
+
+def test_filter_name_multiple_matches():
+    games = [{"name": "Portal"}, {"name": "Portal 2"}, {"name": "Half-Life"}]
+    result = filter_name(games, query="por")
+    names = [g["name"] for g in result]
+    assert "Portal" in names
+    assert "Portal 2" in names
+    assert "Half-Life" not in names
 
 
 # --- apply_filters combines all ---

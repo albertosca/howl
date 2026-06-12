@@ -97,6 +97,25 @@ def filter_time(games: list, min_hours: float = None, max_hours: float = None) -
     return result
 
 
+def _fuzzy(query: str, name: str) -> bool:
+    """Subsequência fzf-style: cada char do query deve aparecer em ordem em name."""
+    q = query.lower()
+    n = name.lower()
+    qi = 0
+    for c in n:
+        if c == q[qi]:
+            qi += 1
+            if qi == len(q):
+                return True
+    return False
+
+
+def filter_name(games: list, query: str = None) -> list:
+    if not query:
+        return games
+    return [g for g in games if _fuzzy(query, g["name"])]
+
+
 def apply_filters(
     games: list,
     genre: list = None,
@@ -106,9 +125,11 @@ def apply_filters(
     category: str = "all",
     min_hours: float = None,
     max_hours: float = None,
+    name_query: str = None,
 ) -> list:
     games = filter_genre(games, must_have=genre, any_of=genre_any, exclude=exclude_genre)
     games = filter_progress(games, mode=progress)
     games = filter_category(games, category=category)
     games = filter_time(games, min_hours=min_hours, max_hours=max_hours)
+    games = filter_name(games, query=name_query)
     return games

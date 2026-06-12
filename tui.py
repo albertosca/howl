@@ -4,7 +4,7 @@ from textual.containers import Horizontal, Vertical
 from textual.binding import Binding
 from textual.reactive import reactive
 
-from classify import apply_filters
+from classify import apply_filters, filter_name
 from score import compute_score, SORT_OPTIONS
 
 
@@ -29,6 +29,8 @@ class FilterPanel(Vertical):
 
     def compose(self) -> ComposeResult:
         yield Label("── Filtros ──────────────")
+        yield Label("Nome (fuzzy)")
+        yield Input(placeholder="ex: hl2, por", id="name-input")
         yield Label("Sort")
         yield Select(
             [(opt, opt) for opt in SORT_OPTIONS],
@@ -102,7 +104,7 @@ class SteamHLTBApp(App):
         Binding("s", "save", "Salvar"),
     ]
 
-    show_genres: reactive[bool] = reactive(False)
+    show_genres: reactive[bool] = reactive(True)
     show_tags: reactive[bool] = reactive(False)
 
     def __init__(self, all_games: list, initial_filters: dict | None = None):
@@ -122,6 +124,7 @@ class SteamHLTBApp(App):
         self.filters.setdefault("vdf_path", "sharedconfig.vdf")
         self.filters.setdefault("show_finished", False)
         self.filters.setdefault("collection", None)
+        self.filters.setdefault("name_query", None)
         self._games: list = []
 
     def compose(self) -> ComposeResult:
@@ -163,6 +166,7 @@ class SteamHLTBApp(App):
             min_hours=self.filters["min_hours"],
             max_hours=self.filters["max_hours"],
         )
+        rows = filter_name(rows, query=self.filters.get("name_query"))
         vdf_path = self.filters.get("vdf_path", "sharedconfig.vdf")
         if not self.filters.get("show_finished", False):
             from steam_collections import exclude_finished
@@ -232,6 +236,11 @@ class SteamHLTBApp(App):
             self.query_one("#collection-select", Select).value = col
 
     def _read_filters_from_panel(self) -> None:
+        try:
+            raw = self.query_one("#name-input", Input).value.strip()
+            self.filters["name_query"] = raw if raw else None
+        except Exception:
+            pass
         try:
             raw = self.query_one("#top-input", Input).value.strip()
             self.filters["top"] = int(raw) if raw.isdigit() else self.filters["top"]
