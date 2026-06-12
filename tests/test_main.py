@@ -110,6 +110,30 @@ def test_list_available_empty_cache(capsys):
     assert "Tente --refresh" in out
 
 
+def test_parse_args_list_collections():
+    args = _parse(["--list-collections"])
+    assert args.list_collections is True
+
+
+def test_list_collections_cmd_prints_names(capsys):
+    from main import list_collections_cmd
+    collection_map = {"220": ["Terminados"], "620": ["Jogando", "Terminados"], "570": ["Multiplayer"]}
+    list_collections_cmd(collection_map)
+    out = capsys.readouterr().out
+    assert "Terminados" in out
+    assert "Jogando" in out
+    assert "Multiplayer" in out
+
+
+def test_list_collections_cmd_shows_count(capsys):
+    from main import list_collections_cmd
+    collection_map = {"220": ["Terminados"], "620": ["Terminados"], "570": ["Jogando"]}
+    list_collections_cmd(collection_map)
+    out = capsys.readouterr().out
+    assert "2" in out
+    assert "1" in out
+
+
 def test_print_table_caps_genres_at_four(capsys):
     games = [{
         "name": "Game",
