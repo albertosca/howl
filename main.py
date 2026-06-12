@@ -63,6 +63,10 @@ Formatos de entrada:
                    help="Filtrar por coleção Steam (ex: 'Terminados', 'Jogando')")
     p.add_argument("--vdf-path", default="sharedconfig.vdf",
                    help="Caminho para o sharedconfig.vdf do Steam (padrão: %(default)s)")
+    p.add_argument("--list-tags", action="store_true",
+                   help="Lista todas as tags/categorias disponíveis no cache e sai")
+    p.add_argument("--list-genres", action="store_true",
+                   help="Lista todos os gêneros disponíveis no cache e sai")
     p.add_argument("--refresh", action="store_true",
                    help="Ignora o cache e rebusca todos os jogos")
     p.add_argument("-v", "--verbose", action="store_true",
@@ -122,6 +126,25 @@ def print_table(games: list, sort_by: str, show_tags: bool = False) -> None:
                 parts.append("tags: " + ", ".join(tags[:4]))
         if parts:
             print(f"     ↳ {' · '.join(parts)}")
+
+
+def list_available(cache: dict, field: str) -> None:
+    from collections import Counter
+    counter = Counter()
+    for entry in cache.values():
+        steam = entry.get("steam") or {}
+        rawg = entry.get("rawg") or {}
+        values = steam.get(field) or rawg.get(field) or rawg.get("tags" if field == "categories" else field, [])
+        for v in values:
+            counter[v] += 1
+    if not counter:
+        print(f"Nenhum(a) {field} encontrado(a) no cache. Tente --refresh.")
+        return
+    print(f"\n{'─'*40}")
+    print(f" {field.upper()} disponíveis ({len(counter)} únicos)")
+    print(f"{'─'*40}")
+    for value, count in counter.most_common():
+        print(f"  {count:>4}x  {value}")
 
 
 def save_results(games: list, output_base: str) -> None:
@@ -186,6 +209,13 @@ def run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = parse_args()
+    if args.list_tags or args.list_genres:
+        cache = load_cache()
+        if args.list_genres:
+            list_available(cache, "genres")
+        if args.list_tags:
+            list_available(cache, "categories")
+        return
     if args.tui:
         from tui import run_tui
         steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
