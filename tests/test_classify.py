@@ -2,7 +2,7 @@ import pytest
 from steam_hltb.classify import (
     build_game_rows, filter_genre, filter_progress,
     filter_category, filter_time, apply_filters,
-    filter_name, _fuzzy,
+    filter_name, _fuzzy, filter_era, _era_label, ERA_LABELS,
 )
 
 
@@ -191,3 +191,134 @@ def test_apply_filters_combines(sample_cache, sample_steam_games):
     result = apply_filters(rows, genre=["action"], progress="not_started")
     assert all(r["hours_played"] == 0.0 for r in result)
     assert all("action" in r["genres"] for r in result)
+
+
+# --- filter_era / _era_label ---
+
+def test_era_label_boundaries():
+    assert _era_label(2004) == "pre-2005"
+    assert _era_label(2005) == "2005-2010"
+    assert _era_label(2009) == "2005-2010"
+    assert _era_label(2010) == "2010-2015"
+    assert _era_label(2014) == "2010-2015"
+    assert _era_label(2015) == "2015-2020"
+    assert _era_label(2019) == "2015-2020"
+    assert _era_label(2020) == "2020+"
+    assert _era_label(2025) == "2020+"
+    assert _era_label(None) == "unknown"
+
+
+def test_era_labels_constant_covers_all():
+    # garantia de que ERA_LABELS cobre todos os retornos possíveis de _era_label
+    possible = {_era_label(y) for y in [2000, 2005, 2010, 2015, 2020, None]}
+    assert possible.issubset(set(ERA_LABELS))
+
+
+def test_filter_era_none_returns_all():
+    games = [{"release_year": 2003}, {"release_year": 2012}, {"release_year": None}]
+    assert filter_era(games, eras=None) == games
+
+
+def test_filter_era_single_era():
+    games = [
+        {"release_year": 2003},   # pre-2005
+        {"release_year": 2012},   # 2010-2015
+        {"release_year": 2022},   # 2020+
+    ]
+    result = filter_era(games, eras=["pre-2005"])
+    assert len(result) == 1
+    assert result[0]["release_year"] == 2003
+
+
+def test_filter_era_multiple_eras():
+    games = [
+        {"release_year": 2003},
+        {"release_year": 2012},
+        {"release_year": 2022},
+        {"release_year": None},
+    ]
+    result = filter_era(games, eras=["pre-2005", "2020+"])
+    assert len(result) == 2
+    years = {g["release_year"] for g in result}
+    assert years == {2003, 2022}
+
+
+def test_filter_era_unknown():
+    games = [{"release_year": None}, {"release_year": 2015}]
+    result = filter_era(games, eras=["unknown"])
+    assert len(result) == 1
+    assert result[0]["release_year"] is None
+
+
+def test_filter_era_empty_list_returns_nothing():
+    games = [{"release_year": 2010}, {"release_year": 2020}]
+    assert filter_era(games, eras=[]) == []
+
+
+# --- release_year in build_game_rows ---
+
+def test_build_game_rows_has_release_year_field(sample_cache, sample_steam_games):
+    rows = build_game_rows(sample_cache, sample_steam_games)
+    hl2 = next(r for r in rows if r["name"] == "Half-Life 2")
+    assert "release_year" in hl2
+    assert hl2["release_year"] is None  # sample_cache não tem release_year em steam
+
+
+def test_apply_filters_with_eras(sample_cache, sample_steam_games):
+    rows = build_game_rows(sample_cache, sample_steam_games)
+    # todos têm release_year=None → era 'unknown'
+    result = apply_filters(rows, eras=["unknown"])
+    assert len(result) == len(rows)  # todos passam (todos são 'unknown')
+    result_none = apply_filters(rows, eras=["pre-2005"])
+    assert len(result_none) == 0  # nenhum tem ano pré-2005
+
+
+def test_build_game_rows_picks_up_release_year_from_steam():
+    """Quando steam já tem release_year, deve aparecer na row."""
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "steam": {
+                "appid": 220,
+                "positive_pct": 97,
+                "total_reviews": 158000,
+                "genres": ["action", "shooter"],
+                "categories": ["single-player"],
+                "metacritic": 96,
+                "release_year": 2004,
+            },
+        }
+    }
+    steam_games = [{"name": "Half-Life 2", "appid": 220, "hours_played": 0.0}]
+    rows = build_game_rows(cache, steam_games)
+    assert rows[0]["release_year"] == 2004
+
+
+def test_filter_time_both_bounds():
+    games = [{"main_extra": 5}, {"main_extra": 10}, {"main_extra": 20}, {"main_extra": 40}]
+    result = filter_time(games, min_hours=8, max_hours=25)
+    assert len(result) == 2
+    hours = [g["main_extra"] for g in result]
+    assert 10 in hours
+    assert 20 in hours
+
+
+def test_apply_filters_era_and_genre_combined():
+    """Filtros de era e genre devem ser aplicados juntos (AND)."""
+    games = [
+        {"name": "A", "genres": ["action"], "tags": [], "hours_played": 0, "main_extra": 10, "category": "singleplayer", "release_year": 2012},
+        {"name": "B", "genres": ["rpg"],    "tags": [], "hours_played": 0, "main_extra": 10, "category": "singleplayer", "release_year": 2012},
+        {"name": "C", "genres": ["action"], "tags": [], "hours_played": 0, "main_extra": 10, "category": "singleplayer", "release_year": 2021},
+    ]
+    result = apply_filters(games, genre=["action"], eras=["2010-2015"], progress="all")
+    assert len(result) == 1
+    assert result[0]["name"] == "A"
+
+
+def test_filter_category_coop_campaign_kept_under_singleplayer():
+    """coop_campaign aparece no filtro 'all' mas não no 'singleplayer'."""
+    games = [{"category": "singleplayer"}, {"category": "coop_campaign"}]
+    # all inclui ambos (exclui só multiplayer)
+    assert len(filter_category(games, category="all")) == 2
+    # singleplayer exclui coop_campaign
+    assert len(filter_category(games, category="singleplayer")) == 1

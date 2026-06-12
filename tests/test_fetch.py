@@ -120,7 +120,43 @@ def test_fetch_steam_app_details_returns_metacritic_genres_categories():
             "metacritic": 96,
             "genres": ["action"],
             "categories": ["single-player", "steam achievements"],
+            "release_year": None,
         }
+
+
+def test_fetch_steam_app_details_extracts_release_year():
+    with patch("steam_hltb.fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "220": {
+                "success": True,
+                "data": {
+                    "release_date": {"date": "16 Nov, 2004"},
+                    "genres": [],
+                    "categories": [],
+                },
+            }
+        }
+        from steam_hltb import fetch
+        result = fetch.fetch_steam_app_details(220)
+        assert result["release_year"] == 2004
+
+
+def test_fetch_steam_app_details_release_year_none_when_missing():
+    with patch("steam_hltb.fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "220": {
+                "success": True,
+                "data": {
+                    "genres": [],
+                    "categories": [],
+                },
+            }
+        }
+        from steam_hltb import fetch
+        result = fetch.fetch_steam_app_details(220)
+        assert result["release_year"] is None
 
 
 def test_fetch_steam_reviews_returns_none_on_non_200():
@@ -280,6 +316,95 @@ def test_migrate_steam_details_skips_no_appid(monkeypatch):
     migrate_steam_details(cache, verbose=False)
     assert called == []
     assert "genres" not in cache["GameNoAppid"]["steam"]
+
+
+def test_fetch_steam_app_details_us_date_format():
+    """Formato "Nov 16, 2004" também deve extrair o ano."""
+    with patch("steam_hltb.fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "220": {
+                "success": True,
+                "data": {
+                    "release_date": {"date": "Nov 16, 2004"},
+                    "genres": [],
+                    "categories": [],
+                },
+            }
+        }
+        from steam_hltb import fetch
+        result = fetch.fetch_steam_app_details(220)
+        assert result["release_year"] == 2004
+
+
+def test_fetch_steam_app_details_invalid_date_returns_none():
+    with patch("steam_hltb.fetch.requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "220": {
+                "success": True,
+                "data": {
+                    "release_date": {"date": "Coming Soon"},
+                    "genres": [],
+                    "categories": [],
+                },
+            }
+        }
+        from steam_hltb import fetch
+        result = fetch.fetch_steam_app_details(220)
+        assert result["release_year"] is None
+
+
+def test_resolve_steamid_returns_steamid_on_success():
+    with patch("steam_hltb.fetch.requests.get") as mock_get:
+        mock_get.return_value.raise_for_status = MagicMock()
+        mock_get.return_value.json.return_value = {
+            "response": {"success": 1, "steamid": "76561198012345678"}
+        }
+        from steam_hltb import fetch
+        result = fetch.resolve_steamid("KEY", "gabelogannewell")
+        assert result == "76561198012345678"
+
+
+def test_build_library_refresh_re_fetches_cached_games(capsys, monkeypatch):
+    """Com refresh=True, games já no cache devem ser rebuscados."""
+    monkeypatch.setattr("steam_hltb.fetch.resolve_steamid", lambda key, user: "76561198000000")
+    monkeypatch.setattr("steam_hltb.fetch.get_steam_games", lambda key, sid: [
+        {"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}
+    ])
+    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
+    fetch_calls = []
+    monkeypatch.setattr("steam_hltb.fetch.fetch_hltb", lambda name: fetch_calls.append(name) or None)
+
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "steam": {"appid": 220},
+        }
+    }
+
+    from steam_hltb import fetch
+    fetch.build_library("key", "user", cache, refresh=True, verbose=False)
+    assert "Half-Life 2" in fetch_calls  # foi rebuscado apesar de estar no cache
+
+
+def test_migrate_steam_details_verbose_prints_progress(capsys, monkeypatch):
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "steam": {"appid": 220, "positive_pct": 98, "total_reviews": 100000},
+        }
+    }
+    monkeypatch.setattr("steam_hltb.fetch.fetch_steam_app_details", lambda appid: {
+        "metacritic": 96, "genres": ["action"], "categories": ["single-player"], "release_year": 2004,
+    })
+    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.fetch.time.sleep", lambda s: None)
+    from steam_hltb.fetch import migrate_steam_details
+    migrate_steam_details(cache, verbose=True)
+    out = capsys.readouterr().out
+    assert "Half-Life 2" in out
+    assert "Migrando" in out
 
 
 def test_build_library_verbose_false_silent_for_new_games(capsys, monkeypatch):
