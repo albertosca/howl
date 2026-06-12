@@ -37,7 +37,7 @@ def test_filter_and_score_pipeline(real_cache):
     rows = build_game_rows(real_cache, steam_games)
     filtered = apply_filters(rows, progress="all", category="all")
     for g in filtered:
-        g["_score"] = compute_score(g, "hltb_short")
+        g["_score"] = compute_score(g, "shortest")
     filtered.sort(key=lambda g: g["_score"], reverse=True)
     assert len(filtered) > 0
     scores = [g["_score"] for g in filtered]

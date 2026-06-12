@@ -49,6 +49,7 @@ def build_game_rows(cache: dict, steam_games: list) -> list:
             "main_story": hltb["main_story"],
             "main_extra": hltb["main_extra"],
             "completionist": hltb["completionist"],
+            "release_year": steam.get("release_year") if steam else None,
         })
     return rows
 
@@ -97,6 +98,31 @@ def filter_time(games: list, min_hours: float = None, max_hours: float = None) -
     return result
 
 
+ERA_LABELS = ["pre-2005", "2005-2010", "2010-2015", "2015-2020", "2020+", "unknown"]
+
+
+def _era_label(year: int | None) -> str:
+    if year is None:
+        return "unknown"
+    if year < 2005:
+        return "pre-2005"
+    if year < 2010:
+        return "2005-2010"
+    if year < 2015:
+        return "2010-2015"
+    if year < 2020:
+        return "2015-2020"
+    return "2020+"
+
+
+def filter_era(games: list, eras: list | None = None) -> list:
+    """Mantém apenas jogos cujo era_label está em `eras`. None = sem filtro."""
+    if eras is None:
+        return games
+    era_set = set(eras)
+    return [g for g in games if _era_label(g.get("release_year")) in era_set]
+
+
 def _fuzzy(query: str, name: str) -> bool:
     """Subsequência fzf-style: cada char do query deve aparecer em ordem em name."""
     q = query.lower()
@@ -126,10 +152,12 @@ def apply_filters(
     min_hours: float = None,
     max_hours: float = None,
     name_query: str = None,
+    eras: list = None,
 ) -> list:
     games = filter_genre(games, must_have=genre, any_of=genre_any, exclude=exclude_genre)
     games = filter_progress(games, mode=progress)
     games = filter_category(games, category=category)
     games = filter_time(games, min_hours=min_hours, max_hours=max_hours)
     games = filter_name(games, query=name_query)
+    games = filter_era(games, eras=eras)
     return games

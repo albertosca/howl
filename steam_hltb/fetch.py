@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 
 import requests
@@ -49,10 +50,14 @@ def fetch_steam_app_details(appid: int) -> dict | None:
     mc_data = data.get("metacritic")
     genres = [g["description"].lower() for g in data.get("genres", [])]
     categories = [c["description"].lower() for c in data.get("categories", [])]
+    release_date_str = data.get("release_date", {}).get("date", "")
+    year_match = re.search(r'\b(19|20)\d{2}\b', release_date_str)
+    release_year = int(year_match.group()) if year_match else None
     return {
         "metacritic": mc_data["score"] if mc_data else None,
         "genres": genres,
         "categories": categories,
+        "release_year": release_year,
     }
 
 

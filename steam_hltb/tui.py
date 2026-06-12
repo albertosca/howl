@@ -1,11 +1,16 @@
 from textual.app import App, ComposeResult
-from textual.widgets import DataTable, Input, Select, Footer, Header, Label, Static
+from textual.widgets import DataTable, Input, Select, Footer, Header, Label, Static, Checkbox
 from textual.containers import Horizontal, Vertical
 from textual.binding import Binding
 from textual.reactive import reactive
 
-from .classify import apply_filters, filter_name
+from .classify import apply_filters, filter_name, ERA_LABELS
 from .score import compute_score, SORT_OPTIONS
+
+
+def _era_id(era: str) -> str:
+    """Sanitiza era label para uso como ID Textual (sem +, sem espaços)."""
+    return "era-" + era.replace("+", "plus").replace(" ", "_")
 
 
 class FilterPanel(Vertical):
@@ -25,6 +30,9 @@ class FilterPanel(Vertical):
     FilterPanel Input {
         margin-bottom: 0;
     }
+    FilterPanel Checkbox {
+        margin: 0;
+    }
     """
 
     def compose(self) -> ComposeResult:
@@ -35,7 +43,7 @@ class FilterPanel(Vertical):
         yield Select(
             [(opt, opt) for opt in SORT_OPTIONS],
             id="sort-select",
-            value="hltb_short",
+            value="shortest",
         )
         yield Label("Top N")
         yield Input(value="10", id="top-input")
@@ -74,6 +82,9 @@ class FilterPanel(Vertical):
             id="collection-select",
             value="todas",
         )
+        yield Label("Era de lançamento")
+        for era in ERA_LABELS:
+            yield Checkbox(era, value=True, id=_era_id(era))
 
 
 class SteamHLTBApp(App):
@@ -118,13 +129,14 @@ class SteamHLTBApp(App):
         self.filters.setdefault("category", "all")
         self.filters.setdefault("min_hours", None)
         self.filters.setdefault("max_hours", None)
-        self.filters.setdefault("sort", "hltb_short")
+        self.filters.setdefault("sort", "shortest")
         self.filters.setdefault("top", 10)
         self.filters.setdefault("weights", {"mc": 0.5, "steam": 0.5})
         self.filters.setdefault("vdf_path", "sharedconfig.vdf")
         self.filters.setdefault("show_finished", False)
         self.filters.setdefault("collection", None)
         self.filters.setdefault("name_query", None)
+        self.filters.setdefault("eras", None)  # None = todas as eras
         self._games: list = []
 
     def compose(self) -> ComposeResult:
@@ -145,6 +157,7 @@ class SteamHLTBApp(App):
         table.clear(columns=True)
         table.add_column("#", width=4)
         table.add_column("Nome", width=38)
+        table.add_column("Ano", width=5)
         table.add_column("MC", width=5)
         table.add_column("Steam", width=7)
         table.add_column("HLTB", width=6)
@@ -165,6 +178,7 @@ class SteamHLTBApp(App):
             category=self.filters["category"],
             min_hours=self.filters["min_hours"],
             max_hours=self.filters["max_hours"],
+            eras=self.filters.get("eras"),
         )
         rows = filter_name(rows, query=self.filters.get("name_query"))
         vdf_path = self.filters.get("vdf_path", "sharedconfig.vdf")
@@ -189,11 +203,13 @@ class SteamHLTBApp(App):
         table = self.query_one(DataTable)
         table.clear()
         for i, g in enumerate(self._games, 1):
+            ano = str(g.get("release_year")) if g.get("release_year") else "-"
             mc = str(g["metacritic"]) if g["metacritic"] else "-"
             steam = f"{g['steam_pct']}%" if g["steam_pct"] else "-"
             row_data = [
                 str(i),
                 g["name"],
+                ano,
                 mc,
                 steam,
                 f"{g['main_extra']}h",
@@ -234,6 +250,15 @@ class SteamHLTBApp(App):
         col = self.filters.get("collection") or "todas"
         if col in ("todas", "Jogando", "Multiplayer"):
             self.query_one("#collection-select", Select).value = col
+        # era checkboxes: se eras != None, desmarcar as que não estão na lista
+        eras = self.filters.get("eras")
+        if eras is not None:
+            for era in ERA_LABELS:
+                try:
+                    cb = self.query_one(f"#{_era_id(era)}", Checkbox)
+                    cb.value = era in eras
+                except Exception:
+                    pass
 
     def _read_filters_from_panel(self) -> None:
         try:
@@ -289,12 +314,27 @@ class SteamHLTBApp(App):
             self.filters["collection"] = None if val == "todas" else val
         except Exception:
             pass
+        # era checkboxes
+        try:
+            checked = []
+            for era in ERA_LABELS:
+                cb = self.query_one(f"#era-{era}", Checkbox)
+                if cb.value:
+                    checked.append(era)
+            # None = todas marcadas (sem filtro); lista = subconjunto
+            self.filters["eras"] = None if len(checked) == len(ERA_LABELS) else (checked or None)
+        except Exception:
+            pass
 
     def on_input_changed(self, _: Input.Changed) -> None:
         self._read_filters_from_panel()
         self._rebuild_table()
 
     def on_select_changed(self, _: Select.Changed) -> None:
+        self._read_filters_from_panel()
+        self._rebuild_table()
+
+    def on_checkbox_changed(self, _: Checkbox.Changed) -> None:
         self._read_filters_from_panel()
         self._rebuild_table()
 
