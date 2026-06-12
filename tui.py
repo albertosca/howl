@@ -62,6 +62,16 @@ class FilterPanel(Vertical):
         yield Input(placeholder="0", id="min-hours-input")
         yield Label("Max horas")
         yield Input(placeholder="100", id="max-hours-input")
+        yield Label("Coleção")
+        yield Select(
+            [
+                ("todas", "todas"),
+                ("Jogando", "Jogando"),
+                ("Multiplayer", "Multiplayer"),
+            ],
+            id="collection-select",
+            value="todas",
+        )
 
 
 class SteamHLTBApp(App):
@@ -153,9 +163,17 @@ class SteamHLTBApp(App):
             min_hours=self.filters["min_hours"],
             max_hours=self.filters["max_hours"],
         )
+        vdf_path = self.filters.get("vdf_path", "sharedconfig.vdf")
         if not self.filters.get("show_finished", False):
             from steam_collections import exclude_finished
-            rows = exclude_finished(rows, self.filters.get("vdf_path", "sharedconfig.vdf"))
+            rows = exclude_finished(rows, vdf_path)
+        if self.filters.get("collection"):
+            try:
+                from steam_collections import load_collections, filter_collection
+                collection_map = load_collections(vdf_path)
+                rows = filter_collection(rows, self.filters["collection"], collection_map)
+            except Exception:
+                pass
         sort_by = self.filters["sort"]
         weights = self.filters["weights"]
         for g in rows:
@@ -209,6 +227,9 @@ class SteamHLTBApp(App):
             self.query_one("#min-hours-input", Input).value = str(self.filters["min_hours"])
         if self.filters["max_hours"] is not None:
             self.query_one("#max-hours-input", Input).value = str(self.filters["max_hours"])
+        col = self.filters.get("collection") or "todas"
+        if col in ("todas", "Jogando", "Multiplayer"):
+            self.query_one("#collection-select", Select).value = col
 
     def _read_filters_from_panel(self) -> None:
         try:
@@ -252,6 +273,11 @@ class SteamHLTBApp(App):
         try:
             raw = self.query_one("#max-hours-input", Input).value.strip()
             self.filters["max_hours"] = float(raw) if raw else None
+        except Exception:
+            pass
+        try:
+            val = self.query_one("#collection-select", Select).value
+            self.filters["collection"] = None if val == "todas" else val
         except Exception:
             pass
 
