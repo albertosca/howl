@@ -1,0 +1,18 @@
+# cache e outputs gerados
+games_cache.json
+how_long_to_beat_output.csv
+how_long_to_beat_output.md
+sharedconfig.vdf
+
+# python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# env
+.env
