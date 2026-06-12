@@ -1,4 +1,3 @@
-import sys
 from score import SORT_OPTIONS
 from classify import apply_filters
 from score import compute_score
@@ -50,15 +49,16 @@ def run_interactive(base_args) -> None:
     top_raw = _ask("Quantos jogos mostrar", default="10")
     top = int(top_raw) if top_raw.isdigit() else 10
 
+    collection_raw = _ask("Filtrar por coleção (vazio=todas, ex: Jogando)", default="")
+
     output = _ask("Nome base do arquivo de saída", default="how_long_to_beat_output")
 
     from fetch import get_api_key, load_cache, build_library
     from classify import build_game_rows
 
     steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
-    rawg_key  = get_api_key("RAWG_API_KEY",  "RAWG API key")
     cache = load_cache()
-    cache, steam_games = build_library(steam_key, rawg_key, base_args.username, cache)
+    cache, steam_games = build_library(steam_key, base_args.username, cache)
     rows = build_game_rows(cache, steam_games)
 
     rows = apply_filters(
@@ -72,6 +72,15 @@ def run_interactive(base_args) -> None:
         max_hours=float(max_hours_raw) if max_hours_raw else None,
     )
 
+    vdf_path = getattr(base_args, "vdf_path", "sharedconfig.vdf")
+    from steam_collections import exclude_finished
+    rows = exclude_finished(rows, vdf_path)
+
+    if collection_raw:
+        from steam_collections import load_collections, filter_collection
+        collection_map = load_collections(vdf_path)
+        rows = filter_collection(rows, collection_raw, collection_map)
+
     weights = _weights(base_args)
     for g in rows:
         g["_score"] = compute_score(g, sort_by, weights)
@@ -80,7 +89,7 @@ def run_interactive(base_args) -> None:
     top_games = rows[:top]
 
     print(f"\n{'='*60}")
-    print(f" TOP {top} — sort: {sort_by}")
+    print(f" TOP {top} — sort: {sort_by}  ({len(top_games)} de {len(rows)} filtrados)")
     print(f"{'='*60}")
     print_table(top_games, sort_by)
     save_results(rows, output)
