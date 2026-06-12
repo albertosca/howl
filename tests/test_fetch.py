@@ -35,6 +35,17 @@ def test_fetch_hltb_returns_none_when_low_similarity():
         assert fetch.fetch_hltb("SomeGame") is None
 
 
+def test_fetch_hltb_returns_none_at_boundary_similarity():
+    """similarity < 0.6 deve rejeitar — garante que FEZTAL (0.55) é rejeitado."""
+    with patch("fetch.HowLongToBeat") as MockHLTB:
+        r = MagicMock()
+        r.similarity = 0.55
+        r.game_name = "FEZTAL"
+        MockHLTB.return_value.search.return_value = [r]
+        import fetch
+        assert fetch.fetch_hltb("FEZ") is None
+
+
 def test_fetch_hltb_returns_data_when_good_match():
     with patch("fetch.HowLongToBeat") as MockHLTB:
         r = MagicMock()

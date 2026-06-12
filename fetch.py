@@ -25,7 +25,7 @@ def fetch_hltb(name: str) -> dict | None:
     if not results:
         return None
     best = max(results, key=lambda e: e.similarity)
-    if best.similarity < 0.5:
+    if best.similarity < 0.6:
         return None
     return {
         "game_name": best.game_name,
