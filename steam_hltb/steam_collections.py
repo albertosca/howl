@@ -1,7 +1,7 @@
 import os
 import re
 
-DEFAULT_VDF_PATH = "sharedconfig.vdf"
+DEFAULT_VDF_PATH = os.environ.get("STEAM_VDF_PATH", "sharedconfig.vdf")
 FINISHED_COLLECTION = "Terminados"
 
 

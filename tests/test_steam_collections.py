@@ -121,3 +121,14 @@ def test_exclude_finished_no_op_when_no_terminados(vdf_file):
     games = [{"appid": 570, "name": "Dota 2"}]  # sem tag
     result = exclude_finished(games, vdf_file)
     assert result == games
+
+
+def test_load_collections_uses_steam_vdf_path_env(monkeypatch, tmp_path):
+    vdf = tmp_path / "sharedconfig.vdf"
+    vdf.write_text('"UserRoamingConfigStore"\n{\n"Software"\n{\n}\n}\n')
+    monkeypatch.setenv("STEAM_VDF_PATH", str(vdf))
+    import importlib
+    import steam_hltb.steam_collections as sc
+    importlib.reload(sc)
+    assert sc.DEFAULT_VDF_PATH == str(vdf)
+    importlib.reload(sc)  # restaura
