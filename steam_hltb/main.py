@@ -101,6 +101,8 @@ Formatos de entrada:
                    help="Modo interativo via prompts")
     p.add_argument("--tui", action="store_true",
                    help="Abre interface visual interativa (htop-style)")
+    p.add_argument("--setup", action="store_true",
+                   help="Configura variáveis de ambiente interativamente")
     return p.parse_args()
 
 
@@ -277,6 +279,11 @@ def main() -> None:
     from dotenv import load_dotenv
     load_dotenv()
     args = parse_args()
+
+    if args.setup:
+        from .setup import run_setup
+        run_setup()
+        return
 
     if args.migrate_cache:
         from .fetch import migrate_steam_details

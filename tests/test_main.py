@@ -310,3 +310,13 @@ def test_print_table_caps_genres_at_four(capsys):
     after_arrow = out.split("↳")[1] if "↳" in out else ""
     assert "e" not in after_arrow
     assert "f" not in after_arrow
+
+
+def test_setup_flag_invokes_run_setup(monkeypatch):
+    called = []
+    monkeypatch.setattr("steam_hltb.setup.run_setup", lambda: called.append(True))
+    monkeypatch.setattr("sys.argv", ["howl", "--setup"])
+    from steam_hltb import main as m
+    import importlib; importlib.reload(m)
+    m.main()
+    assert called == [True]
