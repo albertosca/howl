@@ -25,12 +25,18 @@ def _category(categories: list[str], main_story: int) -> str:
     return "singleplayer"
 
 
+def _normalize_name(name: str) -> str:
+    """Remove ™ e ® do nome do jogo para matching tolerante com Steam."""
+    return name.replace("™", "").replace("®", "").strip()
+
+
 def _load_overrides() -> dict:
-    """Carrega howl_overrides.json do diretório atual. Retorna {} se o arquivo não existe."""
-    if os.path.exists(OVERRIDES_FILE):
-        with open(OVERRIDES_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+    """Carrega howl_overrides.json com chaves normalizadas (sem ™/®)."""
+    if not os.path.exists(OVERRIDES_FILE):
+        return {}
+    with open(OVERRIDES_FILE, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+    return {_normalize_name(k): v for k, v in raw.items()}
 
 
 def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
@@ -72,7 +78,7 @@ def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
             "release_year":       steam.get("release_year") if steam else None,
         }
         # aplica overrides (ex: howl_overrides.json com metacritic/release_year hardcoded)
-        ov = overrides.get(name, {})
+        ov = overrides.get(_normalize_name(name), {})
         if isinstance(ov, dict):
             for key, val in ov.items():
                 if key != "comment":
