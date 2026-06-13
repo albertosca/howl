@@ -1,17 +1,323 @@
 {
-  "_instructions": "Copie este arquivo para howl_overrides.json e adicione seus dados. Qualquer campo presente aqui sobrescreve o valor buscado da API. O campo 'comment' é ignorado.",
+  "_readme": [
+    "Copie este arquivo para howl_overrides.json e edite conforme necessário.",
+    "As chaves devem ser o nome EXATO do jogo como aparece na sua biblioteca Steam.",
+    "Use 'howl --verbose' para ver os nomes exatos, ou 'howl --list-genres' para ver o cache.",
+    "Campos suportados: metacritic, release_year, genres (lista), tags (lista).",
+    "O campo 'comment' é ignorado pelo programa — serve só de documentação.",
+    "IMPORTANTE: O Steam API não retorna Metacritic para jogos de várias publishers (Ubisoft,",
+    "EA, 2K, Rockstar). Scores abaixo são do Metacritic PC, verificados em junho/2026."
+  ],
 
-  "Assassin's Creed IV Black Flag": {
-    "metacritic": 83,
-    "release_year": 2013,
-    "comment": "Steam API não retorna Metacritic para jogos Ubisoft"
-  },
-  "Deus Ex: Human Revolution - Director's Cut": {
+  "_UBISOFT_ASSASSINS_CREED": "--- Série Assassin's Creed ---",
+
+  "Assassin's Creed Brotherhood": {
+    "metacritic": 88,
     "release_year": 2011,
-    "comment": "Data na Steam aparece como 'coming soon' em alguns locales"
+    "comment": "AC Brotherhood PC — Metacritic 88"
   },
-  "The Elder Scrolls V: Skyrim Special Edition": {
+  "Assassin's Creed: Brotherhood": {
+    "metacritic": 88,
+    "release_year": 2011,
+    "comment": "Alias para o caso do Steam usar dois pontos"
+  },
+  "Assassin's Creed Revelations": {
+    "metacritic": 80,
+    "release_year": 2011,
+    "comment": "AC Revelations PC"
+  },
+  "Assassin's Creed: Revelations": {
+    "metacritic": 80,
+    "release_year": 2011
+  },
+  "Assassin's Creed III": {
+    "metacritic": 80,
+    "release_year": 2012
+  },
+  "Assassin's Creed III Remastered": {
+    "metacritic": 80,
+    "release_year": 2019
+  },
+  "Assassin's Creed IV Black Flag": {
+    "metacritic": 84,
+    "release_year": 2013,
+    "comment": "Metacritic PC: 84"
+  },
+  "Assassin's Creed Rogue": {
     "metacritic": 74,
-    "comment": "MC do Special Edition vs original (94) — ajuste conforme preferir"
+    "release_year": 2015,
+    "comment": "Rogue saiu no PC em 2015"
+  },
+  "Assassin's Creed Unity": {
+    "metacritic": 70,
+    "release_year": 2014
+  },
+  "Assassin's Creed Syndicate": {
+    "metacritic": 74,
+    "release_year": 2015
+  },
+  "Assassin's Creed Origins": {
+    "metacritic": 84,
+    "release_year": 2017
+  },
+  "Assassin's Creed Odyssey": {
+    "metacritic": 86,
+    "release_year": 2018
+  },
+  "Assassin's Creed Valhalla": {
+    "metacritic": 82,
+    "release_year": 2020
+  },
+  "Assassin's Creed Mirage": {
+    "metacritic": 76,
+    "release_year": 2023
+  },
+
+  "_UBISOFT_FAR_CRY": "--- Série Far Cry ---",
+
+  "Far Cry 3": {
+    "metacritic": 88,
+    "release_year": 2012
+  },
+  "Far Cry 3 - Blood Dragon": {
+    "metacritic": 81,
+    "release_year": 2013
+  },
+  "Far Cry 3: Blood Dragon": {
+    "metacritic": 81,
+    "release_year": 2013
+  },
+  "Far Cry 4": {
+    "metacritic": 80,
+    "release_year": 2014
+  },
+  "Far Cry Primal": {
+    "metacritic": 74,
+    "release_year": 2016
+  },
+  "Far Cry 5": {
+    "metacritic": 78,
+    "release_year": 2018
+  },
+  "Far Cry New Dawn": {
+    "metacritic": 73,
+    "release_year": 2019
+  },
+  "Far Cry 6": {
+    "metacritic": 74,
+    "release_year": 2021
+  },
+
+  "_UBISOFT_WATCH_DOGS": "--- Série Watch Dogs ---",
+
+  "Watch_Dogs": {
+    "metacritic": 77,
+    "release_year": 2014,
+    "comment": "Steam usa underscore no nome: Watch_Dogs"
+  },
+  "Watch_Dogs 2": {
+    "metacritic": 75,
+    "release_year": 2016
+  },
+  "Watch Dogs: Legion": {
+    "metacritic": 72,
+    "release_year": 2020
+  },
+
+  "_UBISOFT_TOM_CLANCY": "--- Tom Clancy's ---",
+
+  "Tom Clancy's The Division": {
+    "metacritic": 79,
+    "release_year": 2016
+  },
+  "Tom Clancy's The Division 2": {
+    "metacritic": 84,
+    "release_year": 2019
+  },
+  "Tom Clancy's Ghost Recon Wildlands": {
+    "metacritic": 69,
+    "release_year": 2017
+  },
+  "Tom Clancy's Ghost Recon Breakpoint": {
+    "metacritic": 58,
+    "release_year": 2019
+  },
+  "Tom Clancy's Rainbow Six Siege": {
+    "metacritic": 79,
+    "release_year": 2015,
+    "comment": "Score aproximado — confirme se disponível"
+  },
+  "For Honor": {
+    "metacritic": 76,
+    "release_year": 2017
+  },
+  "The Crew": {
+    "metacritic": 71,
+    "release_year": 2014
+  },
+
+  "_UBISOFT_SOUTH_PARK": "--- South Park (Ubisoft publisher) ---",
+
+  "South Park: The Stick of Truth": {
+    "metacritic": 85,
+    "release_year": 2014
+  },
+  "South Park: The Fractured But Whole": {
+    "metacritic": 81,
+    "release_year": 2017
+  },
+
+  "_SQUARE_ENIX_DEUS_EX": "--- Deus Ex (Square Enix / Eidos) ---",
+
+  "Deus Ex: Human Revolution - Director's Cut": {
+    "metacritic": 91,
+    "release_year": 2013,
+    "comment": "Director's Cut (versão no Steam). Original de 2011 não está no Steam."
+  },
+  "Deus Ex: Mankind Divided": {
+    "metacritic": 83,
+    "release_year": 2016
+  },
+
+  "_SQUARE_ENIX_TOMB_RAIDER": "--- Tomb Raider (Square Enix / Crystal Dynamics) ---",
+
+  "Tomb Raider": {
+    "metacritic": 86,
+    "release_year": 2013,
+    "comment": "Reboot de 2013"
+  },
+  "Rise of the Tomb Raider": {
+    "metacritic": 86,
+    "release_year": 2016
+  },
+  "Shadow of the Tomb Raider": {
+    "metacritic": 77,
+    "release_year": 2018
+  },
+
+  "_SQUARE_ENIX_HITMAN": "--- Hitman (IO Interactive / Square Enix) ---",
+
+  "HITMAN": {
+    "metacritic": 83,
+    "release_year": 2016,
+    "comment": "Hitman (2016) — episódico, score final"
+  },
+  "HITMAN 2": {
+    "metacritic": 82,
+    "release_year": 2018
+  },
+  "HITMAN 3": {
+    "metacritic": 87,
+    "release_year": 2021
+  },
+  "HITMAN World of Assassination": {
+    "metacritic": 87,
+    "release_year": 2023,
+    "comment": "Renomeado de HITMAN 3 em 2023"
+  },
+
+  "_SQUARE_ENIX_OUTROS": "--- Outros Square Enix ---",
+
+  "Just Cause 3": {
+    "metacritic": 74,
+    "release_year": 2015
+  },
+  "Just Cause 4": {
+    "metacritic": 68,
+    "release_year": 2018
+  },
+  "Sleeping Dogs: Definitive Edition": {
+    "metacritic": 80,
+    "release_year": 2014,
+    "comment": "Definitive Edition de 2014. Original de 2012."
+  },
+  "Star Wars Jedi: Fallen Order": {
+    "metacritic": 81,
+    "release_year": 2019
+  },
+  "STAR WARS Jedi: Survivor": {
+    "metacritic": 78,
+    "release_year": 2023,
+    "comment": "Steam usa maiúsculas: STAR WARS Jedi: Survivor"
+  },
+
+  "_EA_MASS_EFFECT": "--- Mass Effect (EA / BioWare) ---",
+
+  "Mass Effect": {
+    "metacritic": 89,
+    "release_year": 2008
+  },
+  "Mass Effect 2": {
+    "metacritic": 94,
+    "release_year": 2010
+  },
+  "Mass Effect 3": {
+    "metacritic": 89,
+    "release_year": 2012
+  },
+  "Mass Effect Legendary Edition": {
+    "metacritic": 86,
+    "release_year": 2021
+  },
+
+  "_EA_DRAGON_AGE": "--- Dragon Age (EA / BioWare) ---",
+
+  "Dragon Age: Origins": {
+    "metacritic": 91,
+    "release_year": 2009
+  },
+  "Dragon Age II": {
+    "metacritic": 79,
+    "release_year": 2011,
+    "comment": "Score PC controvertido. Metacritic PC: 79."
+  },
+  "Dragon Age: Inquisition": {
+    "metacritic": 85,
+    "release_year": 2014
+  },
+
+  "_EA_BATTLEFIELD": "--- Battlefield (EA / DICE) ---",
+
+  "Battlefield 4": {
+    "metacritic": 81,
+    "release_year": 2013
+  },
+  "Battlefield 1": {
+    "metacritic": 88,
+    "release_year": 2016
+  },
+  "Battlefield V": {
+    "metacritic": 81,
+    "release_year": 2018
+  },
+
+  "_EA_OUTROS": "--- Outros EA ---",
+
+  "Titanfall 2": {
+    "metacritic": 86,
+    "release_year": 2016
+  },
+
+  "_ROCKSTAR": "--- Rockstar Games ---",
+
+  "Max Payne 3": {
+    "metacritic": 87,
+    "release_year": 2012
+  },
+  "Red Dead Redemption 2": {
+    "metacritic": 93,
+    "release_year": 2019
+  },
+
+  "_2K_MAFIA": "--- Mafia (2K / Hangar 13) ---",
+
+  "Mafia III": {
+    "metacritic": 62,
+    "release_year": 2016,
+    "comment": "Score baixo, mas muitos ainda têm na biblioteca"
+  },
+  "Mafia: Definitive Edition": {
+    "metacritic": 78,
+    "release_year": 2020
   }
 }
