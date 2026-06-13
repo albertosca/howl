@@ -37,42 +37,49 @@ howl --help
 
 ## Configuração
 
-### Steam API Key (obrigatória)
-
-1. Acesse https://steamcommunity.com/dev/apikey
-2. Faça login com sua conta Steam
-3. Preencha o campo "Domain Name" com qualquer valor (ex: `localhost`)
-4. Copie a chave gerada
-
-Defina como variável de ambiente para não precisar digitar sempre:
+### Jeito rápido: `howl --setup`
 
 ```bash
-# bash/zsh — adicione ao ~/.bashrc ou ~/.zshrc
-export STEAM_API_KEY="sua_chave_aqui"
-export STEAM_USERNAME="seu_id_steam"   # vanity URL do perfil (opcional)
+howl --setup
 ```
 
-A vanity URL é o identificador no final do endereço do seu perfil Steam:
-`https://steamcommunity.com/id/`**seu_id_aqui**
+O wizard interativo guia você pelas variáveis necessárias, valida ao vivo contra a Steam API e escreve um `.env` local (carregado automaticamente) ou mostra o bloco pra colar no seu shell profile.
 
-### Arquivo de Coleções Steam (opcional)
+### Jeito manual: variáveis de ambiente
 
-Para usar filtros de coleção (`--collection`, exclusão automática de Terminados), forneça o `sharedconfig.vdf`:
+| Variável | Obrigatória | O que é |
+|---|---|---|
+| `STEAM_API_KEY` | sim | Chave da Steam Web API |
+| `STEAM_USERNAME` | sim | Vanity URL do seu perfil (ex: `heenett`) |
+| `STEAM_VDF_PATH` | não | Caminho para o `sharedconfig.vdf` (filtros de coleção) |
 
-| Sistema operacional | Localização padrão |
-|---------------------|--------------------|
-| **macOS** | `~/Library/Application Support/Steam/userdata/<steamid>/7/remote/sharedconfig.vdf` |
-| **Linux** | `~/.steam/steam/userdata/<steamid>/7/remote/sharedconfig.vdf` |
-| **Windows** | `C:\Program Files (x86)\Steam\userdata\<steamid>\7\remote\sharedconfig.vdf` |
+**STEAM_API_KEY:**
+1. Acesse https://steamcommunity.com/dev/apikey
+2. Faça login com sua conta Steam
+3. Preencha "Domain Name" com qualquer valor (ex: `localhost`)
+4. Copie a chave gerada
 
-O `<steamid>` é um número numérico (diferente da vanity URL). Encontre-o em: Steam → Configurações → Conta → ID da conta Steam.
+**STEAM_USERNAME:**
+A vanity URL do seu perfil Steam: `steamcommunity.com/id/heenett` → username é `heenett`
 
-Copie o arquivo para a pasta do projeto ou passe o caminho com `--vdf-path`:
+**STEAM_VDF_PATH (opcional):**
+Necessário para usar `--collection` e exclusão automática de jogos terminados.
+
+| Sistema | Localização padrão |
+|---|---|
+| macOS | `~/Library/Application Support/Steam/userdata/<steamid>/7/remote/sharedconfig.vdf` |
+| Linux | `~/.steam/steam/userdata/<steamid>/7/remote/sharedconfig.vdf` |
+| Windows | `C:\Program Files (x86)\Steam\userdata\<steamid>\7\remote\sharedconfig.vdf` |
+
+O `<steamid>` é numérico (diferente da vanity URL). Encontre em: Steam → Configurações → Conta → ID da conta Steam.
+
+Para definir as vars permanentemente (alternativa ao `.env`):
 
 ```bash
-cp "~/Library/.../sharedconfig.vdf" .
-# ou
-howl --vdf-path "/caminho/completo/sharedconfig.vdf"
+# Adicione ao ~/.zshenv ou ~/.zprofile
+export STEAM_API_KEY="sua_chave_aqui"
+export STEAM_USERNAME="seu_username"
+export STEAM_VDF_PATH="/caminho/para/sharedconfig.vdf"  # opcional
 ```
 
 ## Uso
