@@ -181,4 +181,9 @@ def run_setup() -> None:
             print(f"  export {k}={v}")
         print("  " + "-" * 50)
 
+    if dest not in ("1", "2", "3"):
+        print("  Nenhum destino selecionado — nada foi salvo.")
+        print("  Rode 'howl --setup' de novo para configurar.\n")
+        return
+
     print("\nSetup concluído! Rode 'howl' para começar.\n")
