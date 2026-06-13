@@ -260,7 +260,7 @@ def test_run_e2e_smoke(tmp_path, monkeypatch):
     import argparse
     from unittest.mock import patch
     args = argparse.Namespace(
-        username="gabelogannewell",
+        username="testuser",
         sort="shortest",
         genre=None, genre_any=None, exclude_genre=None,
         not_started=False, in_progress=False, all_progress=False,

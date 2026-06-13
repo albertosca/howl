@@ -5,7 +5,7 @@ import time
 import requests
 from howlongtobeatpy import HowLongToBeat
 
-STEAM_USERNAME = "gabelogannewell"
+STEAM_USERNAME = os.environ.get("STEAM_USERNAME", "")
 CACHE_FILE = "games_cache.json"
 
 COOP_TAGS = {"co-op", "online co-op", "local co-op", "co-operative", "co-op campaign"}
