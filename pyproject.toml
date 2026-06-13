@@ -12,6 +12,7 @@ dependencies = [
     "howlongtobeatpy",
     "beautifulsoup4",
     "textual>=0.47.0",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
