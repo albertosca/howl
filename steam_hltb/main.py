@@ -79,8 +79,8 @@ Formatos de entrada:
                    help="Peso do Steam no score composto (padrão: %(default)s)")
     p.add_argument("--collection",
                    help="Filtrar por coleção Steam (ex: 'Jogando', 'Multiplayer')")
-    p.add_argument("--vdf-path", default="sharedconfig.vdf",
-                   help="Caminho para o sharedconfig.vdf do Steam (padrão: %(default)s)")
+    p.add_argument("--vdf-path", default=os.environ.get("STEAM_VDF_PATH", "sharedconfig.vdf"),
+                   help="Caminho para o sharedconfig.vdf do Steam (padrão: STEAM_VDF_PATH env ou sharedconfig.vdf)")
     p.add_argument("--show-finished", action="store_true",
                    help="Incluir jogos da coleção 'Terminados' (excluídos por padrão)")
     p.add_argument("--list-tags", action="store_true",
