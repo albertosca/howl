@@ -5,3 +5,4 @@ rich
 pytest
 textual>=0.47.0
 pytest-asyncio
+python-dotenv==1.0.1
