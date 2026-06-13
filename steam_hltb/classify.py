@@ -71,11 +71,12 @@ def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
             "completionist":      hltb.get("completionist"),
             "release_year":       steam.get("release_year") if steam else None,
         }
-        # applica overrides (ex: howl_overrides.json com metacritic/release_year hardcoded)
+        # aplica overrides (ex: howl_overrides.json com metacritic/release_year hardcoded)
         ov = overrides.get(name, {})
-        for key, val in ov.items():
-            if key != "comment":
-                row[key] = val
+        if isinstance(ov, dict):
+            for key, val in ov.items():
+                if key != "comment":
+                    row[key] = val
         rows.append(row)
     return rows
 
