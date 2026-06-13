@@ -67,7 +67,8 @@ def test_fetch_hltb_returns_data_when_good_match():
         }
 
 
-def test_fetch_hltb_returns_zero_for_negative_times():
+def test_fetch_hltb_returns_none_for_missing_or_zero_times():
+    """Tempos negativos ou zero = dado ausente → None, não 0."""
     with patch("steam_hltb.fetch.HowLongToBeat") as MockHLTB:
         r = MagicMock()
         r.similarity = 0.9
@@ -78,8 +79,8 @@ def test_fetch_hltb_returns_zero_for_negative_times():
         MockHLTB.return_value.search.return_value = [r]
         from steam_hltb import fetch
         result = fetch.fetch_hltb("Some Game")
-        assert result["main_story"] == 0
-        assert result["main_extra"] == 0
+        assert result["main_story"] is None
+        assert result["main_extra"] is None
         assert result["completionist"] == 5
 
 
@@ -362,7 +363,7 @@ def test_resolve_steamid_returns_steamid_on_success():
             "response": {"success": 1, "steamid": "76561198012345678"}
         }
         from steam_hltb import fetch
-        result = fetch.resolve_steamid("KEY", "gabelogannewell")
+        result = fetch.resolve_steamid("KEY", "testuser")
         assert result == "76561198012345678"
 
 

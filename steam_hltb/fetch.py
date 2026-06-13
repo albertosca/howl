@@ -21,6 +21,11 @@ def save_cache(cache: dict) -> None:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
 
+def _hltb_hours(val) -> int | None:
+    """Retorna horas como int, ou None se o HLTB não tem dado para este campo."""
+    return int(val) if val and val > 0 else None
+
+
 def fetch_hltb(name: str) -> dict | None:
     results = HowLongToBeat().search(name)
     if not results:
@@ -29,10 +34,10 @@ def fetch_hltb(name: str) -> dict | None:
     if best.similarity < 0.6:
         return None
     return {
-        "game_name": best.game_name,
-        "main_story": int(best.main_story) if best.main_story and best.main_story > 0 else 0,
-        "main_extra": int(best.main_extra) if best.main_extra and best.main_extra > 0 else 0,
-        "completionist": int(best.completionist) if best.completionist and best.completionist > 0 else 0,
+        "game_name":     best.game_name,
+        "main_story":    _hltb_hours(best.main_story),
+        "main_extra":    _hltb_hours(best.main_extra),
+        "completionist": _hltb_hours(best.completionist),
     }
 
 
@@ -47,17 +52,16 @@ def fetch_steam_app_details(appid: int) -> dict | None:
     if not result.get("success"):
         return None
     data = result.get("data", {})
-    mc_data = data.get("metacritic")
-    genres = [g["description"].lower() for g in data.get("genres", [])]
+    mc_data    = data.get("metacritic")
+    genres     = [g["description"].lower() for g in data.get("genres", [])]
     categories = [c["description"].lower() for c in data.get("categories", [])]
-    release_date_str = data.get("release_date", {}).get("date", "")
-    year_match = re.search(r'\b(19|20)\d{2}\b', release_date_str)
-    release_year = int(year_match.group()) if year_match else None
+    date_str   = data.get("release_date", {}).get("date", "")
+    year_match = re.search(r"\b(19|20)\d{2}\b", date_str)
     return {
-        "metacritic": mc_data["score"] if mc_data else None,
-        "genres": genres,
-        "categories": categories,
-        "release_year": release_year,
+        "metacritic":    mc_data["score"] if mc_data else None,
+        "genres":        genres,
+        "categories":    categories,
+        "release_year":  int(year_match.group()) if year_match else None,
     }
 
 
@@ -69,13 +73,13 @@ def fetch_steam_reviews(appid: int) -> dict | None:
     if resp.status_code != 200:
         return None
     summary = resp.json().get("query_summary", {})
-    total = summary.get("total_reviews", 0)
+    total   = summary.get("total_reviews", 0)
     if total == 0:
         return None
     positive = summary.get("total_positive", 0)
     return {
-        "positive_pct": round(positive / total * 100),
-        "total_reviews": total,
+        "positive_pct":   round(positive / total * 100),
+        "total_reviews":  total,
     }
 
 
@@ -98,13 +102,13 @@ def resolve_steamid(api_key: str, username: str) -> str:
     return data["steamid"]
 
 
-def get_steam_games(api_key: str, steamid: str) -> list:
+def get_steam_games(api_key: str, steamid: str) -> list[dict]:
     resp = requests.get(
         "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
         params={
-            "key": api_key,
-            "steamid": steamid,
-            "include_appinfo": True,
+            "key":                    api_key,
+            "steamid":                steamid,
+            "include_appinfo":        True,
             "include_played_free_games": True,
         },
     )
@@ -112,8 +116,8 @@ def get_steam_games(api_key: str, steamid: str) -> list:
     games = resp.json()["response"].get("games", [])
     return [
         {
-            "name": g["name"],
-            "appid": g["appid"],
+            "name":         g["name"],
+            "appid":        g["appid"],
             "hours_played": round(g.get("playtime_forever", 0) / 60, 1),
         }
         for g in games
@@ -121,16 +125,19 @@ def get_steam_games(api_key: str, steamid: str) -> list:
 
 
 def build_library(
-    steam_key: str, username: str, cache: dict,
-    refresh: bool = False, verbose: bool = False
-) -> tuple:
-    steamid = resolve_steamid(steam_key, username)
+    steam_key: str,
+    username: str,
+    cache: dict,
+    refresh: bool = False,
+    verbose: bool = False,
+) -> tuple[dict, list[dict]]:
+    steamid     = resolve_steamid(steam_key, username)
     steam_games = get_steam_games(steam_key, steamid)
-    total = len(steam_games)
+    total       = len(steam_games)
     if verbose:
         print(f"{total} games in library. {len(cache)} already cached.\n")
     for idx, game in enumerate(steam_games, 1):
-        name = game["name"]
+        name  = game["name"]
         appid = game["appid"]
         if name in cache and not refresh:
             if verbose:
@@ -147,7 +154,7 @@ def build_library(
         steam_details = fetch_steam_app_details(appid)
         time.sleep(1.0)
         cache[name] = {
-            "hltb": hltb,
+            "hltb":  hltb,
             "steam": {
                 "appid": appid,
                 **(steam_reviews or {}),
@@ -159,8 +166,7 @@ def build_library(
 
 
 def migrate_steam_details(cache: dict, verbose: bool = False) -> dict:
-    """Preenche steam.genres/categories/metacritic/release_year para entradas incompletas."""
-    import time
+    """Preenche campos ausentes (genres, categories, release_year) em entradas incompletas."""
 
     def _needs_migration(steam: dict) -> bool:
         return "genres" not in steam or "release_year" not in steam

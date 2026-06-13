@@ -322,3 +322,83 @@ def test_filter_category_coop_campaign_kept_under_singleplayer():
     assert len(filter_category(games, category="all")) == 2
     # singleplayer exclui coop_campaign
     assert len(filter_category(games, category="singleplayer")) == 1
+
+
+# --- None em main_extra (HLTB sem dado) ---
+
+def test_filter_time_none_main_extra_treated_as_zero():
+    """main_extra=None (sem dado HLTB) é tratado como 0h nos filtros de tempo."""
+    games = [{"main_extra": None}, {"main_extra": 10}, {"main_extra": 20}]
+    # min_hours=5: None (0) é excluído, 10 e 20 passam
+    result = filter_time(games, min_hours=5)
+    assert len(result) == 2
+    # max_hours=15: None (0) e 10 passam, 20 não
+    result = filter_time(games, max_hours=15)
+    assert len(result) == 2
+
+
+def test_filter_progress_none_main_extra_treated_as_zero():
+    """main_extra=None não deve causar TypeError no filter_progress."""
+    games = [{"hours_played": 0.0, "main_extra": None},
+             {"hours_played": 0.5, "main_extra": None}]
+    # mode in_progress: 0 < hours < 0.5 * max(0, 1) = 0.5 → only 0.5 is ambiguous
+    # just verifying no exception
+    result = filter_progress(games, mode="in_progress")
+    assert isinstance(result, list)
+    result = filter_progress(games, mode="default")
+    assert isinstance(result, list)
+
+
+# --- overrides ---
+
+def test_build_game_rows_applies_overrides(tmp_path, monkeypatch):
+    """howl_overrides.json deve sobrescrever metacritic/release_year na row."""
+    import json as json_mod
+    overrides = {
+        "Half-Life 2": {"metacritic": 99, "release_year": 2004, "comment": "test"}
+    }
+    (tmp_path / "howl_overrides.json").write_text(json_mod.dumps(overrides))
+    monkeypatch.chdir(tmp_path)
+
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "steam": {
+                "appid": 220, "positive_pct": 97, "total_reviews": 158000,
+                "genres": ["action"], "categories": ["single-player"],
+                "metacritic": None, "release_year": None,
+            },
+        }
+    }
+    steam_games = [{"name": "Half-Life 2", "appid": 220, "hours_played": 0.0}]
+
+    import importlib
+    import steam_hltb.classify as classify_mod
+    importlib.reload(classify_mod)
+
+    rows = classify_mod.build_game_rows(cache, steam_games)
+    assert rows[0]["metacritic"] == 99
+    assert rows[0]["release_year"] == 2004
+    assert "comment" not in rows[0]
+
+
+def test_build_game_rows_no_overrides_file(tmp_path, monkeypatch):
+    """Sem howl_overrides.json, build_game_rows funciona normalmente."""
+    monkeypatch.chdir(tmp_path)
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "steam": {"appid": 220, "positive_pct": 97, "total_reviews": 158000,
+                      "genres": ["action"], "categories": ["single-player"],
+                      "metacritic": 96, "release_year": 2004},
+        }
+    }
+    steam_games = [{"name": "Half-Life 2", "appid": 220, "hours_played": 0.0}]
+
+    import importlib
+    import steam_hltb.classify as classify_mod
+    importlib.reload(classify_mod)
+
+    rows = classify_mod.build_game_rows(cache, steam_games)
+    assert rows[0]["metacritic"] == 96
+    assert rows[0]["release_year"] == 2004

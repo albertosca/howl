@@ -37,8 +37,9 @@ def test_shortest_formula():
 
 
 def test_shortest_no_hours_returns_composite():
-    game = {"metacritic": 80, "steam_pct": 80, "main_extra": 0}
-    assert score_shortest(game) == pytest.approx(80.0)
+    """Sem dados de duração (0 ou None) → sem penalidade de tempo, retorna composite."""
+    assert score_shortest({"metacritic": 80, "steam_pct": 80, "main_extra": 0}) == pytest.approx(80.0)
+    assert score_shortest({"metacritic": 80, "steam_pct": 80, "main_extra": None}) == pytest.approx(80.0)
 
 
 def test_shortest_missing_both_returns_zero():
@@ -51,9 +52,10 @@ def test_longest_formula():
     assert score_longest(game) == pytest.approx(160.0)
 
 
-def test_longest_no_hours_uses_sqrt_1():
-    game = {"metacritic": 80, "steam_pct": 80, "main_extra": 0}
-    assert score_longest(game) == pytest.approx(80.0)  # composite * sqrt(1)
+def test_longest_no_hours_returns_zero():
+    """Sem dado de duração: não dá pra ranquear como 'longo' → 0.0."""
+    assert score_longest({"metacritic": 80, "steam_pct": 80, "main_extra": 0}) == 0.0
+    assert score_longest({"metacritic": 80, "steam_pct": 80, "main_extra": None}) == 0.0
 
 
 def test_rated_direct():
@@ -72,9 +74,10 @@ def test_quick_wins_formula():
     assert score_quick_wins(game) == pytest.approx(800.0)
 
 
-def test_quick_wins_no_hours_returns_composite_squared():
-    game = {"metacritic": 80, "steam_pct": 80, "main_extra": 0}
-    assert score_quick_wins(game) == pytest.approx(6400.0)
+def test_quick_wins_no_hours_returns_zero():
+    """Sem dado de duração: não dá pra avaliar eficiência → 0.0 (não flutua pro topo)."""
+    assert score_quick_wins({"metacritic": 80, "steam_pct": 80, "main_extra": 0}) == 0.0
+    assert score_quick_wins({"metacritic": 80, "steam_pct": 80, "main_extra": None}) == 0.0
 
 
 def test_hidden_gems_formula():
@@ -83,9 +86,9 @@ def test_hidden_gems_formula():
     assert score_hidden_gems(game) == pytest.approx(45.0)
 
 
-def test_hidden_gems_no_metacritic_returns_steam():
-    game = {"steam_pct": 90, "metacritic": None}
-    assert score_hidden_gems(game) == pytest.approx(90.0)
+def test_hidden_gems_no_metacritic_returns_zero():
+    """Sem MC = dado ausente, não ausência de hype. Excluído do ranking de hidden gems."""
+    assert score_hidden_gems({"steam_pct": 90, "metacritic": None}) == 0.0
 
 
 def test_hidden_gems_no_steam_returns_zero():

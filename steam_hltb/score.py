@@ -41,12 +41,12 @@ def score_shortest(game: dict, weights: dict | None = None) -> float:
 
 
 def score_longest(game: dict, weights: dict | None = None) -> float:
-    """Bons jogos mais longos: composite × √horas."""
+    """Bons jogos mais longos: composite × √horas. Sem dado de duração = excluído do ranking."""
     score = score_composto(game, weights)
-    hours = game.get("main_extra") or 0
-    if score == 0:
+    hours = game.get("main_extra")
+    if not score or not hours:
         return 0.0
-    return score * math.sqrt(max(hours, 1))
+    return score * math.sqrt(hours)
 
 
 def score_rated(game: dict) -> float:
@@ -60,24 +60,21 @@ def score_loved(game: dict) -> float:
 
 
 def score_quick_wins(game: dict, weights: dict | None = None) -> float:
-    """Qualidade altíssima em pouco tempo: composite² / horas."""
+    """Qualidade altíssima em pouco tempo: composite² / horas. Sem dado de duração = excluído."""
     score = score_composto(game, weights)
-    hours = game.get("main_extra") or 0
-    if score == 0:
+    hours = game.get("main_extra")
+    if not score or not hours:
         return 0.0
-    if hours > 0:
-        return (score ** 2) / hours
-    return score ** 2
+    return (score ** 2) / hours
 
 
 def score_hidden_gems(game: dict) -> float:
-    """Alta aprovação dos players, baixo hype de crítica: steam × (1 - mc/100)."""
+    """Alta aprovação dos players, ignorado pela crítica: steam × (1 - mc/100).
+    Sem MC = dado ausente, não ausência de hype → excluído do ranking."""
     steam = game.get("steam_pct")
     mc = game.get("metacritic")
-    if steam is None:
+    if steam is None or mc is None:
         return 0.0
-    if mc is None:
-        return float(steam)
     return float(steam) * (1 - mc / 100)
 
 
