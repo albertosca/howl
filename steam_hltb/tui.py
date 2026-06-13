@@ -212,7 +212,7 @@ class SteamHLTBApp(App):
                 ano,
                 mc,
                 steam,
-                f"{g['main_extra']}h",
+                f"{g['main_extra']}h" if g.get("main_extra") else "-",
                 f"{g['hours_played']}h",
                 f"{g['_score']:.1f}",
             ]

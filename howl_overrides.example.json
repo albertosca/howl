@@ -1,0 +1,17 @@
+{
+  "_instructions": "Copie este arquivo para howl_overrides.json e adicione seus dados. Qualquer campo presente aqui sobrescreve o valor buscado da API. O campo 'comment' é ignorado.",
+
+  "Assassin's Creed IV Black Flag": {
+    "metacritic": 83,
+    "release_year": 2013,
+    "comment": "Steam API não retorna Metacritic para jogos Ubisoft"
+  },
+  "Deus Ex: Human Revolution - Director's Cut": {
+    "release_year": 2011,
+    "comment": "Data na Steam aparece como 'coming soon' em alguns locales"
+  },
+  "The Elder Scrolls V: Skyrim Special Edition": {
+    "metacritic": 74,
+    "comment": "MC do Special Edition vs original (94) — ajuste conforme preferir"
+  }
+}
