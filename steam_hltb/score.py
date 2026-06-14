@@ -1,12 +1,12 @@
 import math
 
 SORT_OPTIONS = [
-    "shortest",     # bom e curto: composite / √h
-    "longest",      # bom e longo: composite × √h
+    "shortest",     # curto, qualidade ajuda: composite / √h
+    "longest",      # longo, qualidade ajuda: composite × √h / 10
     "rated",        # Metacritic puro
     "loved",        # Steam % positivo puro
-    "quick-wins",   # qualidade altíssima em pouco tempo: composite² / h
-    "hidden-gems",  # amado pelos players, ignorado pela crítica: steam × (1-mc/100)
+    "quick-wins",   # jogo bom (≥75 composite) e curto: composite / (1 + h/5)
+    "hidden-gems",  # muito amado pelos players (≥80% steam), ignorado pela crítica
     "composto",     # média ponderada mc+steam configurável
 ]
 
@@ -41,12 +41,12 @@ def score_shortest(game: dict, weights: dict | None = None) -> float:
 
 
 def score_longest(game: dict, weights: dict | None = None) -> float:
-    """Bons jogos mais longos: composite × √horas. Sem dado de duração = excluído do ranking."""
+    """Jogos mais longos: composite × √horas / 10. Sem dado de duração = excluído."""
     score = score_composto(game, weights)
     hours = game.get("main_extra")
     if not score or not hours:
         return 0.0
-    return score * math.sqrt(hours)
+    return score * math.sqrt(hours) / 10
 
 
 def score_rated(game: dict) -> float:
@@ -60,20 +60,20 @@ def score_loved(game: dict) -> float:
 
 
 def score_quick_wins(game: dict, weights: dict | None = None) -> float:
-    """Qualidade altíssima em pouco tempo: composite² / horas. Sem dado de duração = excluído."""
+    """Jogo bom (composite ≥ 75) e curto: composite / (1 + horas/5). Sem dado = excluído."""
     score = score_composto(game, weights)
     hours = game.get("main_extra")
-    if not score or not hours:
+    if not score or not hours or score < 75:
         return 0.0
-    return (score ** 2) / hours
+    return score / (1 + hours / 5)
 
 
 def score_hidden_gems(game: dict) -> float:
-    """Alta aprovação dos players, ignorado pela crítica: steam × (1 - mc/100).
-    Sem MC = dado ausente, não ausência de hype → excluído do ranking."""
+    """Muito amado pelos players (≥80% steam), ignorado pela crítica: steam × (1 - mc/100).
+    Sem MC = dado ausente → excluído. Steam < 80% = não é muito aclamado → excluído."""
     steam = game.get("steam_pct")
     mc = game.get("metacritic")
-    if steam is None or mc is None:
+    if steam is None or mc is None or steam < 80:
         return 0.0
     return float(steam) * (1 - mc / 100)
 
