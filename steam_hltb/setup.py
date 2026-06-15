@@ -159,6 +159,18 @@ def run_setup() -> None:
     if vdf_path:
         config["STEAM_VDF_PATH"] = vdf_path
 
+    print("\n  IGDB (opcional — scores para jogos delisted/sem Metacritic):")
+    print("  1. Acesse https://dev.twitch.tv/console e crie um app")
+    print("  2. Category: Website Integration, OAuth Redirect URL: http://localhost")
+    print("  3. Copie o Client ID e gere um Client Secret")
+    setup_igdb = input("  Configurar IGDB agora? [s/N] ").strip().lower()
+    if setup_igdb in ("s", "sim", "y", "yes"):
+        igdb_client_id     = input("  IGDB Client ID: ").strip()
+        igdb_client_secret = input("  IGDB Client Secret: ").strip()
+        if igdb_client_id and igdb_client_secret:
+            config["IGDB_CLIENT_ID"]     = igdb_client_id
+            config["IGDB_CLIENT_SECRET"] = igdb_client_secret
+
     print("\n--- Resumo ---")
     for k, v in config.items():
         display = f"***{v[-4:]}" if "KEY" in k else v

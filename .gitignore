@@ -23,6 +23,7 @@ build/
 
 # ambiente
 .env
+.igdb_token.json
 
 # artefatos internos de desenvolvimento (planos, specs gerados por IA)
 docs/superpowers/
