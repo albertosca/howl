@@ -93,6 +93,8 @@ Formatos de entrada:
                    help="Ignora o cache e rebusca todos os jogos")
     p.add_argument("--migrate-cache", action="store_true",
                    help="Preenche steam.genres/categories/release_year para entradas incompletas (~15-30 min)")
+    p.add_argument("--migrate-igdb", action="store_true",
+                   help="Busca dados IGDB para jogos sem Metacritic no cache (requer IGDB_CLIENT_ID e IGDB_CLIENT_SECRET)")
     p.add_argument("-v", "--verbose", action="store_true",
                    help="Exibe progresso detalhado de todos os jogos (inclusive cache)")
     p.add_argument("--show-tags", action="store_true",
@@ -290,6 +292,13 @@ def main() -> None:
         print("⚠  Isso pode demorar 15-30 min. Ctrl+C para interromper (progresso salvo).")
         migrate_steam_details(load_cache(), verbose=True)
         print("Migração concluída.")
+        return
+
+    if args.migrate_igdb:
+        from .fetch import migrate_igdb_data
+        cache = load_cache()
+        migrate_igdb_data(cache, verbose=True)
+        print("Migração IGDB concluída.")
         return
 
     if args.list_tags or args.list_genres or args.list_collections:
