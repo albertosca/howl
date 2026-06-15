@@ -61,6 +61,13 @@ def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
             metacritic = rawg.get("metacritic")
         else:
             genres, categories, metacritic = [], [], None
+        # fallback IGDB para campos ausentes do Steam
+        igdb_data = entry.get("igdb") or {}
+        if igdb_data:
+            if metacritic is None:
+                metacritic = igdb_data.get("aggregated_rating")
+            if not genres:
+                genres = [g.lower() for g in igdb_data.get("genres", [])]
         row: dict = {
             "name":               hltb["game_name"],
             "steam_name":         name,
@@ -75,7 +82,7 @@ def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
             "main_story":         hltb.get("main_story"),
             "main_extra":         hltb.get("main_extra"),
             "completionist":      hltb.get("completionist"),
-            "release_year":       steam.get("release_year") if steam else None,
+            "release_year":       (steam.get("release_year") if steam else None) or igdb_data.get("release_year"),
         }
         # aplica overrides (ex: howl_overrides.json com metacritic/release_year hardcoded)
         ov = overrides.get(_normalize_name(name), {})
