@@ -402,3 +402,83 @@ def test_build_game_rows_no_overrides_file(tmp_path, monkeypatch):
     rows = classify_mod.build_game_rows(cache, steam_games)
     assert rows[0]["metacritic"] == 96
     assert rows[0]["release_year"] == 2004
+
+
+def test_build_game_rows_uses_igdb_metacritic_when_steam_missing(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # isola do howl_overrides.json real
+    cache = {
+        "Fake IGDB Game": {
+            "hltb": {"game_name": "Fake IGDB Game", "main_story": 50, "main_extra": 100, "completionist": 200},
+            "steam": {
+                "appid": 999001, "metacritic": None, "genres": [], "release_year": None,
+                "positive_pct": 94, "total_reviews": 500000, "categories": []
+            },
+            "igdb": {
+                "aggregated_rating": 90, "aggregated_rating_count": 8,
+                "genres": ["Role-playing (RPG)"], "release_year": 2021
+            },
+        }
+    }
+    steam_games = [{"name": "Fake IGDB Game", "appid": 999001, "hours_played": 10}]
+    import importlib
+    import steam_hltb.classify as classify_mod
+    importlib.reload(classify_mod)
+    rows = classify_mod.build_game_rows(cache, steam_games)
+    assert len(rows) == 1
+    assert rows[0]["metacritic"] == 90
+    assert rows[0]["release_year"] == 2021
+
+def test_build_game_rows_uses_igdb_genres_when_steam_empty(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # isola do howl_overrides.json real
+    cache = {
+        "Fake IGDB Game": {
+            "hltb": {"game_name": "Fake IGDB Game", "main_story": 50, "main_extra": 100, "completionist": 200},
+            "steam": {
+                "appid": 999001, "metacritic": None, "genres": [], "release_year": None,
+                "positive_pct": 94, "total_reviews": 500000, "categories": []
+            },
+            "igdb": {
+                "aggregated_rating": 90, "aggregated_rating_count": 8,
+                "genres": ["Role-playing (RPG)", "Indie"], "release_year": 2021
+            },
+        }
+    }
+    steam_games = [{"name": "Fake IGDB Game", "appid": 999001, "hours_played": 10}]
+    import importlib
+    import steam_hltb.classify as classify_mod
+    importlib.reload(classify_mod)
+    rows = classify_mod.build_game_rows(cache, steam_games)
+    assert "role-playing (rpg)" in rows[0]["genres"]
+
+def test_build_game_rows_steam_metacritic_overrides_igdb():
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "steam": {
+                "appid": 220, "metacritic": 96, "genres": ["action"], "release_year": 2004,
+                "positive_pct": 98, "total_reviews": 100000, "categories": ["single-player"]
+            },
+            "igdb": {
+                "aggregated_rating": 80, "aggregated_rating_count": 10,
+                "genres": ["Shooter"], "release_year": 2004
+            },
+        }
+    }
+    steam_games = [{"name": "Half-Life 2", "appid": 220, "hours_played": 15}]
+    rows = build_game_rows(cache, steam_games)
+    assert rows[0]["metacritic"] == 96  # steam prevalece
+
+def test_build_game_rows_no_igdb_data_unaffected():
+    cache = {
+        "No IGDB": {
+            "hltb": {"game_name": "No IGDB", "main_story": 10, "main_extra": 15, "completionist": 20},
+            "steam": {
+                "appid": 999, "metacritic": None, "genres": [], "release_year": None,
+                "positive_pct": 80, "total_reviews": 100, "categories": []
+            },
+        }
+    }
+    steam_games = [{"name": "No IGDB", "appid": 999, "hours_played": 0}]
+    rows = build_game_rows(cache, steam_games)
+    assert rows[0]["metacritic"] is None
+    assert rows[0]["release_year"] is None
