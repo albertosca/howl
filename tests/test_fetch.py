@@ -441,3 +441,80 @@ def test_build_library_verbose_true_prints_indexed_for_new_games(capsys, monkeyp
     out = capsys.readouterr().out
     assert "[1/1] Half-Life 2" in out
     assert "Fetching:" not in out
+
+
+from unittest.mock import patch
+from steam_hltb.fetch import migrate_igdb_data
+
+
+def test_migrate_igdb_fills_missing_metacritic():
+    cache = {
+        "Valheim": {
+            "hltb": {"game_name": "Valheim", "main_story": 50, "main_extra": 100, "completionist": 200},
+            "steam": {"appid": 892970, "metacritic": None, "genres": [], "release_year": None},
+        }
+    }
+    igdb_data = {"aggregated_rating": 90, "aggregated_rating_count": 8, "genres": ["RPG"], "release_year": 2021}
+    with patch("steam_hltb.fetch.igdb.fetch_by_appid", return_value=igdb_data), \
+         patch("steam_hltb.fetch.igdb.get_token", return_value="tok"), \
+         patch("steam_hltb.fetch.save_cache"), \
+         patch("time.sleep"):
+        result = migrate_igdb_data(cache, client_id="cid", client_secret="csec")
+    assert result["Valheim"]["igdb"]["aggregated_rating"] == 90
+    assert result["Valheim"]["igdb"]["release_year"] == 2021
+
+
+def test_migrate_igdb_skips_games_with_metacritic():
+    cache = {
+        "Half-Life 2": {
+            "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
+            "steam": {"appid": 220, "metacritic": 96, "genres": ["action"], "release_year": 2004},
+        }
+    }
+    with patch("steam_hltb.fetch.igdb.fetch_by_appid") as mock_fetch, \
+         patch("steam_hltb.fetch.igdb.get_token", return_value="tok"), \
+         patch("steam_hltb.fetch.save_cache"), \
+         patch("time.sleep"):
+        migrate_igdb_data(cache, client_id="cid", client_secret="csec")
+    mock_fetch.assert_not_called()
+
+
+def test_migrate_igdb_skips_games_already_with_igdb_entry():
+    cache = {
+        "Already Cached": {
+            "hltb": {"game_name": "Already Cached", "main_story": 10},
+            "steam": {"appid": 123, "metacritic": None},
+            "igdb": {"aggregated_rating": 80, "genres": ["Action"]},
+        }
+    }
+    with patch("steam_hltb.fetch.igdb.fetch_by_appid") as mock_fetch, \
+         patch("steam_hltb.fetch.igdb.get_token", return_value="tok"), \
+         patch("steam_hltb.fetch.save_cache"), \
+         patch("time.sleep"):
+        migrate_igdb_data(cache, client_id="cid", client_secret="csec")
+    mock_fetch.assert_not_called()
+
+
+def test_migrate_igdb_falls_back_to_name_when_appid_returns_none():
+    cache = {
+        "Deus Ex: Human Revolution": {
+            "hltb": {"game_name": "Deus Ex: Human Revolution", "main_story": 15},
+            "steam": {"appid": 28050, "metacritic": None},
+        }
+    }
+    igdb_data = {"aggregated_rating": 89, "aggregated_rating_count": 25, "genres": ["RPG"], "release_year": 2011}
+    with patch("steam_hltb.fetch.igdb.fetch_by_appid", return_value=None), \
+         patch("steam_hltb.fetch.igdb.fetch_by_name", return_value=igdb_data), \
+         patch("steam_hltb.fetch.igdb.get_token", return_value="tok"), \
+         patch("steam_hltb.fetch.save_cache"), \
+         patch("time.sleep"):
+        result = migrate_igdb_data(cache, client_id="cid", client_secret="csec")
+    assert result["Deus Ex: Human Revolution"]["igdb"]["aggregated_rating"] == 89
+
+
+def test_migrate_igdb_returns_early_without_credentials():
+    cache = {"Game": {"steam": {"metacritic": None}, "hltb": {}}}
+    with patch("steam_hltb.fetch.igdb.get_token") as mock_token:
+        result = migrate_igdb_data(cache, client_id=None, client_secret=None)
+    mock_token.assert_not_called()
+    assert "igdb" not in result["Game"]

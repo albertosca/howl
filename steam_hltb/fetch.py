@@ -6,6 +6,8 @@ import time
 import requests
 from howlongtobeatpy import HowLongToBeat
 
+from steam_hltb import igdb
+
 CACHE_FILE = "games_cache.json"
 
 
@@ -163,6 +165,53 @@ def build_library(
         }
         save_cache(cache)
     return cache, steam_games
+
+
+def migrate_igdb_data(
+    cache: dict,
+    client_id: str | None = None,
+    client_secret: str | None = None,
+    verbose: bool = False,
+) -> dict:
+    """Preenche campo 'igdb' para jogos sem metacritic no Steam."""
+    client_id     = client_id     or os.environ.get("IGDB_CLIENT_ID")
+    client_secret = client_secret or os.environ.get("IGDB_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        if verbose:
+            print("IGDB_CLIENT_ID / IGDB_CLIENT_SECRET não configurados — pulando.")
+        return cache
+
+    token = igdb.get_token(client_id, client_secret)
+    if not token:
+        if verbose:
+            print("Falha ao obter token IGDB.")
+        return cache
+
+    pending = [
+        (name, entry)
+        for name, entry in cache.items()
+        if entry.get("steam") and entry["steam"].get("metacritic") is None
+        and "igdb" not in entry
+    ]
+    if verbose:
+        print(f"Buscando dados IGDB para {len(pending)} jogos sem metacritic...")
+
+    for idx, (name, entry) in enumerate(pending, 1):
+        appid  = entry["steam"].get("appid")
+        result = igdb.fetch_by_appid(client_id, token, appid) if appid else None
+        if result is None:
+            result = igdb.fetch_by_name(client_id, token, name)
+        if result:
+            cache[name]["igdb"] = result
+            if verbose:
+                print(f"  [{idx}/{len(pending)}] {name} → {result['aggregated_rating']}")
+        else:
+            if verbose:
+                print(f"  [{idx}/{len(pending)}] {name} → não encontrado")
+        save_cache(cache)
+        time.sleep(0.25)
+
+    return cache
 
 
 def migrate_steam_details(cache: dict, verbose: bool = False) -> dict:
