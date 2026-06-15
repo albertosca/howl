@@ -1,4 +1,7 @@
-import json, time, pytest
+import json
+import time
+
+import pytest
 from unittest.mock import patch, mock_open, MagicMock
 from steam_hltb.igdb import get_token, fetch_by_appid, fetch_by_name
 
