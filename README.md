@@ -52,6 +52,8 @@ O wizard interativo guia você pelas variáveis necessárias, valida ao vivo con
 | `STEAM_API_KEY` | sim | Chave da Steam Web API |
 | `STEAM_USERNAME` | sim | Vanity URL do seu perfil (ex: `gabelogannewell`) |
 | `STEAM_VDF_PATH` | não | Caminho para o `sharedconfig.vdf` (filtros de coleção) |
+| `IGDB_CLIENT_ID` | não | Client ID do app Twitch (para scores de jogos delisted) |
+| `IGDB_CLIENT_SECRET` | não | Client Secret do app Twitch |
 
 **STEAM_API_KEY:**
 1. Acesse https://steamcommunity.com/dev/apikey
@@ -61,6 +63,26 @@ O wizard interativo guia você pelas variáveis necessárias, valida ao vivo con
 
 **STEAM_USERNAME:**
 A vanity URL do seu perfil Steam: `steamcommunity.com/id/gabelogannewell` → username é `gabelogannewell`
+
+**IGDB_CLIENT_ID e IGDB_CLIENT_SECRET (opcional):**
+O IGDB complementa o Metacritic para jogos que o Steam não retorna score (delisted, muito antigos, etc.).
+
+1. Acesse https://dev.twitch.tv/console e faça login com sua conta Twitch (crie uma se não tiver — é grátis)
+2. Clique em **Register Your Application**
+3. Preencha:
+   - **Name:** qualquer coisa (ex: `howl-igdb`)
+   - **OAuth Redirect URLs:** `http://localhost`
+   - **Category:** `Website Integration`
+4. Clique em **Create**
+5. Na lista de apps, clique em **Manage**
+6. Copie o **Client ID**
+7. Clique em **New Secret** e copie o **Client Secret** (aparece só uma vez)
+
+Com as credenciais no `.env`, rode:
+```bash
+howl --migrate-igdb
+```
+O token OAuth é gerado e renovado automaticamente. Não é preciso refazer esse processo.
 
 **STEAM_VDF_PATH (opcional):**
 Necessário para usar `--collection` e exclusão automática de jogos terminados.
@@ -168,9 +190,14 @@ howl --username meu_id_steam --refresh
 
 # Preencher campos ausentes em entradas antigas (genres, release_year)
 howl --migrate-cache
+
+# Buscar scores IGDB para jogos sem Metacritic (requer IGDB_CLIENT_ID e IGDB_CLIENT_SECRET)
+howl --migrate-igdb
 ```
 
 O `--migrate-cache` é útil se você tinha um cache de versões anteriores que não tinham todos os campos.
+
+O `--migrate-igdb` preenche scores de críticos via IGDB para jogos onde o Steam não retorna Metacritic — útil especialmente para jogos delisted (ex: Deus Ex: Human Revolution original). Pode ser re-rodado a qualquer momento; jogos que já têm dados IGDB no cache são pulados.
 
 ## Troubleshooting
 
