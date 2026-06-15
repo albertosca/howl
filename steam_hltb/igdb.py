@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 import requests
 
-TOKEN_FILE = ".igdb_token.json"
+TOKEN_FILE = ".igdb_token.json"  # mesmo padrão de CACHE_FILE — path relativo ao cwd de invocação
 IGDB_API = "https://api.igdb.com/v4"
 TWITCH_URL = "https://id.twitch.tv/oauth2/token"
 MIN_RATING_COUNT = 3
@@ -82,6 +82,7 @@ def _post(client_id: str, token: str, endpoint: str, body: str) -> list:
         data=body,
     )
     if not resp.ok:
+        print(f"IGDB API error {resp.status_code}: {resp.text[:200]}", file=__import__('sys').stderr)
         return []
     return resp.json()
 
@@ -127,7 +128,7 @@ def fetch_by_appid(client_id: str | None, token: str | None, appid: int) -> dict
 
 
 def fetch_by_name(client_id: str | None, token: str | None, name: str) -> dict | None:
-    """Busca jogo no IGDB por nome (search)."""
+    """Busca jogo por nome. Retorna o primeiro resultado IGDB — sem validação de similaridade."""
     if not client_id or not token:
         return None
 
