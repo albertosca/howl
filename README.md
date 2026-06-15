@@ -1,11 +1,13 @@
+🇺🇸 **English** · 🇧🇷 [Português](README.pt-BR.md)
+
 # HOWL
 
 **Hoard Optimizer, What to Launch**
 
-Ranqueia sua biblioteca Steam por qualidade × tempo investido usando dados do [HowLongToBeat](https://howlongtobeat.com), Metacritic e Steam Reviews. Chega de paralisia de decisão na frente da backlog.
+Ranks your Steam library by quality × time invested using data from [HowLongToBeat](https://howlongtobeat.com), Metacritic and Steam Reviews. No more decision paralysis staring at your backlog.
 
 ```
-  #  Nome                                            Ano    MC   Steam   HLTB   Jogadas     Score
+  #  Name                                            Year   MC   Steam   HLTB   Played      Score
 ---  ---------------------------------------------- ----  ----  ------  -----  --------  --------
   1  Hades                                          2020    93     97%    22h        0h      20.3
      ↳ action, roguelike
@@ -13,13 +15,13 @@ Ranqueia sua biblioteca Steam por qualidade × tempo investido usando dados do [
      ↳ action, platformer
 ```
 
-## Requisitos
+## Requirements
 
 - Python 3.11+
-- Steam API Key (gratuita, instruções abaixo)
-- Conta Steam com perfil e biblioteca públicos (ou privados com a própria chave)
+- Steam API Key (free, instructions below)
+- Steam account with public profile and library (or private, using your own key)
 
-## Instalação
+## Installation
 
 ```bash
 git clone https://github.com/albertosca/howl.git
@@ -29,193 +31,193 @@ source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-Após instalar, o comando `howl` fica disponível no ambiente:
+After installing, the `howl` command becomes available in the environment:
 
 ```bash
 howl --help
 ```
 
-## Configuração
+## Configuration
 
-### Jeito rápido: `howl --setup`
+### Quick way: `howl --setup`
 
 ```bash
 howl --setup
 ```
 
-O wizard interativo guia você pelas variáveis necessárias, valida ao vivo contra a Steam API e escreve um `.env` local (carregado automaticamente) ou mostra o bloco pra colar no seu shell profile.
+The interactive wizard walks you through the required variables, validates them live against the Steam API, and writes a local `.env` file (loaded automatically) or prints a block for you to paste into your shell profile.
 
-### Jeito manual: variáveis de ambiente
+### Manual way: environment variables
 
-| Variável | Obrigatória | O que é |
+| Variable | Required | What it is |
 |---|---|---|
-| `STEAM_API_KEY` | sim | Chave da Steam Web API |
-| `STEAM_USERNAME` | sim | Vanity URL do seu perfil (ex: `gabelogannewell`) |
-| `STEAM_VDF_PATH` | não | Caminho para o `sharedconfig.vdf` (filtros de coleção) |
-| `IGDB_CLIENT_ID` | não | Client ID do app Twitch (para scores de jogos delisted) |
-| `IGDB_CLIENT_SECRET` | não | Client Secret do app Twitch |
+| `STEAM_API_KEY` | yes | Steam Web API key |
+| `STEAM_USERNAME` | yes | Vanity URL of your profile (e.g. `gabelogannewell`) |
+| `STEAM_VDF_PATH` | no | Path to `sharedconfig.vdf` (collection filters) |
+| `IGDB_CLIENT_ID` | no | Twitch app Client ID (scores for delisted games) |
+| `IGDB_CLIENT_SECRET` | no | Twitch app Client Secret |
 
 **STEAM_API_KEY:**
-1. Acesse https://steamcommunity.com/dev/apikey
-2. Faça login com sua conta Steam
-3. Preencha "Domain Name" com qualquer valor (ex: `localhost`)
-4. Copie a chave gerada
+1. Go to https://steamcommunity.com/dev/apikey
+2. Log in with your Steam account
+3. Fill "Domain Name" with any value (e.g. `localhost`)
+4. Copy the generated key
 
 **STEAM_USERNAME:**
-A vanity URL do seu perfil Steam: `steamcommunity.com/id/gabelogannewell` → username é `gabelogannewell`
+The vanity URL of your Steam profile: `steamcommunity.com/id/gabelogannewell` → username is `gabelogannewell`
 
-**IGDB_CLIENT_ID e IGDB_CLIENT_SECRET (opcional):**
-O IGDB complementa o Metacritic para jogos que o Steam não retorna score (delisted, muito antigos, etc.).
+**IGDB_CLIENT_ID and IGDB_CLIENT_SECRET (optional):**
+IGDB complements Metacritic for games where Steam returns no score (delisted, very old, etc.).
 
-1. Acesse https://dev.twitch.tv/console e faça login com sua conta Twitch (crie uma se não tiver — é grátis)
-2. Clique em **Register Your Application**
-3. Preencha:
-   - **Name:** qualquer coisa (ex: `howl-igdb`)
+1. Go to https://dev.twitch.tv/console and log in with your Twitch account (create one if needed — it's free)
+2. Click **Register Your Application**
+3. Fill in:
+   - **Name:** anything (e.g. `howl-igdb`)
    - **OAuth Redirect URLs:** `http://localhost`
    - **Category:** `Website Integration`
-4. Clique em **Create**
-5. Na lista de apps, clique em **Manage**
-6. Copie o **Client ID**
-7. Clique em **New Secret** e copie o **Client Secret** (aparece só uma vez)
+4. Click **Create**
+5. In the app list, click **Manage**
+6. Copy the **Client ID**
+7. Click **New Secret** and copy the **Client Secret** (shown only once)
 
-Com as credenciais no `.env`, rode:
+With the credentials in `.env`, run:
 ```bash
 howl --migrate-igdb
 ```
-O token OAuth é gerado e renovado automaticamente. Não é preciso refazer esse processo.
+The OAuth token is generated and refreshed automatically. You don't need to repeat this process.
 
-**STEAM_VDF_PATH (opcional):**
-Necessário para usar `--collection` e exclusão automática de jogos terminados.
+**STEAM_VDF_PATH (optional):**
+Required to use `--collection` and automatic exclusion of finished games.
 
-| Sistema | Localização padrão |
+| System | Default location |
 |---|---|
 | macOS | `~/Library/Application Support/Steam/userdata/<steamid>/7/remote/sharedconfig.vdf` |
 | Linux | `~/.steam/steam/userdata/<steamid>/7/remote/sharedconfig.vdf` |
 | Windows | `C:\Program Files (x86)\Steam\userdata\<steamid>\7\remote\sharedconfig.vdf` |
 
-O `<steamid>` é numérico (diferente da vanity URL). Encontre em: Steam → Configurações → Conta → ID da conta Steam.
+The `<steamid>` is numeric (different from the vanity URL). Find it in: Steam → Settings → Account → Steam account ID.
 
-Para definir as vars permanentemente (alternativa ao `.env`):
+To set the variables permanently (alternative to `.env`):
 
 ```bash
-# Adicione ao ~/.zshenv ou ~/.zprofile
-export STEAM_API_KEY="sua_chave_aqui"
-export STEAM_USERNAME="seu_username"
-export STEAM_VDF_PATH="/caminho/para/sharedconfig.vdf"  # opcional
+# Add to ~/.zshenv or ~/.zprofile
+export STEAM_API_KEY="your_key_here"
+export STEAM_USERNAME="your_username"
+export STEAM_VDF_PATH="/path/to/sharedconfig.vdf"  # optional
 ```
 
-## Uso
+## Usage
 
 ```bash
-# Primeiro uso: popula o cache (pode demorar ~5 min para 300 jogos)
-howl --username meu_id_steam --verbose
+# First run: populates the cache (may take ~5 min for 300 games)
+howl --username my_steam_id --verbose
 
-# Top 10 jogos bons e curtos (padrão)
-howl --username meu_id_steam
+# Top 10 good and short games (default)
+howl --username my_steam_id
 
-# Interface visual interativa
-howl --username meu_id_steam --tui
+# Interactive visual interface
+howl --username my_steam_id --tui
 
-# Filtrar por gênero, progresso e fórmula
-howl --username meu_id_steam --genre "action,rpg" --not-started --sort quick-wins
+# Filter by genre, progress and formula
+howl --username my_steam_id --genre "action,rpg" --not-started --sort quick-wins
 
-# Filtrar por época de lançamento
-howl --username meu_id_steam --era "2010-2015,2015-2020"
+# Filter by release era
+howl --username my_steam_id --era "2010-2015,2015-2020"
 
-# Ver o que está disponível no cache
+# See what's available in the cache
 howl --list-genres
 howl --list-tags
 howl --list-collections
 ```
 
-Com `STEAM_USERNAME` definido no ambiente, `--username` pode ser omitido.
+With `STEAM_USERNAME` set in the environment, `--username` can be omitted.
 
-## Fórmulas de ordenação (`--sort`)
+## Sort formulas (`--sort`)
 
-| Nome | Fórmula | Quando usar |
+| Name | Formula | When to use |
 |------|---------|-------------|
-| `shortest` | composite / √h | Jogos bons e curtos — default |
-| `longest` | composite × √h | Épicos que valem cada hora |
-| `rated` | Metacritic puro | Mais aclamados pela crítica |
-| `loved` | Steam % positivo | Mais amados pelos jogadores |
-| `quick-wins` | composite² / h | Qualidade máxima em menos tempo |
-| `hidden-gems` | steam × (1 − mc/100) | Amados pelos players, ignorados pela crítica |
-| `composto` | 0.5×mc + 0.5×steam | Média ponderada configurável |
+| `shortest` | composite / √h | Good and short games — default |
+| `longest` | composite × √h | Epics worth every hour |
+| `rated` | Metacritic only | Most critically acclaimed |
+| `loved` | Steam % positive | Most loved by players |
+| `quick-wins` | composite² / h | Maximum quality in less time |
+| `hidden-gems` | steam × (1 − mc/100) | Loved by players, ignored by critics |
+| `composto` | 0.5×mc + 0.5×steam | Configurable weighted average |
 
-`composite` = média ponderada de Metacritic e Steam reviews (ajuste com `--weight-mc` / `--weight-steam`).
+`composite` = weighted average of Metacritic and Steam reviews (tune with `--weight-mc` / `--weight-steam`).
 
-Jogos sem Metacritic ou Steam reviews recebem peso zero naquela fonte (o outro assume 100%).
+Games without Metacritic or Steam reviews get zero weight on that source (the other takes 100%).
 
-## Filtros disponíveis
+## Available filters
 
-| Flag | Valores | Default |
+| Flag | Values | Default |
 |------|---------|---------|
-| `--sort` | ver tabela acima | `shortest` |
-| `--genre` | vírgula-separado | — |
-| `--genre-any` | vírgula-separado | — |
-| `--exclude-genre` | vírgula-separado | — |
-| `--era` | `pre-2005` `2005-2010` `2010-2015` `2015-2020` `2020+` `unknown` | todas |
+| `--sort` | see table above | `shortest` |
+| `--genre` | comma-separated | — |
+| `--genre-any` | comma-separated | — |
+| `--exclude-genre` | comma-separated | — |
+| `--era` | `pre-2005` `2005-2010` `2010-2015` `2015-2020` `2020+` `unknown` | all |
 | `--not-started` | — | — |
 | `--in-progress` | — | — |
-| `--all-progress` | — | não-zerados |
+| `--all-progress` | — | not-finished |
 | `--category` | `all` `singleplayer` `coop` | `all` |
-| `--min-hours` / `--max-hours` | horas (HLTB) | — |
-| `--collection` | nome da coleção Steam | — |
-| `--top` | inteiro | `10` |
-| `--show-finished` | — | excluídos |
+| `--min-hours` / `--max-hours` | hours (HLTB) | — |
+| `--collection` | Steam collection name | — |
+| `--top` | integer | `10` |
+| `--show-finished` | — | excluded |
 
-## TUI (interface visual)
+## TUI (visual interface)
 
 ```bash
-howl --username meu_id_steam --tui
+howl --username my_steam_id --tui
 ```
 
-| Tecla | Ação |
-|-------|------|
-| `f` | Abrir/fechar painel de filtros |
-| `g` | Toggle coluna de gêneros |
-| `t` | Toggle coluna de categorias Steam |
-| `s` | Salvar resultado atual em CSV + Markdown |
-| `q` | Sair |
+| Key | Action |
+|-------|--------|
+| `f` | Open/close filter panel |
+| `g` | Toggle genres column |
+| `t` | Toggle Steam categories column |
+| `s` | Save current result to CSV + Markdown |
+| `q` | Quit |
 
-O painel de filtros aplica todas as mudanças em tempo real.
+The filter panel applies all changes in real time.
 
 ## Cache
 
-Os dados de HLTB, Steam Reviews e detalhes do jogo são cacheados em `games_cache.json` para evitar requisições repetidas. Para atualizar:
+HLTB, Steam Reviews and game detail data are cached in `games_cache.json` to avoid repeated requests. To update:
 
 ```bash
-# Rebuscar tudo do zero
-howl --username meu_id_steam --refresh
+# Re-fetch everything from scratch
+howl --username my_steam_id --refresh
 
-# Preencher campos ausentes em entradas antigas (genres, release_year)
+# Fill missing fields in old entries (genres, release_year)
 howl --migrate-cache
 
-# Buscar scores IGDB para jogos sem Metacritic (requer IGDB_CLIENT_ID e IGDB_CLIENT_SECRET)
+# Fetch IGDB scores for games without Metacritic (requires IGDB_CLIENT_ID and IGDB_CLIENT_SECRET)
 howl --migrate-igdb
 ```
 
-O `--migrate-cache` é útil se você tinha um cache de versões anteriores que não tinham todos os campos.
+`--migrate-cache` is useful if you had a cache from earlier versions that didn't have all fields.
 
-O `--migrate-igdb` preenche scores de críticos via IGDB para jogos onde o Steam não retorna Metacritic — útil especialmente para jogos delisted (ex: Deus Ex: Human Revolution original). Pode ser re-rodado a qualquer momento; jogos que já têm dados IGDB no cache são pulados.
+`--migrate-igdb` fills critic scores via IGDB for games where Steam returns no Metacritic — especially useful for delisted games (e.g. the original Deus Ex: Human Revolution). It can be re-run at any time; games that already have IGDB data in the cache are skipped.
 
 ## Troubleshooting
 
 **"Username not found on Steam"**
-Verifique se a vanity URL está correta. Acesse `https://steamcommunity.com/id/seu_id/` — se redirecionar para seu perfil, está certo.
+Check that the vanity URL is correct. Visit `https://steamcommunity.com/id/your_id/` — if it redirects to your profile, it's right.
 
-**Jogos sem Metacritic ou Steam reviews**
-Normal — não todos os jogos têm dados. Eles ainda aparecem mas com score 0 em algumas fórmulas. Use `--sort loved` ou `--sort rated` para ver só quem tem dados.
+**Games without Metacritic or Steam reviews**
+Normal — not all games have data. They still show up but with score 0 in some formulas. Use `--sort loved` or `--sort rated` to see only games with data.
 
-**"0 entradas para migrar"**
-O cache já está completo. Se acabou de criar o cache com `howl --verbose`, todos os jogos já saem com todos os campos.
+**"0 entries to migrate"**
+The cache is already complete. If you just built the cache with `howl --verbose`, all games already come with every field.
 
-**Cache com poucos jogos**
-Se a biblioteca Steam está como privada, a API retorna 0 jogos. Acesse Steam → Perfil → Editar → deixe jogos como público (pode voltar a privado depois).
+**Cache with few games**
+If the Steam library is set to private, the API returns 0 games. Go to Steam → Profile → Edit → set games to public (you can switch back to private afterwards).
 
-## Desenvolvimento
+## Development
 
 ```bash
-pytest                          # rodar todos os testes
-pytest tests/test_score.py -v   # módulo específico
+pytest                          # run all tests
+pytest tests/test_score.py -v   # specific module
 ```
