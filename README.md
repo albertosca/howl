@@ -22,7 +22,7 @@ Ranqueia sua biblioteca Steam por qualidade × tempo investido usando dados do [
 ## Instalação
 
 ```bash
-git clone https://github.com/seu-usuario/howl.git
+git clone https://github.com/albertosca/howl.git
 cd howl
 python -m venv venv
 source venv/bin/activate          # Windows: venv\Scripts\activate
