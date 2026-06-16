@@ -314,7 +314,7 @@ def test_print_table_caps_genres_at_four(capsys):
 
 def test_setup_flag_invokes_run_setup(monkeypatch):
     called = []
-    monkeypatch.setattr("steam_hltb.setup.run_setup", lambda: called.append(True))
+    monkeypatch.setattr("steam_hltb.setup.run_setup", lambda *a, **k: called.append(True))
     monkeypatch.setattr("sys.argv", ["howl", "--setup"])
     from steam_hltb import main as m
     import importlib; importlib.reload(m)

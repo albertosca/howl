@@ -279,12 +279,13 @@ def run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     from dotenv import load_dotenv
-    load_dotenv()
+    from .setup import _config_path
+    load_dotenv(_config_path())
     args = parse_args()
 
     if args.setup:
         from .setup import run_setup
-        run_setup()
+        run_setup(verbose=args.verbose)
         return
 
     if args.migrate_cache:

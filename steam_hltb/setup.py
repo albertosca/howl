@@ -1,8 +1,36 @@
 import glob
 import os
 import platform
+import traceback
+from datetime import datetime
 
 import requests
+
+
+# --- caminhos de configuração (~/.config/howl, respeitando XDG_CONFIG_HOME) ---
+
+def _config_dir() -> str:
+    base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    return os.path.join(base, "howl")
+
+
+def _config_path() -> str:
+    return os.path.join(_config_dir(), ".env")
+
+
+def _log_path() -> str:
+    return os.path.join(_config_dir(), "setup.log")
+
+
+def _log_error(msg: str) -> None:
+    """Grava uma entrada no setup.log. Logging nunca deve quebrar o setup."""
+    try:
+        os.makedirs(_config_dir(), mode=0o700, exist_ok=True)
+        with open(_log_path(), "a") as f:
+            ts = datetime.now().isoformat(timespec="seconds")
+            f.write(f"[{ts}] {msg}\n")
+    except Exception:
+        pass
 
 
 def _detect_vdf_paths() -> list[str]:
@@ -22,51 +50,102 @@ def _detect_vdf_paths() -> list[str]:
     return sorted(glob.glob(pattern))
 
 
-def _validate_api_key(key: str) -> bool:
+def _validate_api_key(key: str, verbose: bool = False) -> bool:
     try:
         resp = requests.get(
             "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/",
             params={"key": key, "vanityurl": "valve"},
             timeout=5,
         )
+        if verbose:
+            print(f"\n  [debug] GET ResolveVanityURL (valve) → HTTP {resp.status_code}")
         return resp.status_code == 200
-    except Exception:
+    except Exception as e:
+        if verbose:
+            print(f"\n  [debug] erro de rede ao validar a chave: {e}")
         return False
 
 
-def _validate_username(key: str, username: str) -> str | None:
+def _validate_username(key: str, username: str, verbose: bool = False) -> str | None:
     try:
         resp = requests.get(
             "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/",
             params={"key": key, "vanityurl": username},
             timeout=5,
         )
+        if verbose:
+            print(f"\n  [debug] GET ResolveVanityURL ({username}) → HTTP {resp.status_code}")
         data = resp.json().get("response", {})
         if data.get("success") == 1:
             return data["steamid"]
         return None
-    except Exception:
+    except Exception as e:
+        if verbose:
+            print(f"\n  [debug] erro de rede ao validar o username: {e}")
         return None
 
 
-def _write_env(env_vars: dict[str, str]) -> str:
-    env_path = os.path.join(os.getcwd(), ".env")
-    existing: dict[str, str] = {}
-    if os.path.exists(env_path):
-        with open(env_path) as f:
+def _read_env_file(path: str) -> dict[str, str]:
+    result: dict[str, str] = {}
+    if os.path.exists(path):
+        with open(path) as f:
             for line in f:
                 line = line.strip()
                 if "=" in line and not line.startswith("#"):
                     k, _, v = line.partition("=")
-                    existing[k.strip()] = v.strip()
+                    result[k.strip()] = v.strip()
+    return result
+
+
+def _write_env(env_vars: dict[str, str], confirm_overwrite: bool = True) -> str:
+    """Escreve as variáveis em ~/.config/howl/.env (dir 0700, arquivo 0600).
+
+    Se confirm_overwrite e já houver valores diferentes para alguma chave,
+    pergunta antes de sobrescrever; ao recusar, mantém os valores existentes.
+    """
+    env_vars = dict(env_vars)
+    env_path = _config_path()
+    os.makedirs(_config_dir(), mode=0o700, exist_ok=True)
+    existing = _read_env_file(env_path)
+
+    if confirm_overwrite:
+        clobbered = [k for k in env_vars if k in existing and existing[k] != env_vars[k]]
+        if clobbered:
+            print(f"\n  {env_path} já tem valores para: {', '.join(clobbered)}")
+            choice = input("  Sobrescrever esses valores? [s/N] ").strip().lower()
+            if choice not in ("s", "sim", "y", "yes"):
+                for k in clobbered:
+                    env_vars[k] = existing[k]
+                print("  Mantendo os valores existentes.")
+
     existing.update(env_vars)
     with open(env_path, "w") as f:
         for k, v in existing.items():
             f.write(f"{k}={v}\n")
+    os.chmod(env_path, 0o600)
     return env_path
 
 
-def _prompt_api_key() -> str:
+def _maybe_migrate_legacy_env() -> None:
+    """Se houver ./.env no cwd mas ainda não ~/.config/howl/.env, oferece migrar."""
+    legacy = os.path.join(os.getcwd(), ".env")
+    target = _config_path()
+    if not os.path.exists(legacy) or os.path.exists(target):
+        return
+    print(f"\n  Encontrei um .env legado em {legacy}")
+    print(f"  A partir de agora o howl lê de {target}.")
+    choice = input("  Migrar para lá agora? [S/n] ").strip().lower()
+    if choice in ("n", "não", "nao"):
+        return
+    os.makedirs(_config_dir(), mode=0o700, exist_ok=True)
+    with open(legacy) as src, open(target, "w") as dst:
+        dst.write(src.read())
+    os.chmod(target, 0o600)
+    print(f"  Migrado para {target}")
+    print(f"  Pode remover o antigo quando quiser: rm {legacy}")
+
+
+def _prompt_api_key(verbose: bool = False) -> str:
     existing = os.environ.get("STEAM_API_KEY", "")
     if existing:
         print(f"  STEAM_API_KEY já definida (***{existing[-4:]})")
@@ -85,16 +164,17 @@ def _prompt_api_key() -> str:
             print("  Chave obrigatória.")
             continue
         print("  Validando...", end=" ", flush=True)
-        if _validate_api_key(key):
+        if _validate_api_key(key, verbose=verbose):
             print("OK")
             return key
         print("inválida ou sem internet.")
         retry = input("  Tentar de novo? [S/n] ").strip().lower()
         if retry in ("n", "não", "nao"):
+            print("  Seguindo com a chave informada (não validada).")
             return key
 
 
-def _prompt_username(api_key: str) -> str:
+def _prompt_username(api_key: str, verbose: bool = False) -> str:
     existing = os.environ.get("STEAM_USERNAME", "")
     if existing:
         print(f"\n  STEAM_USERNAME já definida: {existing}")
@@ -111,13 +191,14 @@ def _prompt_username(api_key: str) -> str:
             print("  Username obrigatório.")
             continue
         print("  Validando...", end=" ", flush=True)
-        steamid = _validate_username(api_key, username)
+        steamid = _validate_username(api_key, username, verbose=verbose)
         if steamid:
             print(f"OK (SteamID: {steamid})")
             return username
         print("não encontrado.")
         retry = input("  Tentar de novo? [S/n] ").strip().lower()
         if retry in ("n", "não", "nao"):
+            print("  Seguindo com o username informado (não validado).")
             return username
 
 
@@ -145,11 +226,13 @@ def _prompt_vdf_path() -> str | None:
     return manual if manual else None
 
 
-def run_setup() -> None:
+def _run_setup_inner(verbose: bool = False) -> None:
     print("\n=== howl setup ===\n")
 
-    api_key  = _prompt_api_key()
-    username = _prompt_username(api_key)
+    _maybe_migrate_legacy_env()
+
+    api_key  = _prompt_api_key(verbose=verbose)
+    username = _prompt_username(api_key, verbose=verbose)
     vdf_path = _prompt_vdf_path()
 
     config: dict[str, str] = {
@@ -176,26 +259,19 @@ def run_setup() -> None:
         display = f"***{v[-4:]}" if "KEY" in k else v
         print(f"  {k}={display}")
 
-    print("\nOnde salvar?")
-    print("  1. .env local (carregado automaticamente pelo howl)")
-    print("  2. Mostrar bloco pra colar no ~/.zshenv (persistente no sistema)")
-    print("  3. Ambos")
-    dest = input("  Escolha [1/2/3]: ").strip()
-
-    if dest in ("1", "3"):
-        env_path = _write_env(config)
-        print(f"  Salvo em {env_path}")
-
-    if dest in ("2", "3"):
-        print("\n  Cole no seu ~/.zshenv ou ~/.zprofile e rode 'source ~/.zshenv':")
-        print("  " + "-" * 50)
-        for k, v in config.items():
-            print(f"  export {k}={v}")
-        print("  " + "-" * 50)
-
-    if dest not in ("1", "2", "3"):
-        print("  Nenhum destino selecionado — nada foi salvo.")
-        print("  Rode 'howl --setup' de novo para configurar.\n")
-        return
-
+    env_path = _write_env(config)
+    print(f"\n  Salvo em {env_path}")
     print("\nSetup concluído! Rode 'howl' para começar.\n")
+
+
+def run_setup(verbose: bool = False) -> None:
+    try:
+        _run_setup_inner(verbose=verbose)
+    except (KeyboardInterrupt, EOFError):
+        print("\n\n  Setup cancelado.")
+    except Exception as exc:
+        _log_error(traceback.format_exc())
+        print(f"\n  Erro inesperado durante o setup: {exc}")
+        print(f"  Detalhes registrados em {_log_path()}")
+        if verbose:
+            traceback.print_exc()
