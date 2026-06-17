@@ -1,11 +1,11 @@
 import argparse
 
-from .classify import apply_filters, build_game_rows
-from .cli import _csv_list, _progress_mode, _resolve_username, _weights, parse_args
+from .classify import build_game_rows
+from .cli import _resolve_username, filters_from_args, parse_args
 from .fetch import build_library, get_api_key, load_cache
 from .report import list_available, list_collections_cmd, print_table, save_results
-from .score import compute_score
-from .steam_collections import filter_collection, load_collections
+from .selection import select_games
+from .steam_collections import load_collections
 
 
 def run(args: argparse.Namespace) -> None:
@@ -17,31 +17,8 @@ def run(args: argparse.Namespace) -> None:
         steam_key, username, cache, refresh=args.refresh, verbose=args.verbose
     )
 
-    rows = build_game_rows(cache, steam_games)
-    rows = apply_filters(
-        rows,
-        genre=_csv_list(args.genre),
-        genre_any=_csv_list(args.genre_any),
-        exclude_genre=_csv_list(args.exclude_genre),
-        progress=_progress_mode(args),
-        category=args.category,
-        min_hours=args.min_hours,
-        max_hours=args.max_hours,
-        eras=_csv_list(args.era),
-    )
-    if not args.show_finished:
-        from .steam_collections import exclude_finished
-
-        rows = exclude_finished(rows, args.vdf_path)
-    if args.collection:
-        collection_map = load_collections(args.vdf_path)
-        rows = filter_collection(rows, args.collection, collection_map)
-
-    weights = _weights(args)
-    for g in rows:
-        g["_score"] = compute_score(g, args.sort, weights)
-
-    rows.sort(key=lambda g: g["_score"], reverse=True)
+    all_games = build_game_rows(cache, steam_games)
+    rows = select_games(all_games, filters_from_args(args))
     top = rows[: args.top]
 
     total_filtered = len(rows)
@@ -64,22 +41,7 @@ def _run_tui(args: argparse.Namespace) -> None:
         steam_key, username, cache, refresh=args.refresh, verbose=args.verbose
     )
     rows = build_game_rows(cache, steam_games)
-    initial_filters = {
-        "genre": _csv_list(args.genre),
-        "genre_any": _csv_list(args.genre_any),
-        "exclude_genre": _csv_list(args.exclude_genre),
-        "progress": _progress_mode(args),
-        "category": args.category,
-        "min_hours": args.min_hours,
-        "max_hours": args.max_hours,
-        "sort": args.sort,
-        "top": args.top,
-        "weights": _weights(args),
-        "vdf_path": args.vdf_path,
-        "show_finished": args.show_finished,
-        "eras": _csv_list(args.era),
-    }
-    run_tui(rows, initial_filters)
+    run_tui(rows, filters_from_args(args))
 
 
 def main() -> None:

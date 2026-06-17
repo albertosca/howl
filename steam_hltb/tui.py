@@ -6,8 +6,9 @@ from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widgets import Checkbox, DataTable, Footer, Header, Input, Label, Select, Static
 
-from .classify import ERA_LABELS, apply_filters, filter_name
-from .score import SORT_OPTIONS, compute_score
+from .classify import ERA_LABELS
+from .score import SORT_OPTIONS
+from .selection import select_games
 
 
 def _era_id(era: str) -> str:
@@ -173,38 +174,9 @@ class SteamHLTBApp(App[None]):
             table.add_column("Tags", width=22)
 
     def _rebuild_table(self) -> None:
-        rows = apply_filters(
-            self.all_games,
-            genre=self.filters["genre"],
-            genre_any=self.filters["genre_any"],
-            exclude_genre=self.filters["exclude_genre"],
-            progress=self.filters["progress"],
-            category=self.filters["category"],
-            min_hours=self.filters["min_hours"],
-            max_hours=self.filters["max_hours"],
-            eras=self.filters.get("eras"),
-        )
-        rows = filter_name(rows, query=self.filters.get("name_query"))
-        vdf_path = self.filters.get("vdf_path", "sharedconfig.vdf")
-        if not self.filters.get("show_finished", False):
-            from .steam_collections import exclude_finished
-
-            rows = exclude_finished(rows, vdf_path)
-        if self.filters.get("collection"):
-            try:
-                from .steam_collections import filter_collection, load_collections
-
-                collection_map = load_collections(vdf_path)
-                rows = filter_collection(rows, self.filters["collection"], collection_map)
-            except Exception:
-                pass
+        rows = select_games(self.all_games, self.filters)
+        self._games = rows[: self.filters["top"]]
         sort_by = self.filters["sort"]
-        weights = self.filters["weights"]
-        for g in rows:
-            g["_score"] = compute_score(g, sort_by, weights)
-        rows.sort(key=lambda g: g["_score"], reverse=True)
-        top_n = self.filters["top"]
-        self._games = rows[:top_n]
 
         table = self.query_one(DataTable)
         table.clear()

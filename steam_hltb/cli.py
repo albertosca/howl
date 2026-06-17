@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from typing import Any
 
 from .score import SORT_OPTIONS
 
@@ -188,3 +189,23 @@ def _csv_list(value: str | None) -> list[str] | None:
         return None
     result = [v.strip() for v in value.split(",") if v.strip()]
     return result or None
+
+
+def filters_from_args(args: argparse.Namespace) -> dict[str, Any]:
+    """Deriva o dict de filtros consumido por selection.select_games."""
+    return {
+        "genre": _csv_list(args.genre),
+        "genre_any": _csv_list(args.genre_any),
+        "exclude_genre": _csv_list(args.exclude_genre),
+        "progress": _progress_mode(args),
+        "category": args.category,
+        "min_hours": args.min_hours,
+        "max_hours": args.max_hours,
+        "sort": args.sort,
+        "top": args.top,
+        "weights": _weights(args),
+        "vdf_path": args.vdf_path,
+        "show_finished": args.show_finished,
+        "collection": args.collection,
+        "eras": _csv_list(args.era),
+    }
