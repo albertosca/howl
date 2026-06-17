@@ -45,7 +45,7 @@ howl --help
 howl --setup
 ```
 
-O wizard interativo guia você pelas variáveis necessárias, valida ao vivo contra a Steam API e escreve um `.env` local (carregado automaticamente) ou mostra o bloco pra colar no seu shell profile.
+O wizard interativo guia você pelas variáveis necessárias, valida ao vivo contra a Steam API e as escreve em `~/.config/howl/.env` (carregado automaticamente, criado com permissões `0600`). Se você ainda tiver um `.env` legado no diretório atual, ele oferece migrar.
 
 ### Jeito manual: variáveis de ambiente
 
@@ -80,7 +80,7 @@ O IGDB complementa o Metacritic para jogos que o Steam não retorna score (delis
 6. Copie o **Client ID**
 7. Clique em **New Secret** e copie o **Client Secret** (aparece só uma vez)
 
-Com as credenciais no `.env`, rode:
+Com as credenciais configuradas, rode:
 ```bash
 howl --migrate-igdb
 ```
@@ -97,14 +97,17 @@ Necessário para usar `--collection` e exclusão automática de jogos terminados
 
 O `<steamid>` é numérico (diferente da vanity URL). Encontre em: Steam → Configurações → Conta → ID da conta Steam.
 
-Para definir as vars permanentemente (alternativa ao `.env`):
+As credenciais ficam em `~/.config/howl/.env` (respeita `$XDG_CONFIG_HOME`). O wizard escreve esse arquivo pra você; pra configurar na mão, crie-o com um `KEY=valor` por linha:
 
 ```bash
-# Adicione ao ~/.zshenv ou ~/.zprofile
-export STEAM_API_KEY="sua_chave_aqui"
-export STEAM_USERNAME="seu_username"
-export STEAM_VDF_PATH="/caminho/para/sharedconfig.vdf"  # opcional
+# ~/.config/howl/.env
+STEAM_API_KEY=sua_chave_aqui
+STEAM_USERNAME=seu_username
+# STEAM_VDF_PATH é opcional (filtros de coleção)
+STEAM_VDF_PATH=/caminho/para/sharedconfig.vdf
 ```
+
+Prefira isso a exportar as chaves no seu shell profile (`~/.zshenv`, `~/.bashrc`): exports de shell vazam os valores pra todos os processos do sistema.
 
 ## Uso
 
