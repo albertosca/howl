@@ -26,7 +26,8 @@ def _csv_or_none(value: str) -> list[str] | None:
 
 
 def run_interactive(base_args: argparse.Namespace) -> None:
-    from .main import _weights, print_table, save_results
+    from .cli import _weights
+    from .report import print_table, save_results
 
     print("\n=== Modo Interativo ===\n")
 

@@ -365,7 +365,7 @@ class SteamHLTBApp(App[None]):
         self.show_tags = not self.show_tags
 
     def action_save(self) -> None:
-        from .main import save_results
+        from .report import save_results
 
         save_results(self._games, "how_long_to_beat_output")
         self.notify("Salvo em how_long_to_beat_output.csv e .md")

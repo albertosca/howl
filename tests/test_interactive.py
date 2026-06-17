@@ -39,7 +39,7 @@ def _run(inputs, **args_kwargs):
         patch("steam_hltb.fetch.get_api_key", return_value="fake_key"),
         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
-        patch("steam_hltb.main.save_results"),
+        patch("steam_hltb.report.save_results"),
         patch("steam_hltb.steam_collections.load_collections", return_value={}),
     ):
         from steam_hltb.interactive import run_interactive
@@ -64,7 +64,7 @@ def test_interactive_does_not_ask_rawg_key():
         patch("steam_hltb.fetch.get_api_key", return_value="fake"),
         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
-        patch("steam_hltb.main.save_results"),
+        patch("steam_hltb.report.save_results"),
         patch("steam_hltb.steam_collections.load_collections", return_value={}),
     ):
         from steam_hltb.interactive import run_interactive
@@ -94,7 +94,7 @@ def test_interactive_default_sort_is_shortest():
         patch("steam_hltb.fetch.get_api_key", return_value="fake"),
         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
-        patch("steam_hltb.main.save_results"),
+        patch("steam_hltb.report.save_results"),
         patch("steam_hltb.steam_collections.load_collections", return_value={}),
     ):
         from steam_hltb.interactive import run_interactive

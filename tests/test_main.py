@@ -3,7 +3,7 @@ import sys
 
 def _parse(argv):
     sys.argv = ["main.py", *argv]
-    from steam_hltb.main import parse_args
+    from steam_hltb.cli import parse_args
 
     return parse_args()
 
@@ -44,7 +44,7 @@ def test_print_table_shows_genres_by_default(capsys):
             "tags": ["indie", "great soundtrack"],
         }
     ]
-    from steam_hltb.main import print_table
+    from steam_hltb.report import print_table
 
     print_table(games, "shortest", show_tags=False)
     out = capsys.readouterr().out
@@ -66,7 +66,7 @@ def test_print_table_shows_steam_categories_when_flag(capsys):
             "tags": ["single-player", "full controller support", "steam achievements"],
         }
     ]
-    from steam_hltb.main import print_table
+    from steam_hltb.report import print_table
 
     print_table(games, "shortest", show_tags=True)
     out = capsys.readouterr().out
@@ -90,7 +90,7 @@ def test_list_available_genres(capsys):
         "Hades": {"steam": {"genres": ["action", "roguelike"], "categories": []}, "rawg": None},
         "Portal 2": {"steam": {"genres": ["puzzle", "action"], "categories": []}, "rawg": None},
     }
-    from steam_hltb.main import list_available
+    from steam_hltb.report import list_available
 
     list_available(cache, "genres")
     out = capsys.readouterr().out
@@ -107,7 +107,7 @@ def test_list_available_categories(capsys):
             "rawg": None,
         },
     }
-    from steam_hltb.main import list_available
+    from steam_hltb.report import list_available
 
     list_available(cache, "categories")
     out = capsys.readouterr().out
@@ -116,7 +116,7 @@ def test_list_available_categories(capsys):
 
 
 def test_list_available_empty_cache(capsys):
-    from steam_hltb.main import list_available
+    from steam_hltb.report import list_available
 
     list_available({}, "genres")
     out = capsys.readouterr().out
@@ -129,7 +129,7 @@ def test_parse_args_list_collections():
 
 
 def test_list_collections_cmd_prints_names(capsys):
-    from steam_hltb.main import list_collections_cmd
+    from steam_hltb.report import list_collections_cmd
 
     collection_map = {
         "220": ["Terminados"],
@@ -144,7 +144,7 @@ def test_list_collections_cmd_prints_names(capsys):
 
 
 def test_list_collections_cmd_shows_count(capsys):
-    from steam_hltb.main import list_collections_cmd
+    from steam_hltb.report import list_collections_cmd
 
     collection_map = {"220": ["Terminados"], "620": ["Terminados"], "570": ["Jogando"]}
     list_collections_cmd(collection_map)
@@ -182,7 +182,7 @@ def test_print_table_shows_year(capsys):
             "release_year": 2004,
         }
     ]
-    from steam_hltb.main import print_table
+    from steam_hltb.report import print_table
 
     print_table(games, "shortest")
     out = capsys.readouterr().out
@@ -203,7 +203,7 @@ def test_print_table_shows_dash_for_missing_year(capsys):
             "release_year": None,
         }
     ]
-    from steam_hltb.main import print_table
+    from steam_hltb.report import print_table
 
     print_table(games, "shortest")
     out = capsys.readouterr().out
@@ -216,7 +216,7 @@ def test_progress_mode_all():
     import argparse
 
     args = argparse.Namespace(not_started=False, in_progress=False, all_progress=True)
-    from steam_hltb.main import _progress_mode
+    from steam_hltb.cli import _progress_mode
 
     assert _progress_mode(args) == "all"
 
@@ -225,7 +225,7 @@ def test_progress_mode_not_started():
     import argparse
 
     args = argparse.Namespace(not_started=True, in_progress=False, all_progress=False)
-    from steam_hltb.main import _progress_mode
+    from steam_hltb.cli import _progress_mode
 
     assert _progress_mode(args) == "not_started"
 
@@ -234,7 +234,7 @@ def test_progress_mode_default_when_nothing_set():
     import argparse
 
     args = argparse.Namespace(not_started=False, in_progress=False, all_progress=False)
-    from steam_hltb.main import _progress_mode
+    from steam_hltb.cli import _progress_mode
 
     assert _progress_mode(args) == "default"
 
@@ -243,7 +243,7 @@ def test_weights_normalization_warns_and_normalizes(capsys):
     import argparse
 
     args = argparse.Namespace(weight_mc=0.6, weight_steam=0.6)
-    from steam_hltb.main import _weights
+    from steam_hltb.cli import _weights
 
     w = _weights(args)
     err = capsys.readouterr().err
@@ -252,14 +252,14 @@ def test_weights_normalization_warns_and_normalizes(capsys):
 
 
 def test_csv_list_parses_comma_separated():
-    from steam_hltb.main import _csv_list
+    from steam_hltb.cli import _csv_list
 
     assert _csv_list("action,rpg") == ["action", "rpg"]
     assert _csv_list("action, rpg , puzzle") == ["action", "rpg", "puzzle"]
 
 
 def test_csv_list_returns_none_for_empty():
-    from steam_hltb.main import _csv_list
+    from steam_hltb.cli import _csv_list
 
     assert _csv_list(None) is None
     assert _csv_list("") is None
@@ -280,7 +280,7 @@ def test_save_results_creates_csv_and_md(tmp_path):
             "completionist": 90,
         }
     ]
-    from steam_hltb.main import save_results
+    from steam_hltb.report import save_results
 
     output_base = str(tmp_path / "output")
     save_results(games, output_base)
@@ -361,7 +361,7 @@ def test_print_table_caps_genres_at_four(capsys):
             "tags": [],
         }
     ]
-    from steam_hltb.main import print_table
+    from steam_hltb.report import print_table
 
     print_table(games, "shortest", show_tags=False)
     out = capsys.readouterr().out
