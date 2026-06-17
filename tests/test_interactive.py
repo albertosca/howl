@@ -22,7 +22,12 @@ MOCK_STEAM_GAMES = [{"name": "Half-Life 2", "appid": 220, "hours_played": 0.0}]
 
 
 def _make_args(**kwargs):
-    defaults = dict(username="testuser", weight_mc=0.5, weight_steam=0.5, vdf_path="no.vdf")
+    defaults = {
+        "username": "testuser",
+        "weight_mc": 0.5,
+        "weight_steam": 0.5,
+        "vdf_path": "no.vdf",
+    }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
 

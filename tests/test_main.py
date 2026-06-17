@@ -2,7 +2,7 @@ import sys
 
 
 def _parse(argv):
-    sys.argv = ["main.py"] + argv
+    sys.argv = ["main.py", *argv]
     from steam_hltb.main import parse_args
 
     return parse_args()
@@ -208,7 +208,7 @@ def test_print_table_shows_dash_for_missing_year(capsys):
     print_table(games, "shortest")
     out = capsys.readouterr().out
     # a linha do jogo deve conter "-" no campo de ano
-    game_line = [l for l in out.splitlines() if "Unknown Game" in l][0]
+    game_line = next(line for line in out.splitlines() if "Unknown Game" in line)
     assert "-" in game_line
 
 
@@ -374,8 +374,9 @@ def test_setup_flag_invokes_run_setup(monkeypatch):
     called = []
     monkeypatch.setattr("steam_hltb.setup.run_setup", lambda *a, **k: called.append(True))
     monkeypatch.setattr("sys.argv", ["howl", "--setup"])
-    from steam_hltb import main as m
     import importlib
+
+    from steam_hltb import main as m
 
     importlib.reload(m)
     m.main()

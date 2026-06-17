@@ -2,6 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from steam_hltb.fetch import migrate_igdb_data
+
 
 def test_load_cache_returns_empty_dict_when_file_missing(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
@@ -525,9 +527,6 @@ def test_build_library_verbose_true_prints_indexed_for_new_games(capsys, monkeyp
     out = capsys.readouterr().out
     assert "[1/1] Half-Life 2" in out
     assert "Fetching:" not in out
-
-
-from steam_hltb.fetch import migrate_igdb_data
 
 
 def test_migrate_igdb_fills_missing_metacritic():

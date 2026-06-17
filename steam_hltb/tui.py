@@ -1,5 +1,7 @@
+from typing import Any, ClassVar
+
 from textual.app import App, ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widgets import Checkbox, DataTable, Footer, Header, Input, Label, Select, Static
@@ -87,7 +89,7 @@ class FilterPanel(Vertical):
             yield Checkbox(era, value=True, id=_era_id(era))
 
 
-class SteamHLTBApp(App):
+class SteamHLTBApp(App[None]):
     CSS = """
     Screen {
         layout: vertical;
@@ -107,7 +109,7 @@ class SteamHLTBApp(App):
     }
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit", "Sair"),
         Binding("f", "toggle_filters", "Filtros"),
         Binding("g", "toggle_genres", "Gêneros"),
@@ -118,7 +120,9 @@ class SteamHLTBApp(App):
     show_genres: reactive[bool] = reactive(True)
     show_tags: reactive[bool] = reactive(False)
 
-    def __init__(self, all_games: list, initial_filters: dict | None = None):
+    def __init__(
+        self, all_games: list[dict[str, Any]], initial_filters: dict[str, Any] | None = None
+    ):
         super().__init__()
         self.all_games = all_games
         self.filters = (initial_filters or {}).copy()
@@ -137,7 +141,7 @@ class SteamHLTBApp(App):
         self.filters.setdefault("collection", None)
         self.filters.setdefault("name_query", None)
         self.filters.setdefault("eras", None)  # None = todas as eras
-        self._games: list = []
+        self._games: list[dict[str, Any]] = []
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -367,5 +371,5 @@ class SteamHLTBApp(App):
         self.notify("Salvo em how_long_to_beat_output.csv e .md")
 
 
-def run_tui(all_games: list, initial_filters: dict | None = None) -> None:
+def run_tui(all_games: list[dict[str, Any]], initial_filters: dict[str, Any] | None = None) -> None:
     SteamHLTBApp(all_games, initial_filters).run()

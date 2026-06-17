@@ -2,6 +2,8 @@ import argparse
 import csv
 import os
 import sys
+from pathlib import Path
+from typing import Any
 
 from .classify import apply_filters, build_game_rows
 from .fetch import build_library, get_api_key, load_cache
@@ -29,7 +31,7 @@ STEAM_NOISE_CATEGORIES: frozenset[str] = frozenset(
 )
 
 
-def _gameplay_categories(game: dict) -> list[str]:
+def _gameplay_categories(game: dict[str, Any]) -> list[str]:
     """Retorna steam.categories filtradas de ruído de infraestrutura."""
     return [c for c in game.get("tags", []) if c.lower() not in STEAM_NOISE_CATEGORIES]
 
@@ -37,7 +39,10 @@ def _gameplay_categories(game: dict) -> list[str]:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="howl",
-        description="HOWL — Hoard Optimizer, What to Launch. Ranqueia sua biblioteca Steam por qualidade × tempo.",
+        description=(
+            "HOWL — Hoard Optimizer, What to Launch. "
+            "Ranqueia sua biblioteca Steam por qualidade × tempo."
+        ),
         epilog="""
 Exemplos:
   howl --username mysteamid --top 25 --sort rated
@@ -48,10 +53,10 @@ Exemplos:
   Dica: defina STEAM_USERNAME no ambiente para não precisar de --username.
 
 Formatos de entrada:
-  --genre / --genre-any / --exclude-genre  nomes separados por vírgula (ex: "action,rpg")
-  --sort                                   shortest | longest | rated | loved | quick-wins | hidden-gems | composto
-  --era                                    épocas separadas por vírgula: pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown
-  --weight-mc / --weight-steam             pesos de 0.0 a 1.0 que somam 1.0 (ex: 0.6 e 0.4)
+  --genre / --genre-any / --exclude-genre  nomes vírgula-sep (ex: "action,rpg")
+  --sort      shortest | longest | rated | loved | quick-wins | hidden-gems | composto
+  --era       vírgula-sep: pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown
+  --weight-mc / --weight-steam             pesos 0.0-1.0 que somam 1.0 (ex: 0.6 e 0.4)
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -91,7 +96,10 @@ Formatos de entrada:
     p.add_argument("--max-hours", type=float, help="Duração máxima HLTB em horas")
     p.add_argument(
         "--era",
-        help="Épocas de lançamento (vírgula-sep): pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown",
+        help=(
+            "Épocas de lançamento (vírgula-sep): "
+            "pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown"
+        ),
     )
     p.add_argument("--top", type=int, default=10, help="Quantos jogos exibir (padrão: %(default)s)")
     p.add_argument(
@@ -115,7 +123,10 @@ Formatos de entrada:
     p.add_argument(
         "--vdf-path",
         default=os.environ.get("STEAM_VDF_PATH", "sharedconfig.vdf"),
-        help="Caminho para o sharedconfig.vdf do Steam (padrão: STEAM_VDF_PATH env ou sharedconfig.vdf)",
+        help=(
+            "Caminho para o sharedconfig.vdf do Steam "
+            "(padrão: STEAM_VDF_PATH env ou sharedconfig.vdf)"
+        ),
     )
     p.add_argument(
         "--show-finished",
@@ -146,7 +157,10 @@ Formatos de entrada:
     p.add_argument(
         "--migrate-igdb",
         action="store_true",
-        help="Busca dados IGDB para jogos sem Metacritic no cache (requer IGDB_CLIENT_ID e IGDB_CLIENT_SECRET)",
+        help=(
+            "Busca dados IGDB para jogos sem Metacritic no cache "
+            "(requer IGDB_CLIENT_ID e IGDB_CLIENT_SECRET)"
+        ),
     )
     p.add_argument(
         "-v",
@@ -172,7 +186,8 @@ Formatos de entrada:
 def _resolve_username(args: argparse.Namespace) -> str:
     """Retorna username do argparse, env var, ou prompt interativo."""
     if args.username:
-        return args.username
+        username: str = args.username
+        return username
     username = input("Steam username (vanity URL do perfil): ").strip()
     if not username:
         print("Erro: username obrigatório.", file=sys.stderr)
@@ -206,8 +221,11 @@ def _csv_list(value: str | None) -> list[str] | None:
     return result or None
 
 
-def print_table(games: list[dict], sort_by: str, show_tags: bool = False) -> None:
-    header = f"{'#':>3}  {'Nome':<45}  {'Ano':>4}  {'MC':>4}  {'Steam':>6}  {'HLTB':>5}  {'Jogadas':>8}  {'Score':>8}"
+def print_table(games: list[dict[str, Any]], sort_by: str, show_tags: bool = False) -> None:
+    header = (
+        f"{'#':>3}  {'Nome':<45}  {'Ano':>4}  {'MC':>4}  "
+        f"{'Steam':>6}  {'HLTB':>5}  {'Jogadas':>8}  {'Score':>8}"
+    )
     print(header)
     print("-" * len(header))
     for i, g in enumerate(games, 1):
@@ -218,7 +236,8 @@ def print_table(games: list[dict], sort_by: str, show_tags: bool = False) -> Non
         jogou = f"{g['hours_played']}h"
         score = f"{g['_score']:.1f}"
         print(
-            f"{i:>3}  {g['name']:<45}  {ano:>4}  {mc:>4}  {steam:>6}  {hltb:>5}  {jogou:>8}  {score:>8}"
+            f"{i:>3}  {g['name']:<45}  {ano:>4}  {mc:>4}  "
+            f"{steam:>6}  {hltb:>5}  {jogou:>8}  {score:>8}"
         )
         parts = []
         genres = g.get("genres", [])
@@ -246,7 +265,7 @@ def list_collections_cmd(collection_map: dict[str, list[str]]) -> None:
         print(f"  {count:>4}x  {name}")
 
 
-def list_available(cache: dict, field: str) -> None:
+def list_available(cache: dict[str, Any], field: str) -> None:
     from collections import Counter
 
     counter: Counter[str] = Counter()
@@ -270,9 +289,9 @@ def list_available(cache: dict, field: str) -> None:
         print(f"  {count:>4}x  {value}")
 
 
-def save_results(games: list[dict], output_base: str) -> None:
-    csv_path = output_base + ".csv"
-    md_path = output_base + ".md"
+def save_results(games: list[dict[str, Any]], output_base: str) -> None:
+    csv_path = Path(output_base + ".csv")
+    md_path = Path(output_base + ".md")
 
     fields = [
         "name",
@@ -285,7 +304,7 @@ def save_results(games: list[dict], output_base: str) -> None:
         "main_extra",
         "completionist",
     ]
-    with open(csv_path, "w", encoding="utf-8", newline="") as f:
+    with csv_path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for g in games:
@@ -293,7 +312,7 @@ def save_results(games: list[dict], output_base: str) -> None:
                 {k: g.get(k) for k in fields if k != "score"} | {"score": round(g["_score"], 2)}
             )
 
-    with open(md_path, "w", encoding="utf-8") as f:
+    with md_path.open("w", encoding="utf-8") as f:
         f.write("| # | Nome | MC | Steam | HLTB | Jogadas | Score |\n")
         f.write("|---|------|----|-------|------|---------|-------|\n")
         for i, g in enumerate(games, 1):
@@ -301,7 +320,8 @@ def save_results(games: list[dict], output_base: str) -> None:
             steam = f"{g['steam_pct']}%" if g["steam_pct"] else "-"
             hltb_str = f"{g['main_extra']}h" if g.get("main_extra") else "-"
             f.write(
-                f"| {i} | {g['name']} | {mc} | {steam} | {hltb_str} | {g['hours_played']}h | {g['_score']:.1f} |\n"
+                f"| {i} | {g['name']} | {mc} | {steam} | "
+                f"{hltb_str} | {g['hours_played']}h | {g['_score']:.1f} |\n"
             )
 
     print(f"\nSalvo em '{csv_path}' e '{md_path}'")
@@ -356,9 +376,9 @@ def run(args: argparse.Namespace) -> None:
 def main() -> None:
     from dotenv import load_dotenv
 
-    from .setup import _config_path
+    from .paths import config_path
 
-    load_dotenv(_config_path())
+    load_dotenv(config_path())
     args = parse_args()
 
     if args.setup:

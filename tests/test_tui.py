@@ -59,7 +59,7 @@ async def test_tui_app_starts_and_renders_table():
     from steam_hltb.tui import SteamHLTBApp
 
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
+    async with app.run_test():
         table = app.query_one(DataTable)
         assert table.row_count == 2
 
@@ -68,7 +68,7 @@ async def test_tui_filter_panel_hidden_by_default():
     from steam_hltb.tui import FilterPanel, SteamHLTBApp
 
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
+    async with app.run_test():
         panel = app.query_one(FilterPanel)
         assert panel.display is False
 
@@ -257,6 +257,6 @@ async def test_tui_status_bar_shows_count():
     from steam_hltb.tui import SteamHLTBApp
 
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
+    async with app.run_test():
         # verifica indiretamente via _games (a status bar reflete _games)
         assert len(app._games) == 2
