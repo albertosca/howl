@@ -1,5 +1,6 @@
 import json
-import os
+from pathlib import Path
+from typing import Any
 
 OVERRIDES_FILE = "howl_overrides.json"
 
@@ -41,18 +42,20 @@ def _normalize_name(name: str) -> str:
     return name.replace("™", "").replace("®", "").strip()
 
 
-def _load_overrides() -> dict:
+def _load_overrides() -> dict[str, Any]:
     """Carrega howl_overrides.json com chaves normalizadas (sem ™/®)."""
-    if not os.path.exists(OVERRIDES_FILE):
+    path = Path(OVERRIDES_FILE)
+    if not path.exists():
         return {}
-    with open(OVERRIDES_FILE, encoding="utf-8") as f:
-        raw = json.load(f)
+    raw = json.loads(path.read_text(encoding="utf-8"))
     return {_normalize_name(k): v for k, v in raw.items()}
 
 
-def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
+def build_game_rows(
+    cache: dict[str, Any], steam_games: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     overrides = _load_overrides()
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for game in steam_games:
         name = game["name"]
         entry = cache.get(name, {})
@@ -79,7 +82,7 @@ def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
                 metacritic = igdb_data.get("aggregated_rating")
             if not genres:
                 genres = [g.lower() for g in igdb_data.get("genres", [])]
-        row: dict = {
+        row: dict[str, Any] = {
             "name": hltb["game_name"],
             "steam_name": name,
             "appid": steam.get("appid") if steam else game.get("appid"),
@@ -107,11 +110,11 @@ def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
 
 
 def filter_genre(
-    games: list[dict],
+    games: list[dict[str, Any]],
     must_have: list[str] | None = None,
     any_of: list[str] | None = None,
     exclude: list[str] | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     result = games
     if must_have:
         lower = [g.lower() for g in must_have]
@@ -127,7 +130,7 @@ def filter_genre(
     return result
 
 
-def filter_progress(games: list[dict], mode: str = "default") -> list[dict]:
+def filter_progress(games: list[dict[str, Any]], mode: str = "default") -> list[dict[str, Any]]:
     if mode == "all":
         return games
     if mode == "not_started":
@@ -137,17 +140,17 @@ def filter_progress(games: list[dict], mode: str = "default") -> list[dict]:
     return [g for g in games if g["hours_played"] <= 0.5 * max(g["main_extra"] or 0, 1)]
 
 
-def filter_category(games: list[dict], category: str = "all") -> list[dict]:
+def filter_category(games: list[dict[str, Any]], category: str = "all") -> list[dict[str, Any]]:
     if category == "all":
         return [g for g in games if g["category"] != "multiplayer"]
     return [g for g in games if g["category"] == category]
 
 
 def filter_time(
-    games: list[dict],
+    games: list[dict[str, Any]],
     min_hours: float | None = None,
     max_hours: float | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     result = games
     if min_hours is not None:
         result = [g for g in result if (g["main_extra"] or 0) >= min_hours]
@@ -170,7 +173,7 @@ def _era_label(year: int | None) -> str:
     return "2020+"
 
 
-def filter_era(games: list[dict], eras: list[str] | None = None) -> list[dict]:
+def filter_era(games: list[dict[str, Any]], eras: list[str] | None = None) -> list[dict[str, Any]]:
     """Mantém apenas jogos cuja era de lançamento está em `eras`. None = sem filtro."""
     if eras is None:
         return games
@@ -190,14 +193,14 @@ def _fuzzy(query: str, name: str) -> bool:
     return False
 
 
-def filter_name(games: list[dict], query: str | None = None) -> list[dict]:
+def filter_name(games: list[dict[str, Any]], query: str | None = None) -> list[dict[str, Any]]:
     if not query:
         return games
     return [g for g in games if _fuzzy(query, g["name"])]
 
 
 def apply_filters(
-    games: list[dict],
+    games: list[dict[str, Any]],
     genre: list[str] | None = None,
     genre_any: list[str] | None = None,
     exclude_genre: list[str] | None = None,
@@ -207,11 +210,10 @@ def apply_filters(
     max_hours: float | None = None,
     name_query: str | None = None,
     eras: list[str] | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     games = filter_genre(games, must_have=genre, any_of=genre_any, exclude=exclude_genre)
     games = filter_progress(games, mode=progress)
     games = filter_category(games, category=category)
     games = filter_time(games, min_hours=min_hours, max_hours=max_hours)
     games = filter_name(games, query=name_query)
-    games = filter_era(games, eras=eras)
-    return games
+    return filter_era(games, eras=eras)

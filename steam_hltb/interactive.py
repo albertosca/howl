@@ -1,8 +1,10 @@
+import argparse
+
 from .classify import apply_filters
 from .score import SORT_OPTIONS, compute_score
 
 
-def _ask(prompt: str, options: list = None, default: str = None) -> str:
+def _ask(prompt: str, options: list[str] | None = None, default: str | None = None) -> str:
     if options:
         opts_str = "/".join(options)
         full_prompt = f"{prompt} [{opts_str}]"
@@ -17,13 +19,13 @@ def _ask(prompt: str, options: list = None, default: str = None) -> str:
     return value if value else (default or "")
 
 
-def _csv_or_none(value: str) -> list | None:
+def _csv_or_none(value: str) -> list[str] | None:
     if not value:
         return None
     return [v.strip() for v in value.split(",") if v.strip()]
 
 
-def run_interactive(base_args) -> None:
+def run_interactive(base_args: argparse.Namespace) -> None:
     from .main import _weights, print_table, save_results
 
     print("\n=== Modo Interativo ===\n")

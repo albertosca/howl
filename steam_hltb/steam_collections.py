@@ -1,5 +1,7 @@
 import os
 import re
+from pathlib import Path
+from typing import Any
 
 DEFAULT_VDF_PATH = os.environ.get("STEAM_VDF_PATH", "sharedconfig.vdf")
 FINISHED_COLLECTION = "Terminados"
@@ -7,10 +9,10 @@ FINISHED_COLLECTION = "Terminados"
 
 def load_collections(vdf_path: str = DEFAULT_VDF_PATH) -> dict[str, list[str]]:
     """Retorna {appid_str: [collection_names]} lido do sharedconfig.vdf."""
-    if not os.path.exists(vdf_path):
+    path = Path(vdf_path)
+    if not path.exists():
         return {}
-    with open(vdf_path, encoding="utf-8") as f:
-        content = f.read()
+    content = path.read_text(encoding="utf-8")
     result: dict[str, list[str]] = {}
     app_blocks = re.findall(
         r'"(\d+)"\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}',
@@ -28,10 +30,10 @@ def load_collections(vdf_path: str = DEFAULT_VDF_PATH) -> dict[str, list[str]]:
 
 
 def filter_collection(
-    games: list[dict],
+    games: list[dict[str, Any]],
     collection: str,
     collection_map: dict[str, list[str]],
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     col_lower = collection.lower()
     return [
         g
@@ -41,9 +43,9 @@ def filter_collection(
 
 
 def exclude_finished(
-    games: list[dict],
+    games: list[dict[str, Any]],
     vdf_path: str = DEFAULT_VDF_PATH,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Remove games na coleção 'Terminados'. Silencioso se VDF não existir."""
     collection_map = load_collections(vdf_path)
     if not collection_map:
