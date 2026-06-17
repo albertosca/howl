@@ -2,6 +2,8 @@ import json
 import os
 import re
 import time
+from pathlib import Path
+from typing import Any
 
 import requests
 from howlongtobeatpy import HowLongToBeat
@@ -11,24 +13,24 @@ from steam_hltb import igdb
 CACHE_FILE = "games_cache.json"
 
 
-def load_cache() -> dict:
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, encoding="utf-8") as f:
-            return json.load(f)
+def load_cache() -> dict[str, Any]:
+    path = Path(CACHE_FILE)
+    if path.exists():
+        data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+        return data
     return {}
 
 
-def save_cache(cache: dict) -> None:
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(cache, f, ensure_ascii=False, indent=2)
+def save_cache(cache: dict[str, Any]) -> None:
+    Path(CACHE_FILE).write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _hltb_hours(val) -> int | None:
+def _hltb_hours(val: float | None) -> int | None:
     """Retorna horas como int, ou None se o HLTB não tem dado para este campo."""
     return int(val) if val and val > 0 else None
 
 
-def fetch_hltb(name: str) -> dict | None:
+def fetch_hltb(name: str) -> dict[str, Any] | None:
     results = HowLongToBeat().search(name)
     if not results:
         return None
@@ -43,11 +45,9 @@ def fetch_hltb(name: str) -> dict | None:
     }
 
 
-def fetch_steam_app_details(appid: int) -> dict | None:
-    resp = requests.get(
-        "https://store.steampowered.com/api/appdetails",
-        params={"appids": appid, "cc": "US", "l": "english"},
-    )
+def fetch_steam_app_details(appid: int) -> dict[str, Any] | None:
+    params: dict[str, str | int] = {"appids": appid, "cc": "US", "l": "english"}
+    resp = requests.get("https://store.steampowered.com/api/appdetails", params=params)
     if resp.status_code != 200:
         return None
     result = resp.json().get(str(appid), {})
@@ -67,11 +67,9 @@ def fetch_steam_app_details(appid: int) -> dict | None:
     }
 
 
-def fetch_steam_reviews(appid: int) -> dict | None:
-    resp = requests.get(
-        f"https://store.steampowered.com/appreviews/{appid}",
-        params={"json": 1, "language": "all", "purchase_type": "all"},
-    )
+def fetch_steam_reviews(appid: int) -> dict[str, Any] | None:
+    params: dict[str, str | int] = {"json": 1, "language": "all", "purchase_type": "all"}
+    resp = requests.get(f"https://store.steampowered.com/appreviews/{appid}", params=params)
     if resp.status_code != 200:
         return None
     summary = resp.json().get("query_summary", {})
@@ -101,18 +99,19 @@ def resolve_steamid(api_key: str, username: str) -> str:
     data = resp.json()["response"]
     if data["success"] != 1:
         raise ValueError(f"Username '{username}' not found on Steam.")
-    return data["steamid"]
+    steamid_resolved: str = data["steamid"]
+    return steamid_resolved
 
 
-def get_steam_games(api_key: str, steamid: str) -> list[dict]:
+def get_steam_games(api_key: str, steamid: str) -> list[dict[str, Any]]:
+    params: dict[str, str | int] = {
+        "key": api_key,
+        "steamid": steamid,
+        "include_appinfo": True,
+        "include_played_free_games": True,
+    }
     resp = requests.get(
-        "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
-        params={
-            "key": api_key,
-            "steamid": steamid,
-            "include_appinfo": True,
-            "include_played_free_games": True,
-        },
+        "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/", params=params
     )
     resp.raise_for_status()
     games = resp.json()["response"].get("games", [])
@@ -129,10 +128,10 @@ def get_steam_games(api_key: str, steamid: str) -> list[dict]:
 def build_library(
     steam_key: str,
     username: str,
-    cache: dict,
+    cache: dict[str, Any],
     refresh: bool = False,
     verbose: bool = False,
-) -> tuple[dict, list[dict]]:
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     steamid = resolve_steamid(steam_key, username)
     steam_games = get_steam_games(steam_key, steamid)
     total = len(steam_games)
@@ -168,11 +167,11 @@ def build_library(
 
 
 def migrate_igdb_data(
-    cache: dict,
+    cache: dict[str, Any],
     client_id: str | None = None,
     client_secret: str | None = None,
     verbose: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     """Preenche campo 'igdb' para jogos sem metacritic no Steam."""
     client_id = client_id or os.environ.get("IGDB_CLIENT_ID")
     client_secret = client_secret or os.environ.get("IGDB_CLIENT_SECRET")
@@ -213,10 +212,10 @@ def migrate_igdb_data(
     return cache
 
 
-def migrate_steam_details(cache: dict, verbose: bool = False) -> dict:
+def migrate_steam_details(cache: dict[str, Any], verbose: bool = False) -> dict[str, Any]:
     """Preenche campos ausentes (genres, categories, release_year) em entradas incompletas."""
 
-    def _needs_migration(steam: dict) -> bool:
+    def _needs_migration(steam: dict[str, Any]) -> bool:
         return "genres" not in steam or "release_year" not in steam
 
     pending = [
