@@ -20,6 +20,9 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-mock",
+    "pytest-cov",
+    "ruff",
+    "mypy",
 ]
 
 [project.scripts]
@@ -31,3 +34,28 @@ include = ["steam_hltb*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RET", "PTH", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["howlongtobeatpy.*", "textual.*", "bs4.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["steam_hltb"]
+
+[tool.coverage.report]
+show_missing = true
