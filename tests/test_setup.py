@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import steam_hltb.setup as setup
@@ -7,22 +8,21 @@ import steam_hltb.setup as setup
 
 
 def test_detect_vdf_paths_macos(monkeypatch, tmp_path):
-    vdf = tmp_path / "sharedconfig.vdf"
+    vdf = tmp_path / "Library/Application Support/Steam/userdata/123/7/remote/sharedconfig.vdf"
+    vdf.parent.mkdir(parents=True)
     vdf.touch()
     monkeypatch.setattr("platform.system", lambda: "Darwin")
-    with patch("glob.glob", return_value=[str(vdf)]) as mock_glob:
-        result = setup._detect_vdf_paths()
-    assert result == [str(vdf)]
-    called_pattern = mock_glob.call_args[0][0]
-    assert "Library/Application Support/Steam" in called_pattern
+    monkeypatch.setattr(setup.Path, "home", classmethod(lambda cls: tmp_path))
+    assert setup._detect_vdf_paths() == [str(vdf)]
 
 
-def test_detect_vdf_paths_linux(monkeypatch):
+def test_detect_vdf_paths_linux(monkeypatch, tmp_path):
+    vdf = tmp_path / ".steam/steam/userdata/123/7/remote/sharedconfig.vdf"
+    vdf.parent.mkdir(parents=True)
+    vdf.touch()
     monkeypatch.setattr("platform.system", lambda: "Linux")
-    with patch("glob.glob", return_value=[]) as mock_glob:
-        setup._detect_vdf_paths()
-    called_pattern = mock_glob.call_args[0][0]
-    assert ".steam/steam" in called_pattern
+    monkeypatch.setattr(setup.Path, "home", classmethod(lambda cls: tmp_path))
+    assert setup._detect_vdf_paths() == [str(vdf)]
 
 
 def test_detect_vdf_paths_unknown_system(monkeypatch):
@@ -82,14 +82,13 @@ def test_validate_username_network_error():
 
 def test_config_path_respects_xdg(monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", "/tmp/xdg")
-    assert setup._config_path() == "/tmp/xdg/howl/.env"
-    assert setup._log_path() == "/tmp/xdg/howl/setup.log"
+    assert setup._config_path() == Path("/tmp/xdg/howl/.env")
+    assert setup._log_path() == Path("/tmp/xdg/howl/setup.log")
 
 
 def test_config_path_default(monkeypatch):
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-    monkeypatch.setattr("os.path.expanduser", lambda p: p.replace("~", "/home/u"))
-    assert setup._config_path() == "/home/u/.config/howl/.env"
+    assert setup._config_path() == Path.home() / ".config" / "howl" / ".env"
 
 
 # --- _write_env ---
@@ -98,8 +97,8 @@ def test_config_path_default(monkeypatch):
 def test_write_env_creates_file(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     path = setup._write_env({"STEAM_API_KEY": "ABC123", "STEAM_USERNAME": "gabelogannewell"})
-    assert path == str(tmp_path / "howl" / ".env")
-    content = open(path).read()
+    assert path == tmp_path / "howl" / ".env"
+    content = path.read_text()
     assert "STEAM_API_KEY=ABC123" in content
     assert "STEAM_USERNAME=gabelogannewell" in content
 
@@ -118,7 +117,7 @@ def test_write_env_merges_with_existing(tmp_path, monkeypatch):
     (cfg / ".env").write_text("EXISTING_VAR=old\nSTEAM_API_KEY=old_key\n")
     # confirm_overwrite=False evita o prompt; merge mantém EXISTING_VAR
     setup._write_env({"STEAM_API_KEY": "new_key"}, confirm_overwrite=False)
-    content = open(cfg / ".env").read()
+    content = (cfg / ".env").read_text()
     assert "EXISTING_VAR=old" in content
     assert "STEAM_API_KEY=new_key" in content
     assert "old_key" not in content
@@ -131,7 +130,7 @@ def test_write_env_overwrite_confirmed(tmp_path, monkeypatch):
     (cfg / ".env").write_text("STEAM_API_KEY=old_key\n")
     with patch("builtins.input", return_value="s"):
         setup._write_env({"STEAM_API_KEY": "new_key"})
-    assert "STEAM_API_KEY=new_key" in open(cfg / ".env").read()
+    assert "STEAM_API_KEY=new_key" in (cfg / ".env").read_text()
 
 
 def test_write_env_overwrite_declined_keeps_old(tmp_path, monkeypatch):
@@ -141,7 +140,7 @@ def test_write_env_overwrite_declined_keeps_old(tmp_path, monkeypatch):
     (cfg / ".env").write_text("STEAM_API_KEY=old_key\n")
     with patch("builtins.input", return_value="n"):
         setup._write_env({"STEAM_API_KEY": "new_key"})
-    content = open(cfg / ".env").read()
+    content = (cfg / ".env").read_text()
     assert "STEAM_API_KEY=old_key" in content
     assert "new_key" not in content
 

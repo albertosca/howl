@@ -1,9 +1,10 @@
 """Client IGDB com OAuth automático via Twitch client_credentials."""
 
 import json
-import os
+import sys
 import time
 from datetime import UTC, datetime
+from typing import Any
 
 import requests
 
@@ -19,19 +20,20 @@ MIN_RATING_COUNT = 3
 # ---------------------------------------------------------------------------
 
 
-def _load_token() -> dict | None:
+def _load_token() -> dict[str, Any] | None:
     """Lê ~/.config/howl/.igdb_token.json se existir."""
     token_file = paths.token_path()
-    if not os.path.exists(token_file):
+    if not token_file.exists():
         return None
-    with open(token_file) as f:
-        return json.load(f)
+    with token_file.open() as f:
+        data: dict[str, Any] = json.load(f)
+    return data
 
 
 def _save_token(access_token: str, expires_at: float) -> None:
     """Salva token em ~/.config/howl/.igdb_token.json."""
     paths.ensure_config_dir()
-    with open(paths.token_path(), "w") as f:
+    with paths.token_path().open("w") as f:
         json.dump({"access_token": access_token, "expires_at": expires_at}, f)
 
 
@@ -47,8 +49,8 @@ def _refresh_token(client_id: str, client_secret: str) -> tuple[str, float]:
     )
     resp.raise_for_status()
     data = resp.json()
-    expires_at = time.time() + data["expires_in"] - 60
-    access_token = data["access_token"]
+    expires_at: float = time.time() + data["expires_in"] - 60
+    access_token: str = data["access_token"]
     _save_token(access_token, expires_at)
     return access_token, expires_at
 
@@ -65,7 +67,8 @@ def get_token(client_id: str | None, client_secret: str | None) -> str | None:
 
     cached = _load_token()
     if cached and cached.get("expires_at", 0) > time.time():
-        return cached["access_token"]
+        token: str = cached["access_token"]
+        return token
 
     access_token, _ = _refresh_token(client_id, client_secret)
     return access_token
@@ -76,7 +79,7 @@ def get_token(client_id: str | None, client_secret: str | None) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def _post(client_id: str, token: str, endpoint: str, body: str) -> list:
+def _post(client_id: str, token: str, endpoint: str, body: str) -> list[dict[str, Any]]:
     """Faz POST na API IGDB e retorna lista de resultados."""
     resp = requests.post(
         f"{IGDB_API}/{endpoint}",
@@ -87,14 +90,13 @@ def _post(client_id: str, token: str, endpoint: str, body: str) -> list:
         data=body,
     )
     if not resp.ok:
-        print(
-            f"IGDB API error {resp.status_code}: {resp.text[:200]}", file=__import__("sys").stderr
-        )
+        print(f"IGDB API error {resp.status_code}: {resp.text[:200]}", file=sys.stderr)
         return []
-    return resp.json()
+    results: list[dict[str, Any]] = resp.json()
+    return results
 
 
-def _parse_result(data: dict) -> dict | None:
+def _parse_result(data: dict[str, Any]) -> dict[str, Any] | None:
     """
     Extrai rating/genres/release_year do resultado IGDB.
     Retorna None se aggregated_rating_count < MIN_RATING_COUNT.
@@ -119,7 +121,7 @@ def _parse_result(data: dict) -> dict | None:
     }
 
 
-def fetch_by_appid(client_id: str | None, token: str | None, appid: int) -> dict | None:
+def fetch_by_appid(client_id: str | None, token: str | None, appid: int) -> dict[str, Any] | None:
     """Busca jogo no IGDB pelo Steam appid (external_games.category = 1)."""
     if not client_id or not token:
         return None
@@ -134,7 +136,7 @@ def fetch_by_appid(client_id: str | None, token: str | None, appid: int) -> dict
     return _parse_result(results[0])
 
 
-def fetch_by_name(client_id: str | None, token: str | None, name: str) -> dict | None:
+def fetch_by_name(client_id: str | None, token: str | None, name: str) -> dict[str, Any] | None:
     """Busca jogo por nome. Retorna o primeiro resultado IGDB — sem validação de similaridade."""
     if not client_id or not token:
         return None

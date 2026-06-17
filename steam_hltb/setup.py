@@ -1,8 +1,8 @@
-import glob
 import os
 import platform
 import traceback
 from datetime import datetime
+from pathlib import Path
 
 import requests
 
@@ -23,7 +23,7 @@ def _log_error(msg: str) -> None:
     """Grava uma entrada no setup.log. Logging nunca deve quebrar o setup."""
     try:
         ensure_config_dir()
-        with open(_log_path(), "a") as f:
+        with _log_path().open("a") as f:
             ts = datetime.now().isoformat(timespec="seconds")
             f.write(f"[{ts}] {msg}\n")
     except Exception:
@@ -33,16 +33,14 @@ def _log_error(msg: str) -> None:
 def _detect_vdf_paths() -> list[str]:
     system = platform.system()
     if system == "Darwin":
-        pattern = os.path.expanduser(
-            "~/Library/Application Support/Steam/userdata/*/7/remote/sharedconfig.vdf"
-        )
+        base = Path.home() / "Library/Application Support/Steam/userdata"
     elif system == "Linux":
-        pattern = os.path.expanduser("~/.steam/steam/userdata/*/7/remote/sharedconfig.vdf")
+        base = Path.home() / ".steam/steam/userdata"
     elif system == "Windows":
-        pattern = "C:/Program Files (x86)/Steam/userdata/*/7/remote/sharedconfig.vdf"
+        base = Path("C:/Program Files (x86)/Steam/userdata")
     else:
         return []
-    return sorted(glob.glob(pattern))
+    return sorted(str(p) for p in base.glob("*/7/remote/sharedconfig.vdf"))
 
 
 def _validate_api_key(key: str, verbose: bool = False) -> bool:
@@ -72,7 +70,8 @@ def _validate_username(key: str, username: str, verbose: bool = False) -> str | 
             print(f"\n  [debug] GET ResolveVanityURL ({username}) → HTTP {resp.status_code}")
         data = resp.json().get("response", {})
         if data.get("success") == 1:
-            return data["steamid"]
+            steamid: str = data["steamid"]
+            return steamid
         return None
     except Exception as e:
         if verbose:
@@ -80,19 +79,18 @@ def _validate_username(key: str, username: str, verbose: bool = False) -> str | 
         return None
 
 
-def _read_env_file(path: str) -> dict[str, str]:
+def _read_env_file(path: Path) -> dict[str, str]:
     result: dict[str, str] = {}
-    if os.path.exists(path):
-        with open(path) as f:
-            for line in f:
-                line = line.strip()
-                if "=" in line and not line.startswith("#"):
-                    k, _, v = line.partition("=")
-                    result[k.strip()] = v.strip()
+    if path.exists():
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if "=" in line and not line.startswith("#"):
+                k, _, v = line.partition("=")
+                result[k.strip()] = v.strip()
     return result
 
 
-def _write_env(env_vars: dict[str, str], confirm_overwrite: bool = True) -> str:
+def _write_env(env_vars: dict[str, str], confirm_overwrite: bool = True) -> Path:
     """Escreve as variáveis em ~/.config/howl/.env (dir 0700, arquivo 0600).
 
     Se confirm_overwrite e já houver valores diferentes para alguma chave,
@@ -114,18 +112,16 @@ def _write_env(env_vars: dict[str, str], confirm_overwrite: bool = True) -> str:
                 print("  Mantendo os valores existentes.")
 
     existing.update(env_vars)
-    with open(env_path, "w") as f:
-        for k, v in existing.items():
-            f.write(f"{k}={v}\n")
-    os.chmod(env_path, 0o600)
+    env_path.write_text("".join(f"{k}={v}\n" for k, v in existing.items()))
+    env_path.chmod(0o600)
     return env_path
 
 
 def _maybe_migrate_legacy_env() -> None:
     """Se houver ./.env no cwd mas ainda não ~/.config/howl/.env, oferece migrar."""
-    legacy = os.path.join(os.getcwd(), ".env")
+    legacy = Path.cwd() / ".env"
     target = _config_path()
-    if not os.path.exists(legacy) or os.path.exists(target):
+    if not legacy.exists() or target.exists():
         return
     print(f"\n  Encontrei um .env legado em {legacy}")
     print(f"  A partir de agora o howl lê de {target}.")
@@ -133,9 +129,8 @@ def _maybe_migrate_legacy_env() -> None:
     if choice in ("n", "não", "nao"):
         return
     ensure_config_dir()
-    with open(legacy) as src, open(target, "w") as dst:
-        dst.write(src.read())
-    os.chmod(target, 0o600)
+    target.write_text(legacy.read_text())
+    target.chmod(0o600)
     print(f"  Migrado para {target}")
     print(f"  Pode remover o antigo quando quiser: rm {legacy}")
 
