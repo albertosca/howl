@@ -135,3 +135,12 @@ def test_load_collections_uses_steam_vdf_path_env(monkeypatch, tmp_path):
     importlib.reload(sc)
     assert str(vdf) == sc.DEFAULT_VDF_PATH
     importlib.reload(sc)  # restaura
+
+
+def test_load_collections_skips_blocks_without_tags(tmp_path):
+    from steam_hltb.steam_collections import load_collections
+
+    vdf = tmp_path / "sc.vdf"
+    vdf.write_text('"123"\n{\n"tags"\n{\n}\n}\n')
+    # bloco tem seção tags mas vazia → não entra no resultado
+    assert load_collections(str(vdf)) == {}

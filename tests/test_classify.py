@@ -603,3 +603,38 @@ def test_build_game_rows_no_igdb_data_unaffected():
     rows = build_game_rows(cache, steam_games)
     assert rows[0]["metacritic"] is None
     assert rows[0]["release_year"] is None
+
+
+def test_build_game_rows_override_skips_comment_key(tmp_path, monkeypatch):
+    from steam_hltb import classify
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        classify, "_load_overrides", lambda: {"Hades": {"comment": "nota", "metacritic": 99}}
+    )
+    cache = {
+        "Hades": {
+            "hltb": {"game_name": "Hades", "main_story": 20, "main_extra": 25},
+            "steam": {"genres": ["action"], "categories": [], "metacritic": 90},
+        }
+    }
+    steam_games = [{"name": "Hades", "appid": 1, "hours_played": 0}]
+    rows = classify.build_game_rows(cache, steam_games)
+    assert rows[0]["metacritic"] == 99  # override aplicado
+    assert "comment" not in rows[0]  # chave 'comment' ignorada
+
+
+def test_build_game_rows_ignores_non_dict_override(tmp_path, monkeypatch):
+    from steam_hltb import classify
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(classify, "_load_overrides", lambda: {"Hades": "malformed"})
+    cache = {
+        "Hades": {
+            "hltb": {"game_name": "Hades", "main_story": 20, "main_extra": 25},
+            "steam": {"genres": ["action"], "categories": [], "metacritic": 90},
+        }
+    }
+    steam_games = [{"name": "Hades", "appid": 1, "hours_played": 0}]
+    rows = classify.build_game_rows(cache, steam_games)
+    assert rows[0]["metacritic"] == 90  # override não-dict é ignorado

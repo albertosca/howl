@@ -1,9 +1,10 @@
 from steam_hltb.selection import select_games
 
 
-def _game(name, mc, steam, hours, genres=None, played=0.0, category="singleplayer"):
+def _game(name, mc, steam, hours, genres=None, played=0.0, category="singleplayer", appid=0):
     return {
         "name": name,
+        "appid": appid,
         "metacritic": mc,
         "steam_pct": steam,
         "main_story": hours,
@@ -54,3 +55,22 @@ def test_does_not_slice_top():
     games = [_game(f"G{i}", 90, 90, 10) for i in range(5)]
     result = select_games(games, {**BASE, "top": 2})
     assert len(result) == 5  # select_games ordena mas não corta no top
+
+
+def test_applies_collection_filter(monkeypatch):
+    from steam_hltb import selection
+
+    monkeypatch.setattr(selection, "load_collections", lambda vdf: {"1": ["Jogando"]})
+    games = [_game("A", 90, 90, 10, appid=1), _game("B", 90, 90, 10, appid=2)]
+    result = selection.select_games(games, {**BASE, "collection": "Jogando"})
+    assert [g["name"] for g in result] == ["A"]
+
+
+def test_excludes_finished_when_not_show_finished(monkeypatch):
+    from steam_hltb import selection
+
+    # show_finished ausente → exclude_finished roda (aqui mockado pra cortar 1)
+    monkeypatch.setattr(selection, "exclude_finished", lambda rows, vdf: rows[:1])
+    games = [_game("A", 90, 90, 10), _game("B", 90, 90, 10)]
+    result = selection.select_games(games, {"sort": "rated", "weights": {"mc": 0.5, "steam": 0.5}})
+    assert len(result) == 1

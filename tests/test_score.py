@@ -158,3 +158,10 @@ def test_compute_score_custom_uses_composto():
 def test_compute_score_raises_on_unknown_sort():
     with pytest.raises(ValueError, match="Unknown sort"):
         compute_score({}, "invalid_sort")
+
+
+def test_score_composto_zero_total_weight():
+    from steam_hltb.score import score_composto
+
+    # mc presente mas peso zero → total_weight == 0 → 0.0
+    assert score_composto({"metacritic": 80}, {"mc": 0.0, "steam": 0.0}) == 0.0

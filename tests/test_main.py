@@ -381,3 +381,62 @@ def test_setup_flag_invokes_run_setup(monkeypatch):
     importlib.reload(m)
     m.main()
     assert called == [True]
+
+
+def test_resolve_username_prompts_when_missing(monkeypatch):
+    import argparse
+
+    from steam_hltb.cli import _resolve_username
+
+    args = argparse.Namespace(username=None)
+    monkeypatch.setattr("builtins.input", lambda _: "  alice  ")
+    assert _resolve_username(args) == "alice"
+
+
+def test_resolve_username_exits_when_empty(monkeypatch):
+    import argparse
+
+    import pytest
+
+    from steam_hltb.cli import _resolve_username
+
+    args = argparse.Namespace(username=None)
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    with pytest.raises(SystemExit):
+        _resolve_username(args)
+
+
+def test_progress_mode_in_progress():
+    import argparse
+
+    from steam_hltb.cli import _progress_mode
+
+    args = argparse.Namespace(not_started=False, in_progress=True, all_progress=False)
+    assert _progress_mode(args) == "in_progress"
+
+
+def test_print_table_show_tags_with_only_noise_cats(capsys):
+    from steam_hltb.report import print_table
+
+    games = [
+        {
+            "name": "G",
+            "metacritic": 80,
+            "steam_pct": 90,
+            "main_extra": 10,
+            "hours_played": 0,
+            "_score": 30.0,
+            "genres": [],
+            "tags": ["steam achievements"],  # só ruído → sem linha de cat
+            "release_year": None,
+        }
+    ]
+    print_table(games, "shortest", show_tags=True)
+    assert "cat:" not in capsys.readouterr().out
+
+
+def test_list_collections_cmd_empty(capsys):
+    from steam_hltb.report import list_collections_cmd
+
+    list_collections_cmd({})
+    assert "Nenhuma" in capsys.readouterr().out

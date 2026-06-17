@@ -110,3 +110,17 @@ def test_interactive_output_shows_results(capsys):
     _run([""] * 15)
     out = capsys.readouterr().out
     assert "Half-Life 2" in out or "TOP" in out
+
+
+def test_ask_with_options_no_default(monkeypatch):
+    from steam_hltb.interactive import _ask
+
+    monkeypatch.setattr("builtins.input", lambda _: "x")
+    assert _ask("Q", options=["a", "b"]) == "x"
+
+
+def test_csv_or_none_parses_and_empties():
+    from steam_hltb.interactive import _csv_or_none
+
+    assert _csv_or_none("a, b ,c") == ["a", "b", "c"]
+    assert _csv_or_none("") is None
