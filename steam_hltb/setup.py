@@ -8,12 +8,16 @@ import requests
 
 from steam_hltb.paths import (
     config_path as _config_path,
+)
+from steam_hltb.paths import (
     ensure_config_dir,
+)
+from steam_hltb.paths import (
     log_path as _log_path,
 )
 
-
 # --- caminhos de configuração: ver steam_hltb/paths.py ---
+
 
 def _log_error(msg: str) -> None:
     """Grava uma entrada no setup.log. Logging nunca deve quebrar o setup."""
@@ -33,9 +37,7 @@ def _detect_vdf_paths() -> list[str]:
             "~/Library/Application Support/Steam/userdata/*/7/remote/sharedconfig.vdf"
         )
     elif system == "Linux":
-        pattern = os.path.expanduser(
-            "~/.steam/steam/userdata/*/7/remote/sharedconfig.vdf"
-        )
+        pattern = os.path.expanduser("~/.steam/steam/userdata/*/7/remote/sharedconfig.vdf")
     elif system == "Windows":
         pattern = "C:/Program Files (x86)/Steam/userdata/*/7/remote/sharedconfig.vdf"
     else:
@@ -224,12 +226,12 @@ def _run_setup_inner(verbose: bool = False) -> None:
 
     _maybe_migrate_legacy_env()
 
-    api_key  = _prompt_api_key(verbose=verbose)
+    api_key = _prompt_api_key(verbose=verbose)
     username = _prompt_username(api_key, verbose=verbose)
     vdf_path = _prompt_vdf_path()
 
     config: dict[str, str] = {
-        "STEAM_API_KEY":  api_key,
+        "STEAM_API_KEY": api_key,
         "STEAM_USERNAME": username,
     }
     if vdf_path:
@@ -241,10 +243,10 @@ def _run_setup_inner(verbose: bool = False) -> None:
     print("  3. Copie o Client ID e gere um Client Secret")
     setup_igdb = input("  Configurar IGDB agora? [s/N] ").strip().lower()
     if setup_igdb in ("s", "sim", "y", "yes"):
-        igdb_client_id     = input("  IGDB Client ID: ").strip()
+        igdb_client_id = input("  IGDB Client ID: ").strip()
         igdb_client_secret = input("  IGDB Client Secret: ").strip()
         if igdb_client_id and igdb_client_secret:
-            config["IGDB_CLIENT_ID"]     = igdb_client_id
+            config["IGDB_CLIENT_ID"] = igdb_client_id
             config["IGDB_CLIENT_SECRET"] = igdb_client_secret
 
     print("\n--- Resumo ---")

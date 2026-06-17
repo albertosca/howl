@@ -13,7 +13,7 @@ CACHE_FILE = "games_cache.json"
 
 def load_cache() -> dict:
     if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+        with open(CACHE_FILE, encoding="utf-8") as f:
             return json.load(f)
     return {}
 
@@ -36,9 +36,9 @@ def fetch_hltb(name: str) -> dict | None:
     if best.similarity < 0.6:
         return None
     return {
-        "game_name":     best.game_name,
-        "main_story":    _hltb_hours(best.main_story),
-        "main_extra":    _hltb_hours(best.main_extra),
+        "game_name": best.game_name,
+        "main_story": _hltb_hours(best.main_story),
+        "main_extra": _hltb_hours(best.main_extra),
         "completionist": _hltb_hours(best.completionist),
     }
 
@@ -54,16 +54,16 @@ def fetch_steam_app_details(appid: int) -> dict | None:
     if not result.get("success"):
         return None
     data = result.get("data", {})
-    mc_data    = data.get("metacritic")
-    genres     = [g["description"].lower() for g in data.get("genres", [])]
+    mc_data = data.get("metacritic")
+    genres = [g["description"].lower() for g in data.get("genres", [])]
     categories = [c["description"].lower() for c in data.get("categories", [])]
-    date_str   = data.get("release_date", {}).get("date", "")
+    date_str = data.get("release_date", {}).get("date", "")
     year_match = re.search(r"\b(19|20)\d{2}\b", date_str)
     return {
-        "metacritic":    mc_data["score"] if mc_data else None,
-        "genres":        genres,
-        "categories":    categories,
-        "release_year":  int(year_match.group()) if year_match else None,
+        "metacritic": mc_data["score"] if mc_data else None,
+        "genres": genres,
+        "categories": categories,
+        "release_year": int(year_match.group()) if year_match else None,
     }
 
 
@@ -75,13 +75,13 @@ def fetch_steam_reviews(appid: int) -> dict | None:
     if resp.status_code != 200:
         return None
     summary = resp.json().get("query_summary", {})
-    total   = summary.get("total_reviews", 0)
+    total = summary.get("total_reviews", 0)
     if total == 0:
         return None
     positive = summary.get("total_positive", 0)
     return {
-        "positive_pct":   round(positive / total * 100),
-        "total_reviews":  total,
+        "positive_pct": round(positive / total * 100),
+        "total_reviews": total,
     }
 
 
@@ -108,9 +108,9 @@ def get_steam_games(api_key: str, steamid: str) -> list[dict]:
     resp = requests.get(
         "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
         params={
-            "key":                    api_key,
-            "steamid":                steamid,
-            "include_appinfo":        True,
+            "key": api_key,
+            "steamid": steamid,
+            "include_appinfo": True,
             "include_played_free_games": True,
         },
     )
@@ -118,8 +118,8 @@ def get_steam_games(api_key: str, steamid: str) -> list[dict]:
     games = resp.json()["response"].get("games", [])
     return [
         {
-            "name":         g["name"],
-            "appid":        g["appid"],
+            "name": g["name"],
+            "appid": g["appid"],
             "hours_played": round(g.get("playtime_forever", 0) / 60, 1),
         }
         for g in games
@@ -133,13 +133,13 @@ def build_library(
     refresh: bool = False,
     verbose: bool = False,
 ) -> tuple[dict, list[dict]]:
-    steamid     = resolve_steamid(steam_key, username)
+    steamid = resolve_steamid(steam_key, username)
     steam_games = get_steam_games(steam_key, steamid)
-    total       = len(steam_games)
+    total = len(steam_games)
     if verbose:
         print(f"{total} games in library. {len(cache)} already cached.\n")
     for idx, game in enumerate(steam_games, 1):
-        name  = game["name"]
+        name = game["name"]
         appid = game["appid"]
         if name in cache and not refresh:
             if verbose:
@@ -156,7 +156,7 @@ def build_library(
         steam_details = fetch_steam_app_details(appid)
         time.sleep(1.0)
         cache[name] = {
-            "hltb":  hltb,
+            "hltb": hltb,
             "steam": {
                 "appid": appid,
                 **(steam_reviews or {}),
@@ -174,7 +174,7 @@ def migrate_igdb_data(
     verbose: bool = False,
 ) -> dict:
     """Preenche campo 'igdb' para jogos sem metacritic no Steam."""
-    client_id     = client_id     or os.environ.get("IGDB_CLIENT_ID")
+    client_id = client_id or os.environ.get("IGDB_CLIENT_ID")
     client_secret = client_secret or os.environ.get("IGDB_CLIENT_SECRET")
     if not client_id or not client_secret:
         if verbose:
@@ -190,14 +190,13 @@ def migrate_igdb_data(
     pending = [
         (name, entry)
         for name, entry in cache.items()
-        if entry.get("steam") and entry["steam"].get("metacritic") is None
-        and "igdb" not in entry
+        if entry.get("steam") and entry["steam"].get("metacritic") is None and "igdb" not in entry
     ]
     if verbose:
         print(f"Buscando dados IGDB para {len(pending)} jogos sem metacritic...")
 
     for idx, (name, entry) in enumerate(pending, 1):
-        appid  = entry["steam"].get("appid")
+        appid = entry["steam"].get("appid")
         result = igdb.fetch_by_appid(client_id, token, appid) if appid else None
         if result is None:
             result = igdb.fetch_by_name(client_id, token, name)

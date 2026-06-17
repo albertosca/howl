@@ -3,19 +3,30 @@ import csv
 import os
 import sys
 
-from .fetch import get_api_key, load_cache, build_library
-from .score import compute_score, SORT_OPTIONS
-from .classify import build_game_rows, apply_filters, ERA_LABELS
-from .steam_collections import load_collections, filter_collection
+from .classify import apply_filters, build_game_rows
+from .fetch import build_library, get_api_key, load_cache
+from .score import SORT_OPTIONS, compute_score
+from .steam_collections import filter_collection, load_collections
 
 # Categorias Steam de infraestrutura — não relevantes para gameplay
-STEAM_NOISE_CATEGORIES: frozenset[str] = frozenset({
-    "steam achievements", "steam cloud", "steam leaderboards",
-    "steam trading cards", "steam workshop", "valve anti-cheat enabled",
-    "stats", "steam turn notifications", "remote play on phone",
-    "remote play on tablet", "remote play on tv", "remote play together",
-    "in-app purchases", "partial controller support",
-})
+STEAM_NOISE_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "steam achievements",
+        "steam cloud",
+        "steam leaderboards",
+        "steam trading cards",
+        "steam workshop",
+        "valve anti-cheat enabled",
+        "stats",
+        "steam turn notifications",
+        "remote play on phone",
+        "remote play on tablet",
+        "remote play on tv",
+        "remote play together",
+        "in-app purchases",
+        "partial controller support",
+    }
+)
 
 
 def _gameplay_categories(game: dict) -> list[str]:
@@ -44,67 +55,117 @@ Formatos de entrada:
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--username", default=os.environ.get("STEAM_USERNAME"),
-                   help="Vanity URL do perfil Steam (ou env STEAM_USERNAME)")
-    p.add_argument("--sort", default="shortest", choices=SORT_OPTIONS,
-                   help="Critério de ordenação (padrão: %(default)s)")
-    p.add_argument("--genre",
-                   help="Gêneros obrigatórios, separados por vírgula (ex: 'action,rpg')")
-    p.add_argument("--genre-any",
-                   help="Pelo menos um desses gêneros (separados por vírgula)")
-    p.add_argument("--exclude-genre",
-                   help="Gêneros a excluir (separados por vírgula)")
+    p.add_argument(
+        "--username",
+        default=os.environ.get("STEAM_USERNAME"),
+        help="Vanity URL do perfil Steam (ou env STEAM_USERNAME)",
+    )
+    p.add_argument(
+        "--sort",
+        default="shortest",
+        choices=SORT_OPTIONS,
+        help="Critério de ordenação (padrão: %(default)s)",
+    )
+    p.add_argument("--genre", help="Gêneros obrigatórios, separados por vírgula (ex: 'action,rpg')")
+    p.add_argument("--genre-any", help="Pelo menos um desses gêneros (separados por vírgula)")
+    p.add_argument("--exclude-genre", help="Gêneros a excluir (separados por vírgula)")
 
     prog = p.add_mutually_exclusive_group()
-    prog.add_argument("--not-started", action="store_true",
-                      help="Somente jogos nunca jogados (0h)")
-    prog.add_argument("--in-progress", action="store_true",
-                      help="Somente jogos iniciados e não zerados")
-    prog.add_argument("--all-progress", action="store_true",
-                      help="Sem filtro de progresso (inclui jogos já zerados)")
+    prog.add_argument("--not-started", action="store_true", help="Somente jogos nunca jogados (0h)")
+    prog.add_argument(
+        "--in-progress", action="store_true", help="Somente jogos iniciados e não zerados"
+    )
+    prog.add_argument(
+        "--all-progress",
+        action="store_true",
+        help="Sem filtro de progresso (inclui jogos já zerados)",
+    )
 
-    p.add_argument("--category", default="all", choices=["all", "singleplayer", "coop"],
-                   help="Filtrar por tipo de jogo (padrão: %(default)s)")
+    p.add_argument(
+        "--category",
+        default="all",
+        choices=["all", "singleplayer", "coop"],
+        help="Filtrar por tipo de jogo (padrão: %(default)s)",
+    )
     p.add_argument("--min-hours", type=float, help="Duração mínima HLTB em horas")
     p.add_argument("--max-hours", type=float, help="Duração máxima HLTB em horas")
-    p.add_argument("--era",
-                   help="Épocas de lançamento (vírgula-sep): pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown")
-    p.add_argument("--top", type=int, default=10,
-                   help="Quantos jogos exibir (padrão: %(default)s)")
-    p.add_argument("--output", default="howl_output",
-                   help="Nome base dos arquivos de saída .csv e .md (padrão: %(default)s)")
-    p.add_argument("--weight-mc", type=float, default=0.5,
-                   help="Peso do Metacritic no score composto (padrão: %(default)s)")
-    p.add_argument("--weight-steam", type=float, default=0.5,
-                   help="Peso do Steam no score composto (padrão: %(default)s)")
-    p.add_argument("--collection",
-                   help="Filtrar por coleção Steam (ex: 'Jogando', 'Multiplayer')")
-    p.add_argument("--vdf-path", default=os.environ.get("STEAM_VDF_PATH", "sharedconfig.vdf"),
-                   help="Caminho para o sharedconfig.vdf do Steam (padrão: STEAM_VDF_PATH env ou sharedconfig.vdf)")
-    p.add_argument("--show-finished", action="store_true",
-                   help="Incluir jogos da coleção 'Terminados' (excluídos por padrão)")
-    p.add_argument("--list-tags", action="store_true",
-                   help="Lista todas as categorias disponíveis no cache e sai")
-    p.add_argument("--list-genres", action="store_true",
-                   help="Lista todos os gêneros disponíveis no cache e sai")
-    p.add_argument("--list-collections", action="store_true",
-                   help="Lista coleções Steam disponíveis no VDF e sai")
-    p.add_argument("--refresh", action="store_true",
-                   help="Ignora o cache e rebusca todos os jogos")
-    p.add_argument("--migrate-cache", action="store_true",
-                   help="Preenche steam.genres/categories/release_year para entradas incompletas (~15-30 min)")
-    p.add_argument("--migrate-igdb", action="store_true",
-                   help="Busca dados IGDB para jogos sem Metacritic no cache (requer IGDB_CLIENT_ID e IGDB_CLIENT_SECRET)")
-    p.add_argument("-v", "--verbose", action="store_true",
-                   help="Exibe progresso detalhado de todos os jogos (inclusive cache)")
-    p.add_argument("--show-tags", action="store_true",
-                   help="Exibe categorias Steam dos jogos na tabela (além de gêneros)")
-    p.add_argument("--interactive", action="store_true",
-                   help="Modo interativo via prompts")
-    p.add_argument("--tui", action="store_true",
-                   help="Abre interface visual interativa (htop-style)")
-    p.add_argument("--setup", action="store_true",
-                   help="Configura variáveis de ambiente interativamente")
+    p.add_argument(
+        "--era",
+        help="Épocas de lançamento (vírgula-sep): pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown",
+    )
+    p.add_argument("--top", type=int, default=10, help="Quantos jogos exibir (padrão: %(default)s)")
+    p.add_argument(
+        "--output",
+        default="howl_output",
+        help="Nome base dos arquivos de saída .csv e .md (padrão: %(default)s)",
+    )
+    p.add_argument(
+        "--weight-mc",
+        type=float,
+        default=0.5,
+        help="Peso do Metacritic no score composto (padrão: %(default)s)",
+    )
+    p.add_argument(
+        "--weight-steam",
+        type=float,
+        default=0.5,
+        help="Peso do Steam no score composto (padrão: %(default)s)",
+    )
+    p.add_argument("--collection", help="Filtrar por coleção Steam (ex: 'Jogando', 'Multiplayer')")
+    p.add_argument(
+        "--vdf-path",
+        default=os.environ.get("STEAM_VDF_PATH", "sharedconfig.vdf"),
+        help="Caminho para o sharedconfig.vdf do Steam (padrão: STEAM_VDF_PATH env ou sharedconfig.vdf)",
+    )
+    p.add_argument(
+        "--show-finished",
+        action="store_true",
+        help="Incluir jogos da coleção 'Terminados' (excluídos por padrão)",
+    )
+    p.add_argument(
+        "--list-tags",
+        action="store_true",
+        help="Lista todas as categorias disponíveis no cache e sai",
+    )
+    p.add_argument(
+        "--list-genres",
+        action="store_true",
+        help="Lista todos os gêneros disponíveis no cache e sai",
+    )
+    p.add_argument(
+        "--list-collections",
+        action="store_true",
+        help="Lista coleções Steam disponíveis no VDF e sai",
+    )
+    p.add_argument("--refresh", action="store_true", help="Ignora o cache e rebusca todos os jogos")
+    p.add_argument(
+        "--migrate-cache",
+        action="store_true",
+        help="Preenche steam.genres/categories/release_year para entradas incompletas (~15-30 min)",
+    )
+    p.add_argument(
+        "--migrate-igdb",
+        action="store_true",
+        help="Busca dados IGDB para jogos sem Metacritic no cache (requer IGDB_CLIENT_ID e IGDB_CLIENT_SECRET)",
+    )
+    p.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Exibe progresso detalhado de todos os jogos (inclusive cache)",
+    )
+    p.add_argument(
+        "--show-tags",
+        action="store_true",
+        help="Exibe categorias Steam dos jogos na tabela (além de gêneros)",
+    )
+    p.add_argument("--interactive", action="store_true", help="Modo interativo via prompts")
+    p.add_argument(
+        "--tui", action="store_true", help="Abre interface visual interativa (htop-style)"
+    )
+    p.add_argument(
+        "--setup", action="store_true", help="Configura variáveis de ambiente interativamente"
+    )
     return p.parse_args()
 
 
@@ -150,13 +211,15 @@ def print_table(games: list[dict], sort_by: str, show_tags: bool = False) -> Non
     print(header)
     print("-" * len(header))
     for i, g in enumerate(games, 1):
-        ano   = str(g["release_year"]) if g.get("release_year") else "-"
-        mc    = str(g["metacritic"]) if g["metacritic"] else "-"
+        ano = str(g["release_year"]) if g.get("release_year") else "-"
+        mc = str(g["metacritic"]) if g["metacritic"] else "-"
         steam = f"{g['steam_pct']}%" if g["steam_pct"] else "-"
-        hltb  = f"{g['main_extra']}h" if g.get("main_extra") else "-"
+        hltb = f"{g['main_extra']}h" if g.get("main_extra") else "-"
         jogou = f"{g['hours_played']}h"
         score = f"{g['_score']:.1f}"
-        print(f"{i:>3}  {g['name']:<45}  {ano:>4}  {mc:>4}  {steam:>6}  {hltb:>5}  {jogou:>8}  {score:>8}")
+        print(
+            f"{i:>3}  {g['name']:<45}  {ano:>4}  {mc:>4}  {steam:>6}  {hltb:>5}  {jogou:>8}  {score:>8}"
+        )
         parts = []
         genres = g.get("genres", [])
         if genres:
@@ -171,25 +234,25 @@ def print_table(games: list[dict], sort_by: str, show_tags: bool = False) -> Non
 
 def list_collections_cmd(collection_map: dict[str, list[str]]) -> None:
     from collections import Counter
-    counter: Counter[str] = Counter(
-        tag for tags in collection_map.values() for tag in tags
-    )
+
+    counter: Counter[str] = Counter(tag for tags in collection_map.values() for tag in tags)
     if not counter:
         print("Nenhuma coleção encontrada. Verifique --vdf-path.")
         return
-    print(f"\n{'─'*40}")
+    print(f"\n{'─' * 40}")
     print(f" COLEÇÕES disponíveis ({len(counter)} únicas)")
-    print(f"{'─'*40}")
+    print(f"{'─' * 40}")
     for name, count in counter.most_common():
         print(f"  {count:>4}x  {name}")
 
 
 def list_available(cache: dict, field: str) -> None:
     from collections import Counter
+
     counter: Counter[str] = Counter()
     for entry in cache.values():
         steam = entry.get("steam") or {}
-        rawg  = entry.get("rawg") or {}
+        rawg = entry.get("rawg") or {}
         if field == "categories":
             values = steam.get("categories") or []
         else:
@@ -200,19 +263,28 @@ def list_available(cache: dict, field: str) -> None:
     if not counter:
         print(f"Nenhum(a) {field} encontrado(a) no cache. Tente --refresh ou --migrate-cache.")
         return
-    print(f"\n{'─'*40}")
+    print(f"\n{'─' * 40}")
     print(f" {field.upper()} disponíveis ({len(counter)} únicos)")
-    print(f"{'─'*40}")
+    print(f"{'─' * 40}")
     for value, count in counter.most_common():
         print(f"  {count:>4}x  {value}")
 
 
 def save_results(games: list[dict], output_base: str) -> None:
     csv_path = output_base + ".csv"
-    md_path  = output_base + ".md"
+    md_path = output_base + ".md"
 
-    fields = ["name", "category", "metacritic", "steam_pct", "score",
-              "hours_played", "main_story", "main_extra", "completionist"]
+    fields = [
+        "name",
+        "category",
+        "metacritic",
+        "steam_pct",
+        "score",
+        "hours_played",
+        "main_story",
+        "main_extra",
+        "completionist",
+    ]
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
@@ -225,21 +297,24 @@ def save_results(games: list[dict], output_base: str) -> None:
         f.write("| # | Nome | MC | Steam | HLTB | Jogadas | Score |\n")
         f.write("|---|------|----|-------|------|---------|-------|\n")
         for i, g in enumerate(games, 1):
-            mc    = str(g["metacritic"]) if g["metacritic"] else "-"
+            mc = str(g["metacritic"]) if g["metacritic"] else "-"
             steam = f"{g['steam_pct']}%" if g["steam_pct"] else "-"
             hltb_str = f"{g['main_extra']}h" if g.get("main_extra") else "-"
-            f.write(f"| {i} | {g['name']} | {mc} | {steam} | {hltb_str} | {g['hours_played']}h | {g['_score']:.1f} |\n")
+            f.write(
+                f"| {i} | {g['name']} | {mc} | {steam} | {hltb_str} | {g['hours_played']}h | {g['_score']:.1f} |\n"
+            )
 
     print(f"\nSalvo em '{csv_path}' e '{md_path}'")
 
 
 def run(args: argparse.Namespace) -> None:
     steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
-    username  = _resolve_username(args)
+    username = _resolve_username(args)
 
     cache = load_cache()
-    cache, steam_games = build_library(steam_key, username, cache,
-                                       refresh=args.refresh, verbose=args.verbose)
+    cache, steam_games = build_library(
+        steam_key, username, cache, refresh=args.refresh, verbose=args.verbose
+    )
 
     rows = build_game_rows(cache, steam_games)
     rows = apply_filters(
@@ -255,6 +330,7 @@ def run(args: argparse.Namespace) -> None:
     )
     if not args.show_finished:
         from .steam_collections import exclude_finished
+
         rows = exclude_finished(rows, args.vdf_path)
     if args.collection:
         collection_map = load_collections(args.vdf_path)
@@ -265,31 +341,35 @@ def run(args: argparse.Namespace) -> None:
         g["_score"] = compute_score(g, args.sort, weights)
 
     rows.sort(key=lambda g: g["_score"], reverse=True)
-    top = rows[:args.top]
+    top = rows[: args.top]
 
     total_filtered = len(rows)
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f" TOP {args.top} — sort: {args.sort}  ({len(top)} de {total_filtered} filtrados)")
     if len(top) < args.top and total_filtered < args.top:
         print(f" ⚠  Apenas {total_filtered} jogos passaram nos filtros (pedido: {args.top})")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print_table(top, args.sort, show_tags=args.show_tags)
     save_results(rows, args.output)
 
 
 def main() -> None:
     from dotenv import load_dotenv
+
     from .setup import _config_path
+
     load_dotenv(_config_path())
     args = parse_args()
 
     if args.setup:
         from .setup import run_setup
+
         run_setup(verbose=args.verbose)
         return
 
     if args.migrate_cache:
         from .fetch import migrate_steam_details
+
         print("⚠  Isso pode demorar 15-30 min. Ctrl+C para interromper (progresso salvo).")
         migrate_steam_details(load_cache(), verbose=True)
         print("Migração concluída.")
@@ -297,6 +377,7 @@ def main() -> None:
 
     if args.migrate_igdb:
         from .fetch import migrate_igdb_data
+
         cache = load_cache()
         migrate_igdb_data(cache, verbose=True)
         print("Migração IGDB concluída.")
@@ -314,32 +395,35 @@ def main() -> None:
 
     if args.tui:
         from .tui import run_tui
+
         steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
-        username  = _resolve_username(args)
+        username = _resolve_username(args)
         cache = load_cache()
-        cache, steam_games = build_library(steam_key, username, cache,
-                                           refresh=args.refresh, verbose=args.verbose)
+        cache, steam_games = build_library(
+            steam_key, username, cache, refresh=args.refresh, verbose=args.verbose
+        )
         rows = build_game_rows(cache, steam_games)
         initial_filters = {
-            "genre":         _csv_list(args.genre),
-            "genre_any":     _csv_list(args.genre_any),
+            "genre": _csv_list(args.genre),
+            "genre_any": _csv_list(args.genre_any),
             "exclude_genre": _csv_list(args.exclude_genre),
-            "progress":      _progress_mode(args),
-            "category":      args.category,
-            "min_hours":     args.min_hours,
-            "max_hours":     args.max_hours,
-            "sort":          args.sort,
-            "top":           args.top,
-            "weights":       _weights(args),
-            "vdf_path":      args.vdf_path,
+            "progress": _progress_mode(args),
+            "category": args.category,
+            "min_hours": args.min_hours,
+            "max_hours": args.max_hours,
+            "sort": args.sort,
+            "top": args.top,
+            "weights": _weights(args),
+            "vdf_path": args.vdf_path,
             "show_finished": args.show_finished,
-            "eras":          _csv_list(args.era),
+            "eras": _csv_list(args.era),
         }
         run_tui(rows, initial_filters)
         return
 
     if args.interactive:
         from .interactive import run_interactive
+
         run_interactive(args)
         return
 

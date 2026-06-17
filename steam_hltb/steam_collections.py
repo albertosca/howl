@@ -9,7 +9,7 @@ def load_collections(vdf_path: str = DEFAULT_VDF_PATH) -> dict[str, list[str]]:
     """Retorna {appid_str: [collection_names]} lido do sharedconfig.vdf."""
     if not os.path.exists(vdf_path):
         return {}
-    with open(vdf_path, "r", encoding="utf-8") as f:
+    with open(vdf_path, encoding="utf-8") as f:
         content = f.read()
     result: dict[str, list[str]] = {}
     app_blocks = re.findall(
@@ -34,7 +34,8 @@ def filter_collection(
 ) -> list[dict]:
     col_lower = collection.lower()
     return [
-        g for g in games
+        g
+        for g in games
         if col_lower in [c.lower() for c in collection_map.get(str(g.get("appid", "")), [])]
     ]
 
@@ -47,8 +48,5 @@ def exclude_finished(
     collection_map = load_collections(vdf_path)
     if not collection_map:
         return games
-    finished_ids = {
-        appid for appid, tags in collection_map.items()
-        if FINISHED_COLLECTION in tags
-    }
+    finished_ids = {appid for appid, tags in collection_map.items() if FINISHED_COLLECTION in tags}
     return [g for g in games if str(g.get("appid", "")) not in finished_ids]

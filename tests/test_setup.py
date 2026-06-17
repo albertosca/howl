@@ -1,12 +1,10 @@
-import glob
 import os
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import steam_hltb.setup as setup
 
-
 # --- _detect_vdf_paths ---
+
 
 def test_detect_vdf_paths_macos(monkeypatch, tmp_path):
     vdf = tmp_path / "sharedconfig.vdf"
@@ -35,6 +33,7 @@ def test_detect_vdf_paths_unknown_system(monkeypatch):
 
 # --- _validate_api_key ---
 
+
 def test_validate_api_key_success():
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -55,6 +54,7 @@ def test_validate_api_key_network_error():
 
 
 # --- _validate_username ---
+
 
 def test_validate_username_found():
     mock_resp = MagicMock()
@@ -79,6 +79,7 @@ def test_validate_username_network_error():
 
 # --- _config_path ---
 
+
 def test_config_path_respects_xdg(monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", "/tmp/xdg")
     assert setup._config_path() == "/tmp/xdg/howl/.env"
@@ -92,6 +93,7 @@ def test_config_path_default(monkeypatch):
 
 
 # --- _write_env ---
+
 
 def test_write_env_creates_file(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
@@ -146,6 +148,7 @@ def test_write_env_overwrite_declined_keeps_old(tmp_path, monkeypatch):
 
 # --- _maybe_migrate_legacy_env ---
 
+
 def test_migrate_legacy_env_copies_and_chmods(tmp_path, monkeypatch):
     home = tmp_path / "config"
     cwd = tmp_path / "repo"
@@ -189,16 +192,21 @@ def test_migrate_legacy_env_declined(tmp_path, monkeypatch):
 
 # --- run_setup: robustez ---
 
+
 def test_run_setup_graceful_on_interrupt(capsys, monkeypatch):
-    monkeypatch.setattr(setup, "_run_setup_inner", lambda verbose: (_ for _ in ()).throw(KeyboardInterrupt))
+    monkeypatch.setattr(
+        setup, "_run_setup_inner", lambda verbose: (_ for _ in ()).throw(KeyboardInterrupt)
+    )
     setup.run_setup()  # não deve propagar
     assert "cancelado" in capsys.readouterr().out.lower()
 
 
 def test_run_setup_logs_unexpected_error(tmp_path, capsys, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
     def boom(verbose):
         raise RuntimeError("kaboom")
+
     monkeypatch.setattr(setup, "_run_setup_inner", boom)
     setup.run_setup()  # não deve propagar
     out = capsys.readouterr().out

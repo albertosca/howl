@@ -1,13 +1,13 @@
 import math
 
 SORT_OPTIONS = [
-    "shortest",     # curto, qualidade ajuda: composite / √h
-    "longest",      # longo, qualidade ajuda: composite × √h / 10
-    "rated",        # Metacritic puro
-    "loved",        # Steam % positivo puro
-    "quick-wins",   # jogo bom (≥75 composite) e curto: composite / (1 + h/5)
+    "shortest",  # curto, qualidade ajuda: composite / √h
+    "longest",  # longo, qualidade ajuda: composite × √h / 10
+    "rated",  # Metacritic puro
+    "loved",  # Steam % positivo puro
+    "quick-wins",  # jogo bom (≥75 composite) e curto: composite / (1 + h/5)
     "hidden-gems",  # muito amado pelos players (≥80% steam), ignorado pela crítica
-    "composto",     # média ponderada mc+steam configurável
+    "composto",  # média ponderada mc+steam configurável
 ]
 
 

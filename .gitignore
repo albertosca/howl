@@ -20,6 +20,8 @@ dist/
 build/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
 # ambiente
 .env

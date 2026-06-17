@@ -1,8 +1,6 @@
 import pytest
-import tempfile
-import os
-from steam_hltb.steam_collections import load_collections, filter_collection
 
+from steam_hltb.steam_collections import filter_collection, load_collections
 
 SAMPLE_VDF = """
 "UserLocalConfigStore"
@@ -97,10 +95,11 @@ def test_filter_collection_returns_empty_when_no_match(vdf_file):
 
 def test_exclude_finished_removes_terminados(vdf_file):
     from steam_hltb.steam_collections import exclude_finished
+
     games = [
-        {"appid": 220, "name": "Half-Life 2"},   # Terminados
-        {"appid": 620, "name": "Portal 2"},       # Jogando + Terminados
-        {"appid": 570, "name": "Dota 2"},         # sem tag
+        {"appid": 220, "name": "Half-Life 2"},  # Terminados
+        {"appid": 620, "name": "Portal 2"},  # Jogando + Terminados
+        {"appid": 570, "name": "Dota 2"},  # sem tag
     ]
     result = exclude_finished(games, vdf_file)
     names = [g["name"] for g in result]
@@ -111,6 +110,7 @@ def test_exclude_finished_removes_terminados(vdf_file):
 
 def test_exclude_finished_silent_when_vdf_missing():
     from steam_hltb.steam_collections import exclude_finished
+
     games = [{"appid": 220, "name": "Half-Life 2"}]
     result = exclude_finished(games, "/nonexistent/path.vdf")
     assert result == games
@@ -118,6 +118,7 @@ def test_exclude_finished_silent_when_vdf_missing():
 
 def test_exclude_finished_no_op_when_no_terminados(vdf_file):
     from steam_hltb.steam_collections import exclude_finished
+
     games = [{"appid": 570, "name": "Dota 2"}]  # sem tag
     result = exclude_finished(games, vdf_file)
     assert result == games
@@ -128,7 +129,9 @@ def test_load_collections_uses_steam_vdf_path_env(monkeypatch, tmp_path):
     vdf.write_text('"UserRoamingConfigStore"\n{\n"Software"\n{\n}\n}\n')
     monkeypatch.setenv("STEAM_VDF_PATH", str(vdf))
     import importlib
+
     import steam_hltb.steam_collections as sc
+
     importlib.reload(sc)
-    assert sc.DEFAULT_VDF_PATH == str(vdf)
+    assert str(vdf) == sc.DEFAULT_VDF_PATH
     importlib.reload(sc)  # restaura

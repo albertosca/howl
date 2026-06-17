@@ -1,11 +1,10 @@
 import json
 import os
 import time
+from unittest.mock import MagicMock, mock_open, patch
 
-import pytest
-from unittest.mock import patch, mock_open, MagicMock
 from steam_hltb import igdb
-from steam_hltb.igdb import get_token, fetch_by_appid, fetch_by_name
+from steam_hltb.igdb import fetch_by_appid, fetch_by_name, get_token
 
 
 def test_save_token_writes_to_config_dir(tmp_path, monkeypatch):
@@ -28,8 +27,12 @@ def test_load_token_reads_from_config_dir(tmp_path, monkeypatch):
 
 
 def test_get_token_fetches_when_no_file():
-    with patch("os.path.exists", return_value=False), \
-         patch("steam_hltb.igdb._refresh_token", return_value=("tok123", time.time() + 9999)) as mock_refresh:
+    with (
+        patch("os.path.exists", return_value=False),
+        patch(
+            "steam_hltb.igdb._refresh_token", return_value=("tok123", time.time() + 9999)
+        ) as mock_refresh,
+    ):
         token = get_token("cid", "csecret")
     assert token == "tok123"
     mock_refresh.assert_called_once_with("cid", "csecret")
@@ -46,8 +49,11 @@ def test_get_token_uses_cached_when_valid():
 def test_get_token_refreshes_when_expired():
     expired = {"access_token": "old", "expires_at": time.time() - 1}
     m = mock_open(read_data=json.dumps(expired))
-    with patch("os.path.exists", return_value=True), patch("builtins.open", m), \
-         patch("steam_hltb.igdb._refresh_token", return_value=("new", time.time() + 9999)) as mock_r:
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("builtins.open", m),
+        patch("steam_hltb.igdb._refresh_token", return_value=("new", time.time() + 9999)) as mock_r,
+    ):
         token = get_token("cid", "csecret")
     assert token == "new"
     mock_r.assert_called_once()
@@ -61,13 +67,15 @@ def test_get_token_returns_none_when_no_credentials():
 def test_fetch_by_appid_returns_data():
     mock_resp = MagicMock()
     mock_resp.ok = True
-    mock_resp.json.return_value = [{
-        "name": "Valheim",
-        "aggregated_rating": 90.0,
-        "aggregated_rating_count": 8,
-        "genres": [{"name": "Role-playing (RPG)"}, {"name": "Indie"}],
-        "first_release_date": 1613000000,
-    }]
+    mock_resp.json.return_value = [
+        {
+            "name": "Valheim",
+            "aggregated_rating": 90.0,
+            "aggregated_rating_count": 8,
+            "genres": [{"name": "Role-playing (RPG)"}, {"name": "Indie"}],
+            "first_release_date": 1613000000,
+        }
+    ]
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_appid("cid", "tok", 892970)
     assert result["aggregated_rating"] == 90
@@ -87,13 +95,15 @@ def test_fetch_by_appid_returns_none_when_empty():
 def test_fetch_by_name_returns_data():
     mock_resp = MagicMock()
     mock_resp.ok = True
-    mock_resp.json.return_value = [{
-        "name": "Deus Ex: Human Revolution",
-        "aggregated_rating": 89.0,
-        "aggregated_rating_count": 25,
-        "genres": [{"name": "Shooter"}, {"name": "Role-playing (RPG)"}],
-        "first_release_date": 1313000000,
-    }]
+    mock_resp.json.return_value = [
+        {
+            "name": "Deus Ex: Human Revolution",
+            "aggregated_rating": 89.0,
+            "aggregated_rating_count": 25,
+            "genres": [{"name": "Shooter"}, {"name": "Role-playing (RPG)"}],
+            "first_release_date": 1313000000,
+        }
+    ]
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_name("cid", "tok", "Deus Ex: Human Revolution")
     assert result["aggregated_rating"] == 89
@@ -103,13 +113,15 @@ def test_fetch_by_name_returns_data():
 def test_fetch_by_name_ignores_low_rating_count():
     mock_resp = MagicMock()
     mock_resp.ok = True
-    mock_resp.json.return_value = [{
-        "name": "Some Obscure Game",
-        "aggregated_rating": 95.0,
-        "aggregated_rating_count": 1,
-        "genres": [],
-        "first_release_date": None,
-    }]
+    mock_resp.json.return_value = [
+        {
+            "name": "Some Obscure Game",
+            "aggregated_rating": 95.0,
+            "aggregated_rating_count": 1,
+            "genres": [],
+            "first_release_date": None,
+        }
+    ]
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_name("cid", "tok", "Some Obscure Game")
     assert result is None

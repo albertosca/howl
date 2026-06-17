@@ -1,12 +1,21 @@
 import argparse
-import pytest
 from unittest.mock import patch
 
 MOCK_CACHE = {
     "Half-Life 2": {
-        "hltb": {"game_name": "Half-Life 2", "main_story": 12, "main_extra": 15, "completionist": 19},
-        "steam": {"appid": 220, "positive_pct": 98, "total_reviews": 100000,
-                  "genres": ["action"], "categories": ["single-player"]},
+        "hltb": {
+            "game_name": "Half-Life 2",
+            "main_story": 12,
+            "main_extra": 15,
+            "completionist": 19,
+        },
+        "steam": {
+            "appid": 220,
+            "positive_pct": 98,
+            "total_reviews": 100000,
+            "genres": ["action"],
+            "categories": ["single-player"],
+        },
     }
 }
 MOCK_STEAM_GAMES = [{"name": "Half-Life 2", "appid": 220, "hours_played": 0.0}]
@@ -20,13 +29,16 @@ def _make_args(**kwargs):
 
 def _run(inputs, **args_kwargs):
     args = _make_args(**args_kwargs)
-    with patch("builtins.input", side_effect=inputs + [""]*20), \
-         patch("steam_hltb.fetch.get_api_key", return_value="fake_key"), \
-         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE), \
-         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)), \
-         patch("steam_hltb.main.save_results"), \
-         patch("steam_hltb.steam_collections.load_collections", return_value={}):
+    with (
+        patch("builtins.input", side_effect=inputs + [""] * 20),
+        patch("steam_hltb.fetch.get_api_key", return_value="fake_key"),
+        patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
+        patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
+        patch("steam_hltb.main.save_results"),
+        patch("steam_hltb.steam_collections.load_collections", return_value={}),
+    ):
         from steam_hltb.interactive import run_interactive
+
         run_interactive(args)
 
 
@@ -42,13 +54,16 @@ def test_interactive_does_not_ask_rawg_key():
         return ""
 
     args = _make_args()
-    with patch("builtins.input", side_effect=mock_input), \
-         patch("steam_hltb.fetch.get_api_key", return_value="fake"), \
-         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE), \
-         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)), \
-         patch("steam_hltb.main.save_results"), \
-         patch("steam_hltb.steam_collections.load_collections", return_value={}):
+    with (
+        patch("builtins.input", side_effect=mock_input),
+        patch("steam_hltb.fetch.get_api_key", return_value="fake"),
+        patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
+        patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
+        patch("steam_hltb.main.save_results"),
+        patch("steam_hltb.steam_collections.load_collections", return_value={}),
+    ):
         from steam_hltb.interactive import run_interactive
+
         run_interactive(args)
 
     assert not any("rawg" in a.lower() for a in asked)
@@ -69,13 +84,16 @@ def test_interactive_default_sort_is_shortest():
         return ""
 
     args = _make_args()
-    with patch("builtins.input", side_effect=mock_input), \
-         patch("steam_hltb.fetch.get_api_key", return_value="fake"), \
-         patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE), \
-         patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)), \
-         patch("steam_hltb.main.save_results"), \
-         patch("steam_hltb.steam_collections.load_collections", return_value={}):
+    with (
+        patch("builtins.input", side_effect=mock_input),
+        patch("steam_hltb.fetch.get_api_key", return_value="fake"),
+        patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
+        patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
+        patch("steam_hltb.main.save_results"),
+        patch("steam_hltb.steam_collections.load_collections", return_value={}),
+    ):
         from steam_hltb.interactive import run_interactive
+
         run_interactive(args)
 
     sort_prompts = [p for p in prompts_seen if "Ordenar" in p or "sort" in p.lower()]

@@ -3,7 +3,7 @@
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
 
@@ -18,12 +18,13 @@ MIN_RATING_COUNT = 3
 # Token management
 # ---------------------------------------------------------------------------
 
+
 def _load_token() -> dict | None:
     """Lê ~/.config/howl/.igdb_token.json se existir."""
     token_file = paths.token_path()
     if not os.path.exists(token_file):
         return None
-    with open(token_file, "r") as f:
+    with open(token_file) as f:
         return json.load(f)
 
 
@@ -74,6 +75,7 @@ def get_token(client_id: str | None, client_secret: str | None) -> str | None:
 # API calls
 # ---------------------------------------------------------------------------
 
+
 def _post(client_id: str, token: str, endpoint: str, body: str) -> list:
     """Faz POST na API IGDB e retorna lista de resultados."""
     resp = requests.post(
@@ -85,7 +87,9 @@ def _post(client_id: str, token: str, endpoint: str, body: str) -> list:
         data=body,
     )
     if not resp.ok:
-        print(f"IGDB API error {resp.status_code}: {resp.text[:200]}", file=__import__('sys').stderr)
+        print(
+            f"IGDB API error {resp.status_code}: {resp.text[:200]}", file=__import__("sys").stderr
+        )
         return []
     return resp.json()
 
@@ -105,7 +109,7 @@ def _parse_result(data: dict) -> dict | None:
     ts = data.get("first_release_date")
     release_year = None
     if ts:
-        release_year = datetime.fromtimestamp(ts, tz=timezone.utc).year
+        release_year = datetime.fromtimestamp(ts, tz=UTC).year
 
     return {
         "aggregated_rating": round(rating) if rating is not None else None,
@@ -121,7 +125,7 @@ def fetch_by_appid(client_id: str | None, token: str | None, appid: int) -> dict
         return None
 
     body = (
-        f'fields name,aggregated_rating,aggregated_rating_count,genres.name,first_release_date; '
+        f"fields name,aggregated_rating,aggregated_rating_count,genres.name,first_release_date; "
         f'where external_games.category = 1 & external_games.uid = "{appid}"; limit 1;'
     )
     results = _post(client_id, token, "games", body)
@@ -137,7 +141,7 @@ def fetch_by_name(client_id: str | None, token: str | None, name: str) -> dict |
 
     safe_name = name.replace('"', '\\"')
     body = (
-        f'fields name,aggregated_rating,aggregated_rating_count,genres.name,first_release_date; '
+        f"fields name,aggregated_rating,aggregated_rating_count,genres.name,first_release_date; "
         f'search "{safe_name}"; limit 1;'
     )
     results = _post(client_id, token, "games", body)

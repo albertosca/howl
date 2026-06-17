@@ -3,21 +3,32 @@ import os
 
 OVERRIDES_FILE = "howl_overrides.json"
 
-COOP_CATEGORIES: frozenset[str] = frozenset({
-    "co-op", "online co-op", "local co-op", "shared/split screen co-op",
-})
-MULTIPLAYER_ONLY_CATEGORIES: frozenset[str] = frozenset({
-    "multi-player", "multiplayer", "online pvp", "mmo", "massively multiplayer",
-})
+COOP_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "co-op",
+        "online co-op",
+        "local co-op",
+        "shared/split screen co-op",
+    }
+)
+MULTIPLAYER_ONLY_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "multi-player",
+        "multiplayer",
+        "online pvp",
+        "mmo",
+        "massively multiplayer",
+    }
+)
 
 ERA_LABELS: list[str] = ["pre-2005", "2005-2010", "2010-2015", "2015-2020", "2020+", "unknown"]
 
 
 def _category(categories: list[str], main_story: int) -> str:
-    cat_set     = {c.lower() for c in categories}
-    has_coop    = bool(cat_set & COOP_CATEGORIES)
-    has_single  = "single-player" in cat_set or "singleplayer" in cat_set
-    is_mp_only  = bool(cat_set & MULTIPLAYER_ONLY_CATEGORIES) and not has_single and not has_coop
+    cat_set = {c.lower() for c in categories}
+    has_coop = bool(cat_set & COOP_CATEGORIES)
+    has_single = "single-player" in cat_set or "singleplayer" in cat_set
+    is_mp_only = bool(cat_set & MULTIPLAYER_ONLY_CATEGORIES) and not has_single and not has_coop
     if is_mp_only:
         return "multiplayer"
     if has_coop and main_story > 0:
@@ -34,7 +45,7 @@ def _load_overrides() -> dict:
     """Carrega howl_overrides.json com chaves normalizadas (sem ™/®)."""
     if not os.path.exists(OVERRIDES_FILE):
         return {}
-    with open(OVERRIDES_FILE, "r", encoding="utf-8") as f:
+    with open(OVERRIDES_FILE, encoding="utf-8") as f:
         raw = json.load(f)
     return {_normalize_name(k): v for k, v in raw.items()}
 
@@ -43,20 +54,20 @@ def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
     overrides = _load_overrides()
     rows: list[dict] = []
     for game in steam_games:
-        name  = game["name"]
+        name = game["name"]
         entry = cache.get(name, {})
-        hltb  = entry.get("hltb")
+        hltb = entry.get("hltb")
         steam = entry.get("steam")
         if not hltb:
             continue
         # suporte a cache antigo (rawg) e novo (steam com genres/categories)
         rawg = entry.get("rawg")
         if steam and "genres" in steam:
-            genres     = steam.get("genres", [])
+            genres = steam.get("genres", [])
             categories = steam.get("categories", [])
             metacritic = steam.get("metacritic")
         elif rawg:
-            genres     = rawg.get("genres", [])
+            genres = rawg.get("genres", [])
             categories = rawg.get("tags", [])
             metacritic = rawg.get("metacritic")
         else:
@@ -69,20 +80,21 @@ def build_game_rows(cache: dict, steam_games: list[dict]) -> list[dict]:
             if not genres:
                 genres = [g.lower() for g in igdb_data.get("genres", [])]
         row: dict = {
-            "name":               hltb["game_name"],
-            "steam_name":         name,
-            "appid":              steam.get("appid") if steam else game.get("appid"),
-            "hours_played":       game["hours_played"],
-            "category":           _category(categories, hltb.get("main_story") or 0),
-            "genres":             genres,
-            "tags":               categories,
-            "metacritic":         metacritic,
-            "steam_pct":          steam.get("positive_pct") if steam else None,
+            "name": hltb["game_name"],
+            "steam_name": name,
+            "appid": steam.get("appid") if steam else game.get("appid"),
+            "hours_played": game["hours_played"],
+            "category": _category(categories, hltb.get("main_story") or 0),
+            "genres": genres,
+            "tags": categories,
+            "metacritic": metacritic,
+            "steam_pct": steam.get("positive_pct") if steam else None,
             "steam_total_reviews": steam.get("total_reviews") if steam else None,
-            "main_story":         hltb.get("main_story"),
-            "main_extra":         hltb.get("main_extra"),
-            "completionist":      hltb.get("completionist"),
-            "release_year":       (steam.get("release_year") if steam else None) or igdb_data.get("release_year"),
+            "main_story": hltb.get("main_story"),
+            "main_extra": hltb.get("main_extra"),
+            "completionist": hltb.get("completionist"),
+            "release_year": (steam.get("release_year") if steam else None)
+            or igdb_data.get("release_year"),
         }
         # aplica overrides (ex: howl_overrides.json com metacritic/release_year hardcoded)
         ov = overrides.get(_normalize_name(name), {})
@@ -102,14 +114,16 @@ def filter_genre(
 ) -> list[dict]:
     result = games
     if must_have:
-        lower  = [g.lower() for g in must_have]
+        lower = [g.lower() for g in must_have]
         result = [g for g in result if all(m in [x.lower() for x in g["genres"]] for m in lower)]
     if any_of:
-        lower  = [g.lower() for g in any_of]
+        lower = [g.lower() for g in any_of]
         result = [g for g in result if any(m in [x.lower() for x in g["genres"]] for m in lower)]
     if exclude:
-        lower  = [g.lower() for g in exclude]
-        result = [g for g in result if not any(e in [x.lower() for x in g["genres"]] for e in lower)]
+        lower = [g.lower() for g in exclude]
+        result = [
+            g for g in result if not any(e in [x.lower() for x in g["genres"]] for e in lower)
+        ]
     return result
 
 
@@ -166,7 +180,7 @@ def filter_era(games: list[dict], eras: list[str] | None = None) -> list[dict]:
 
 def _fuzzy(query: str, name: str) -> bool:
     """Subsequência fzf-style: cada char do query deve aparecer em ordem em name."""
-    q  = query.lower()
+    q = query.lower()
     qi = 0
     for c in name.lower():
         if c == q[qi]:

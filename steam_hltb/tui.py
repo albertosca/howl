@@ -1,11 +1,11 @@
 from textual.app import App, ComposeResult
-from textual.widgets import DataTable, Input, Select, Footer, Header, Label, Static, Checkbox
-from textual.containers import Horizontal, Vertical
 from textual.binding import Binding
+from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
+from textual.widgets import Checkbox, DataTable, Footer, Header, Input, Label, Select, Static
 
-from .classify import apply_filters, filter_name, ERA_LABELS
-from .score import compute_score, SORT_OPTIONS
+from .classify import ERA_LABELS, apply_filters, filter_name
+from .score import SORT_OPTIONS, compute_score
 
 
 def _era_id(era: str) -> str:
@@ -184,10 +184,12 @@ class SteamHLTBApp(App):
         vdf_path = self.filters.get("vdf_path", "sharedconfig.vdf")
         if not self.filters.get("show_finished", False):
             from .steam_collections import exclude_finished
+
             rows = exclude_finished(rows, vdf_path)
         if self.filters.get("collection"):
             try:
-                from .steam_collections import load_collections, filter_collection
+                from .steam_collections import filter_collection, load_collections
+
                 collection_map = load_collections(vdf_path)
                 rows = filter_collection(rows, self.filters["collection"], collection_map)
             except Exception:
@@ -242,7 +244,9 @@ class SteamHLTBApp(App):
         if self.filters["genre"]:
             self.query_one("#genre-input", Input).value = ", ".join(self.filters["genre"])
         if self.filters["exclude_genre"]:
-            self.query_one("#exclude-genre-input", Input).value = ", ".join(self.filters["exclude_genre"])
+            self.query_one("#exclude-genre-input", Input).value = ", ".join(
+                self.filters["exclude_genre"]
+            )
         if self.filters["min_hours"] is not None:
             self.query_one("#min-hours-input", Input).value = str(self.filters["min_hours"])
         if self.filters["max_hours"] is not None:
@@ -358,6 +362,7 @@ class SteamHLTBApp(App):
 
     def action_save(self) -> None:
         from .main import save_results
+
         save_results(self._games, "how_long_to_beat_output")
         self.notify("Salvo em how_long_to_beat_output.csv e .md")
 

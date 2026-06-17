@@ -1,14 +1,30 @@
-import pytest
 import math
+
+import pytest
+
 from steam_hltb.score import (
-    score_shortest, score_longest, score_rated, score_loved,
-    score_quick_wins, score_hidden_gems, score_composto,
-    compute_score, SORT_OPTIONS,
+    SORT_OPTIONS,
+    compute_score,
+    score_composto,
+    score_hidden_gems,
+    score_longest,
+    score_loved,
+    score_quick_wins,
+    score_rated,
+    score_shortest,
 )
 
 
 def test_sort_options_contains_all_expected():
-    assert set(SORT_OPTIONS) == {"shortest", "longest", "rated", "loved", "quick-wins", "hidden-gems", "composto"}
+    assert set(SORT_OPTIONS) == {
+        "shortest",
+        "longest",
+        "rated",
+        "loved",
+        "quick-wins",
+        "hidden-gems",
+        "composto",
+    }
 
 
 def test_score_composto_default_weights():
@@ -38,8 +54,12 @@ def test_shortest_formula():
 
 def test_shortest_no_hours_returns_composite():
     """Sem dados de duração (0 ou None) → sem penalidade de tempo, retorna composite."""
-    assert score_shortest({"metacritic": 80, "steam_pct": 80, "main_extra": 0}) == pytest.approx(80.0)
-    assert score_shortest({"metacritic": 80, "steam_pct": 80, "main_extra": None}) == pytest.approx(80.0)
+    assert score_shortest({"metacritic": 80, "steam_pct": 80, "main_extra": 0}) == pytest.approx(
+        80.0
+    )
+    assert score_shortest({"metacritic": 80, "steam_pct": 80, "main_extra": None}) == pytest.approx(
+        80.0
+    )
 
 
 def test_shortest_missing_both_returns_zero():
