@@ -1,9 +1,30 @@
 import json
+import os
 import time
 
 import pytest
 from unittest.mock import patch, mock_open, MagicMock
+from steam_hltb import igdb
 from steam_hltb.igdb import get_token, fetch_by_appid, fetch_by_name
+
+
+def test_save_token_writes_to_config_dir(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    igdb._save_token("tok123", time.time() + 9999)
+    token_file = tmp_path / "howl" / ".igdb_token.json"
+    assert token_file.exists()
+    assert json.loads(token_file.read_text())["access_token"] == "tok123"
+    assert (os.stat(tmp_path / "howl").st_mode & 0o777) == 0o700
+
+
+def test_load_token_reads_from_config_dir(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    cfg = tmp_path / "howl"
+    cfg.mkdir()
+    (cfg / ".igdb_token.json").write_text(
+        json.dumps({"access_token": "fromcfg", "expires_at": time.time() + 9999})
+    )
+    assert igdb._load_token()["access_token"] == "fromcfg"
 
 
 def test_get_token_fetches_when_no_file():

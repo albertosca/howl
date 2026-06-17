@@ -6,26 +6,19 @@ from datetime import datetime
 
 import requests
 
-
-# --- caminhos de configuração (~/.config/howl, respeitando XDG_CONFIG_HOME) ---
-
-def _config_dir() -> str:
-    base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    return os.path.join(base, "howl")
-
-
-def _config_path() -> str:
-    return os.path.join(_config_dir(), ".env")
+from steam_hltb.paths import (
+    config_path as _config_path,
+    ensure_config_dir,
+    log_path as _log_path,
+)
 
 
-def _log_path() -> str:
-    return os.path.join(_config_dir(), "setup.log")
-
+# --- caminhos de configuração: ver steam_hltb/paths.py ---
 
 def _log_error(msg: str) -> None:
     """Grava uma entrada no setup.log. Logging nunca deve quebrar o setup."""
     try:
-        os.makedirs(_config_dir(), mode=0o700, exist_ok=True)
+        ensure_config_dir()
         with open(_log_path(), "a") as f:
             ts = datetime.now().isoformat(timespec="seconds")
             f.write(f"[{ts}] {msg}\n")
@@ -105,7 +98,7 @@ def _write_env(env_vars: dict[str, str], confirm_overwrite: bool = True) -> str:
     """
     env_vars = dict(env_vars)
     env_path = _config_path()
-    os.makedirs(_config_dir(), mode=0o700, exist_ok=True)
+    ensure_config_dir()
     existing = _read_env_file(env_path)
 
     if confirm_overwrite:
@@ -137,7 +130,7 @@ def _maybe_migrate_legacy_env() -> None:
     choice = input("  Migrar para lá agora? [S/n] ").strip().lower()
     if choice in ("n", "não", "nao"):
         return
-    os.makedirs(_config_dir(), mode=0o700, exist_ok=True)
+    ensure_config_dir()
     with open(legacy) as src, open(target, "w") as dst:
         dst.write(src.read())
     os.chmod(target, 0o600)

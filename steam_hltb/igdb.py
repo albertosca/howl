@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 
 import requests
 
-TOKEN_FILE = ".igdb_token.json"  # mesmo padrão de CACHE_FILE — path relativo ao cwd de invocação
+from steam_hltb import paths
+
 IGDB_API = "https://api.igdb.com/v4"
 TWITCH_URL = "https://id.twitch.tv/oauth2/token"
 MIN_RATING_COUNT = 3
@@ -18,16 +19,18 @@ MIN_RATING_COUNT = 3
 # ---------------------------------------------------------------------------
 
 def _load_token() -> dict | None:
-    """Lê .igdb_token.json se existir."""
-    if not os.path.exists(TOKEN_FILE):
+    """Lê ~/.config/howl/.igdb_token.json se existir."""
+    token_file = paths.token_path()
+    if not os.path.exists(token_file):
         return None
-    with open(TOKEN_FILE, "r") as f:
+    with open(token_file, "r") as f:
         return json.load(f)
 
 
 def _save_token(access_token: str, expires_at: float) -> None:
-    """Salva token em .igdb_token.json."""
-    with open(TOKEN_FILE, "w") as f:
+    """Salva token em ~/.config/howl/.igdb_token.json."""
+    paths.ensure_config_dir()
+    with open(paths.token_path(), "w") as f:
         json.dump({"access_token": access_token, "expires_at": expires_at}, f)
 
 
