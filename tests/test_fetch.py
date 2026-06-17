@@ -628,3 +628,129 @@ def test_migrate_igdb_returns_early_without_credentials():
         result = migrate_igdb_data(cache, client_id=None, client_secret=None)
     mock_token.assert_not_called()
     assert "igdb" not in result["Game"]
+
+
+def test_get_api_key_from_env(monkeypatch):
+    from steam_hltb.fetch import get_api_key
+
+    monkeypatch.setenv("MY_KEY", "secret")
+    assert get_api_key("MY_KEY", "prompt") == "secret"
+
+
+def test_get_api_key_prompts_when_absent(monkeypatch):
+    from steam_hltb.fetch import get_api_key
+
+    monkeypatch.delenv("MY_KEY", raising=False)
+    monkeypatch.setattr("builtins.input", lambda _: "  typed  ")
+    assert get_api_key("MY_KEY", "prompt") == "typed"
+
+
+def test_build_library_fetches_new_game_with_hltb(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from steam_hltb import fetch
+
+    monkeypatch.setattr(fetch, "resolve_steamid", lambda k, u: "1")
+    monkeypatch.setattr(
+        fetch, "get_steam_games", lambda k, sid: [{"name": "G", "appid": 7, "hours_played": 0}]
+    )
+    monkeypatch.setattr(
+        fetch,
+        "fetch_hltb",
+        lambda name: {"game_name": name, "main_story": 10, "main_extra": 12, "completionist": 20},
+    )
+    monkeypatch.setattr(
+        fetch, "fetch_steam_reviews", lambda appid: {"positive_pct": 95, "total_reviews": 100}
+    )
+    monkeypatch.setattr(
+        fetch,
+        "fetch_steam_app_details",
+        lambda appid: {
+            "metacritic": 90,
+            "genres": ["action"],
+            "categories": [],
+            "release_year": 2020,
+        },
+    )
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    cache, _ = fetch.build_library("k", "u", {})
+    assert cache["G"]["hltb"]["game_name"] == "G"
+    assert cache["G"]["steam"]["appid"] == 7
+    assert cache["G"]["steam"]["metacritic"] == 90
+
+
+def test_migrate_igdb_verbose_no_credentials(capsys, monkeypatch):
+    from steam_hltb.fetch import migrate_igdb_data
+
+    monkeypatch.delenv("IGDB_CLIENT_ID", raising=False)
+    monkeypatch.delenv("IGDB_CLIENT_SECRET", raising=False)
+    migrate_igdb_data({}, verbose=True)
+    assert "pulando" in capsys.readouterr().out
+
+
+def test_migrate_igdb_verbose_token_failure(capsys, monkeypatch):
+    from steam_hltb import fetch
+
+    monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: None)
+    fetch.migrate_igdb_data({}, client_id="x", client_secret="y", verbose=True)
+    assert "Falha ao obter token" in capsys.readouterr().out
+
+
+def test_migrate_igdb_verbose_found(capsys, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from steam_hltb import fetch
+
+    monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
+    monkeypatch.setattr(
+        fetch.igdb, "fetch_by_appid", lambda cid, tok, appid: {"aggregated_rating": 88}
+    )
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
+    fetch.migrate_igdb_data(cache, client_id="x", client_secret="y", verbose=True)
+    out = capsys.readouterr().out
+    assert "Buscando dados IGDB" in out
+    assert "88" in out
+    assert cache["G"]["igdb"]["aggregated_rating"] == 88
+
+
+def test_migrate_igdb_verbose_not_found(capsys, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from steam_hltb import fetch
+
+    monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
+    monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda cid, tok, appid: None)
+    monkeypatch.setattr(fetch.igdb, "fetch_by_name", lambda cid, tok, name: None)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
+    fetch.migrate_igdb_data(cache, client_id="x", client_secret="y", verbose=True)
+    assert "não encontrado" in capsys.readouterr().out
+
+
+def test_migrate_steam_details_skips_when_details_none(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from steam_hltb import fetch
+
+    monkeypatch.setattr(fetch, "fetch_steam_app_details", lambda appid: None)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    cache = {"G": {"steam": {"appid": 5}}}  # falta genres/release_year → pendente
+    fetch.migrate_steam_details(cache)
+    assert "genres" not in cache["G"]["steam"]  # details None → nada atualizado
+
+
+def test_migrate_igdb_token_failure_quiet(monkeypatch):
+    from steam_hltb import fetch
+
+    monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: None)
+    assert fetch.migrate_igdb_data({}, client_id="x", client_secret="y") == {}  # verbose False
+
+
+def test_migrate_igdb_not_found_quiet(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from steam_hltb import fetch
+
+    monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
+    monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda c, t, a: None)
+    monkeypatch.setattr(fetch.igdb, "fetch_by_name", lambda c, t, n: None)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
+    fetch.migrate_igdb_data(cache, client_id="x", client_secret="y")  # verbose False
+    assert "igdb" not in cache["G"]

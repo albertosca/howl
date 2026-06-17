@@ -127,3 +127,48 @@ def test_fetch_by_name_ignores_low_rating_count():
 def test_missing_credentials_returns_none():
     assert fetch_by_appid(None, None, 892970) is None
     assert fetch_by_name(None, None, "game") is None
+
+
+def test_load_token_returns_none_when_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))  # sem arquivo de token
+    assert igdb._load_token() is None
+
+
+def test_refresh_token_posts_and_saves(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    resp = MagicMock()
+    resp.json.return_value = {"access_token": "newtok", "expires_in": 5000}
+    with patch("requests.post", return_value=resp):
+        token, expires = igdb._refresh_token("cid", "csec")
+    assert token == "newtok"
+    assert expires > time.time()
+    assert (tmp_path / "howl" / ".igdb_token.json").exists()
+
+
+def test_post_returns_empty_on_error():
+    resp = MagicMock()
+    resp.ok = False
+    resp.status_code = 500
+    resp.text = "boom"
+    with patch("requests.post", return_value=resp):
+        assert igdb._post("cid", "tok", "games", "body") == []
+
+
+def test_fetch_by_appid_release_year_none_without_date():
+    resp = MagicMock()
+    resp.ok = True
+    resp.json.return_value = [
+        {"aggregated_rating": 85, "aggregated_rating_count": 10, "genres": [{"name": "RPG"}]}
+    ]
+    with patch("requests.post", return_value=resp):
+        result = igdb.fetch_by_appid("cid", "tok", 5)
+    assert result is not None
+    assert result["release_year"] is None
+
+
+def test_fetch_by_name_returns_none_when_empty():
+    resp = MagicMock()
+    resp.ok = True
+    resp.json.return_value = []
+    with patch("requests.post", return_value=resp):
+        assert igdb.fetch_by_name("cid", "tok", "x") is None
