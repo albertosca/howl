@@ -4,6 +4,16 @@
 
 **Hoard Optimizer, What to Launch**
 
+[![CI](https://github.com/albertosca/howl/actions/workflows/ci.yml/badge.svg)](https://github.com/albertosca/howl/actions/workflows/ci.yml)
+![Coverage](.github/badges/coverage.svg)
+![Ruff](.github/badges/ruff.svg)
+
+<!-- Coverage/Ruff são SVGs locais (sem serviço externo). Regenerar com:
+       pip install "genbadge[coverage]" anybadge
+       pytest --cov-report=xml && genbadge coverage --local -i coverage.xml -o .github/badges/coverage.svg
+       anybadge --label="code style" --value=ruff --file=.github/badges/ruff.svg --color="#261230" -o
+     O coverage fica sempre correto: o gate --cov-fail-under=100 quebra o CI se cair de 100%. -->
+
 Ranqueia sua biblioteca Steam por qualidade × tempo investido usando dados do [HowLongToBeat](https://howlongtobeat.com), Metacritic e Steam Reviews. Chega de paralisia de decisão na frente da backlog.
 
 ```
