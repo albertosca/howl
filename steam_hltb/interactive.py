@@ -1,9 +1,10 @@
-from .score import SORT_OPTIONS
+import argparse
+
 from .classify import apply_filters
-from .score import compute_score
+from .score import SORT_OPTIONS, compute_score
 
 
-def _ask(prompt: str, options: list = None, default: str = None) -> str:
+def _ask(prompt: str, options: list[str] | None = None, default: str | None = None) -> str:
     if options:
         opts_str = "/".join(options)
         full_prompt = f"{prompt} [{opts_str}]"
@@ -18,20 +19,21 @@ def _ask(prompt: str, options: list = None, default: str = None) -> str:
     return value if value else (default or "")
 
 
-def _csv_or_none(value: str) -> list | None:
+def _csv_or_none(value: str) -> list[str] | None:
     if not value:
         return None
     return [v.strip() for v in value.split(",") if v.strip()]
 
 
-def run_interactive(base_args) -> None:
-    from .main import _weights, save_results, print_table
+def run_interactive(base_args: argparse.Namespace) -> None:
+    from .cli import _weights
+    from .report import print_table, save_results
 
     print("\n=== Modo Interativo ===\n")
 
-    genre_raw     = _ask("Gêneros obrigatórios (vírgula-sep, vazio=todos)", default="")
+    genre_raw = _ask("Gêneros obrigatórios (vírgula-sep, vazio=todos)", default="")
     genre_any_raw = _ask("Qualquer um desses gêneros (vírgula-sep, vazio=ignorar)", default="")
-    excl_raw      = _ask("Excluir gêneros (vírgula-sep, vazio=nenhum)", default="")
+    excl_raw = _ask("Excluir gêneros (vírgula-sep, vazio=nenhum)", default="")
 
     progress = _ask(
         "Filtro de progresso",
@@ -53,8 +55,8 @@ def run_interactive(base_args) -> None:
 
     output = _ask("Nome base do arquivo de saída", default="how_long_to_beat_output")
 
-    from .fetch import get_api_key, load_cache, build_library
     from .classify import build_game_rows
+    from .fetch import build_library, get_api_key, load_cache
 
     steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
     cache = load_cache()
@@ -74,10 +76,12 @@ def run_interactive(base_args) -> None:
 
     vdf_path = getattr(base_args, "vdf_path", "sharedconfig.vdf")
     from .steam_collections import exclude_finished
+
     rows = exclude_finished(rows, vdf_path)
 
     if collection_raw:
-        from .steam_collections import load_collections, filter_collection
+        from .steam_collections import filter_collection, load_collections
+
         collection_map = load_collections(vdf_path)
         rows = filter_collection(rows, collection_raw, collection_map)
 
@@ -88,8 +92,8 @@ def run_interactive(base_args) -> None:
     rows.sort(key=lambda g: g["_score"], reverse=True)
     top_games = rows[:top]
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f" TOP {top} — sort: {sort_by}  ({len(top_games)} de {len(rows)} filtrados)")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print_table(top_games, sort_by)
     save_results(rows, output)

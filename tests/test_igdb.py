@@ -1,11 +1,10 @@
 import json
 import os
 import time
+from unittest.mock import MagicMock, patch
 
-import pytest
-from unittest.mock import patch, mock_open, MagicMock
 from steam_hltb import igdb
-from steam_hltb.igdb import get_token, fetch_by_appid, fetch_by_name
+from steam_hltb.igdb import fetch_by_appid, fetch_by_name, get_token
 
 
 def test_save_token_writes_to_config_dir(tmp_path, monkeypatch):
@@ -28,8 +27,12 @@ def test_load_token_reads_from_config_dir(tmp_path, monkeypatch):
 
 
 def test_get_token_fetches_when_no_file():
-    with patch("os.path.exists", return_value=False), \
-         patch("steam_hltb.igdb._refresh_token", return_value=("tok123", time.time() + 9999)) as mock_refresh:
+    with (
+        patch("steam_hltb.igdb._load_token", return_value=None),
+        patch(
+            "steam_hltb.igdb._refresh_token", return_value=("tok123", time.time() + 9999)
+        ) as mock_refresh,
+    ):
         token = get_token("cid", "csecret")
     assert token == "tok123"
     mock_refresh.assert_called_once_with("cid", "csecret")
@@ -37,17 +40,17 @@ def test_get_token_fetches_when_no_file():
 
 def test_get_token_uses_cached_when_valid():
     valid = {"access_token": "cached", "expires_at": time.time() + 9999}
-    m = mock_open(read_data=json.dumps(valid))
-    with patch("os.path.exists", return_value=True), patch("builtins.open", m):
+    with patch("steam_hltb.igdb._load_token", return_value=valid):
         token = get_token("cid", "csecret")
     assert token == "cached"
 
 
 def test_get_token_refreshes_when_expired():
     expired = {"access_token": "old", "expires_at": time.time() - 1}
-    m = mock_open(read_data=json.dumps(expired))
-    with patch("os.path.exists", return_value=True), patch("builtins.open", m), \
-         patch("steam_hltb.igdb._refresh_token", return_value=("new", time.time() + 9999)) as mock_r:
+    with (
+        patch("steam_hltb.igdb._load_token", return_value=expired),
+        patch("steam_hltb.igdb._refresh_token", return_value=("new", time.time() + 9999)) as mock_r,
+    ):
         token = get_token("cid", "csecret")
     assert token == "new"
     mock_r.assert_called_once()
@@ -61,13 +64,15 @@ def test_get_token_returns_none_when_no_credentials():
 def test_fetch_by_appid_returns_data():
     mock_resp = MagicMock()
     mock_resp.ok = True
-    mock_resp.json.return_value = [{
-        "name": "Valheim",
-        "aggregated_rating": 90.0,
-        "aggregated_rating_count": 8,
-        "genres": [{"name": "Role-playing (RPG)"}, {"name": "Indie"}],
-        "first_release_date": 1613000000,
-    }]
+    mock_resp.json.return_value = [
+        {
+            "name": "Valheim",
+            "aggregated_rating": 90.0,
+            "aggregated_rating_count": 8,
+            "genres": [{"name": "Role-playing (RPG)"}, {"name": "Indie"}],
+            "first_release_date": 1613000000,
+        }
+    ]
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_appid("cid", "tok", 892970)
     assert result["aggregated_rating"] == 90
@@ -87,13 +92,15 @@ def test_fetch_by_appid_returns_none_when_empty():
 def test_fetch_by_name_returns_data():
     mock_resp = MagicMock()
     mock_resp.ok = True
-    mock_resp.json.return_value = [{
-        "name": "Deus Ex: Human Revolution",
-        "aggregated_rating": 89.0,
-        "aggregated_rating_count": 25,
-        "genres": [{"name": "Shooter"}, {"name": "Role-playing (RPG)"}],
-        "first_release_date": 1313000000,
-    }]
+    mock_resp.json.return_value = [
+        {
+            "name": "Deus Ex: Human Revolution",
+            "aggregated_rating": 89.0,
+            "aggregated_rating_count": 25,
+            "genres": [{"name": "Shooter"}, {"name": "Role-playing (RPG)"}],
+            "first_release_date": 1313000000,
+        }
+    ]
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_name("cid", "tok", "Deus Ex: Human Revolution")
     assert result["aggregated_rating"] == 89
@@ -103,13 +110,15 @@ def test_fetch_by_name_returns_data():
 def test_fetch_by_name_ignores_low_rating_count():
     mock_resp = MagicMock()
     mock_resp.ok = True
-    mock_resp.json.return_value = [{
-        "name": "Some Obscure Game",
-        "aggregated_rating": 95.0,
-        "aggregated_rating_count": 1,
-        "genres": [],
-        "first_release_date": None,
-    }]
+    mock_resp.json.return_value = [
+        {
+            "name": "Some Obscure Game",
+            "aggregated_rating": 95.0,
+            "aggregated_rating_count": 1,
+            "genres": [],
+            "first_release_date": None,
+        }
+    ]
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_name("cid", "tok", "Some Obscure Game")
     assert result is None
@@ -118,3 +127,48 @@ def test_fetch_by_name_ignores_low_rating_count():
 def test_missing_credentials_returns_none():
     assert fetch_by_appid(None, None, 892970) is None
     assert fetch_by_name(None, None, "game") is None
+
+
+def test_load_token_returns_none_when_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))  # sem arquivo de token
+    assert igdb._load_token() is None
+
+
+def test_refresh_token_posts_and_saves(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    resp = MagicMock()
+    resp.json.return_value = {"access_token": "newtok", "expires_in": 5000}
+    with patch("requests.post", return_value=resp):
+        token, expires = igdb._refresh_token("cid", "csec")
+    assert token == "newtok"
+    assert expires > time.time()
+    assert (tmp_path / "howl" / ".igdb_token.json").exists()
+
+
+def test_post_returns_empty_on_error():
+    resp = MagicMock()
+    resp.ok = False
+    resp.status_code = 500
+    resp.text = "boom"
+    with patch("requests.post", return_value=resp):
+        assert igdb._post("cid", "tok", "games", "body") == []
+
+
+def test_fetch_by_appid_release_year_none_without_date():
+    resp = MagicMock()
+    resp.ok = True
+    resp.json.return_value = [
+        {"aggregated_rating": 85, "aggregated_rating_count": 10, "genres": [{"name": "RPG"}]}
+    ]
+    with patch("requests.post", return_value=resp):
+        result = igdb.fetch_by_appid("cid", "tok", 5)
+    assert result is not None
+    assert result["release_year"] is None
+
+
+def test_fetch_by_name_returns_none_when_empty():
+    resp = MagicMock()
+    resp.ok = True
+    resp.json.return_value = []
+    with patch("requests.post", return_value=resp):
+        assert igdb.fetch_by_name("cid", "tok", "x") is None

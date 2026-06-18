@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.fixture
 def sample_cache():
     return {
@@ -54,10 +55,11 @@ def sample_cache():
         },
     }
 
+
 @pytest.fixture
 def sample_steam_games():
     return [
         {"name": "Half-Life 2", "appid": 220, "hours_played": 0.0},
-        {"name": "Portal 2",    "appid": 620, "hours_played": 3.0},
-        {"name": "Dota 2",      "appid": 570, "hours_played": 100.0},
+        {"name": "Portal 2", "appid": 620, "hours_played": 3.0},
+        {"name": "Dota 2", "appid": 570, "hours_played": 100.0},
     ]

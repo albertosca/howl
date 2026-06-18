@@ -1,5 +1,3 @@
-import pytest
-
 SAMPLE_GAMES = [
     {
         "name": "Hades",
@@ -38,10 +36,15 @@ SAMPLE_GAMES = [
 ]
 
 INITIAL_FILTERS = {
-    "genre": None, "genre_any": None, "exclude_genre": None,
-    "progress": "all", "category": "all",
-    "min_hours": None, "max_hours": None,
-    "sort": "shortest", "top": 10,
+    "genre": None,
+    "genre_any": None,
+    "exclude_genre": None,
+    "progress": "all",
+    "category": "all",
+    "min_hours": None,
+    "max_hours": None,
+    "sort": "shortest",
+    "top": 10,
     "weights": {"mc": 0.5, "steam": 0.5},
     "show_finished": True,  # testes não dependem do VDF local
     "vdf_path": "sharedconfig.vdf",
@@ -51,24 +54,28 @@ INITIAL_FILTERS = {
 
 
 async def test_tui_app_starts_and_renders_table():
-    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import DataTable
+
+    from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
+    async with app.run_test():
         table = app.query_one(DataTable)
         assert table.row_count == 2
 
 
 async def test_tui_filter_panel_hidden_by_default():
-    from steam_hltb.tui import SteamHLTBApp, FilterPanel
+    from steam_hltb.tui import FilterPanel, SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
+    async with app.run_test():
         panel = app.query_one(FilterPanel)
         assert panel.display is False
 
 
 async def test_tui_filter_panel_toggles_with_f():
-    from steam_hltb.tui import SteamHLTBApp, FilterPanel
+    from steam_hltb.tui import FilterPanel, SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         panel = app.query_one(FilterPanel)
@@ -79,8 +86,10 @@ async def test_tui_filter_panel_toggles_with_f():
 
 
 async def test_tui_fuzzy_filter_reduces_rows():
-    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import DataTable, Input
+
+    from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         await pilot.press("f")
@@ -93,8 +102,10 @@ async def test_tui_fuzzy_filter_reduces_rows():
 
 
 async def test_tui_fuzzy_filter_no_match_shows_zero_rows():
-    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import DataTable, Input
+
+    from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         await pilot.press("f")
@@ -106,8 +117,10 @@ async def test_tui_fuzzy_filter_no_match_shows_zero_rows():
 
 
 async def test_tui_fuzzy_filter_cleared_restores_all_rows():
-    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import DataTable, Input
+
+    from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         await pilot.press("f")
@@ -122,8 +135,10 @@ async def test_tui_fuzzy_filter_cleared_restores_all_rows():
 
 
 async def test_tui_genre_filter_reduces_rows():
-    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import DataTable, Input
+
+    from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         await pilot.press("f")
@@ -137,8 +152,10 @@ async def test_tui_genre_filter_reduces_rows():
 
 
 async def test_tui_top_n_limits_output():
-    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import DataTable, Input
+
+    from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         await pilot.press("f")
@@ -151,8 +168,10 @@ async def test_tui_top_n_limits_output():
 
 async def test_tui_sort_loved_orders_by_steam_pct():
     """sort=loved → Hades (97%) antes de Hollow Knight (95%)."""
-    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import Select
+
+    from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         await pilot.press("f")
@@ -167,12 +186,12 @@ async def test_tui_sort_loved_orders_by_steam_pct():
 async def test_tui_era_filter_logic_via_filters():
     """Filtro por era: manipular filters diretamente e rebuildar tabela."""
     from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
+    async with app.run_test():
         # Hades: 2020 → era "2020+"; Hollow Knight: 2017 → era "2015-2020"
         app.filters["eras"] = ["2015-2020"]
         app._rebuild_table()
-        await pilot.pause()
         assert len(app._games) == 1
         assert app._games[0]["name"] == "Hollow Knight"
 
@@ -180,28 +199,29 @@ async def test_tui_era_filter_logic_via_filters():
 async def test_tui_era_filter_all_excluded():
     """Era vazia → nenhum jogo aparece."""
     from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
-        app.filters["eras"] = []   # lista vazia = filtrar tudo
+    async with app.run_test():
+        app.filters["eras"] = []  # lista vazia = filtrar tudo
         app._rebuild_table()
-        await pilot.pause()
         assert len(app._games) == 0
 
 
 async def test_tui_era_filter_none_shows_all():
     """Era=None (padrão) → sem filtro, todos os jogos aparecem."""
     from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
+    async with app.run_test():
         app.filters["eras"] = None
         app._rebuild_table()
-        await pilot.pause()
         assert len(app._games) == 2
 
 
 async def test_tui_read_filters_era_all_checked_returns_none():
     """Quando todos os checkboxes de era estão marcados, eras deve ser None (sem filtro)."""
     from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         await pilot.press("f")
@@ -212,8 +232,10 @@ async def test_tui_read_filters_era_all_checked_returns_none():
 
 
 async def test_tui_show_genres_toggle_adds_column():
-    from steam_hltb.tui import SteamHLTBApp
     from textual.widgets import DataTable
+
+    from steam_hltb.tui import SteamHLTBApp
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
         # show_genres começa True → coluna Gêneros existe
@@ -228,9 +250,127 @@ async def test_tui_show_genres_toggle_adds_column():
 
 
 async def test_tui_status_bar_shows_count():
+
     from steam_hltb.tui import SteamHLTBApp
-    from textual.widgets import Static
+
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
-    async with app.run_test() as pilot:
+    async with app.run_test():
         # verifica indiretamente via _games (a status bar reflete _games)
         assert len(app._games) == 2
+
+
+GAME_MISSING = {
+    "name": "Bare",
+    "steam_name": "Bare",
+    "appid": 9,
+    "hours_played": 0.0,
+    "category": "singleplayer",
+    "genres": [],
+    "tags": [],
+    "metacritic": None,
+    "steam_pct": None,
+    "steam_total_reviews": 0,
+    "main_story": None,
+    "main_extra": None,
+    "completionist": None,
+    "release_year": None,
+    "_score": 0.0,
+}
+
+FULL_FILTERS = {
+    **INITIAL_FILTERS,
+    "genre": ["action"],
+    "exclude_genre": ["sports"],
+    "min_hours": 5.0,
+    "max_hours": 50.0,
+    "collection": "Jogando",
+    "eras": ["2020+"],
+    "sort": "rated",
+    "progress": "not_started",
+    "category": "singleplayer",
+}
+
+
+async def test_tui_renders_missing_fields_as_dash():
+    from textual.widgets import DataTable
+
+    from steam_hltb.tui import SteamHLTBApp
+
+    app = SteamHLTBApp([GAME_MISSING], INITIAL_FILTERS)
+    async with app.run_test():
+        assert app.query_one(DataTable).row_count == 1
+
+
+async def test_tui_show_tags_toggle():
+    from steam_hltb.tui import SteamHLTBApp
+
+    app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
+    async with app.run_test() as pilot:
+        await pilot.press("t")
+        await pilot.pause()
+        assert app.show_tags is True
+
+
+async def test_tui_syncs_populated_filters_to_panel():
+    from textual.widgets import Input, Select
+
+    from steam_hltb.tui import SteamHLTBApp
+
+    app = SteamHLTBApp(SAMPLE_GAMES, FULL_FILTERS)
+    async with app.run_test():
+        assert app.query_one("#genre-input", Input).value == "action"
+        assert app.query_one("#exclude-genre-input", Input).value == "sports"
+        assert app.query_one("#min-hours-input", Input).value == "5.0"
+        assert app.query_one("#max-hours-input", Input).value == "50.0"
+        assert app.query_one("#collection-select", Select).value == "Jogando"
+
+
+async def test_tui_reads_populated_filters_from_panel():
+    from steam_hltb.tui import SteamHLTBApp
+
+    app = SteamHLTBApp(SAMPLE_GAMES, FULL_FILTERS)
+    async with app.run_test() as pilot:
+        await pilot.press("f")
+        await pilot.pause()
+        app._read_filters_from_panel()
+        assert app.filters["genre"] == ["action"]
+        assert app.filters["exclude_genre"] == ["sports"]
+        assert app.filters["min_hours"] == 5.0
+        assert app.filters["max_hours"] == 50.0
+        assert app.filters["collection"] == "Jogando"
+        assert app.filters["eras"] == ["2020+"]
+
+
+async def test_tui_save_action_calls_save_results(monkeypatch):
+    from steam_hltb.tui import SteamHLTBApp
+
+    saved = {}
+    monkeypatch.setattr(
+        "steam_hltb.report.save_results", lambda games, base: saved.update(n=len(games))
+    )
+    app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
+    async with app.run_test() as pilot:
+        await pilot.press("s")
+        await pilot.pause()
+    assert saved.get("n") == 2
+
+
+async def test_tui_sync_skips_unknown_collection():
+    from textual.widgets import Select
+
+    from steam_hltb.tui import SteamHLTBApp
+
+    filters = {**FULL_FILTERS, "collection": "CustomCol", "vdf_path": "nonexistent.vdf"}
+    app = SteamHLTBApp(SAMPLE_GAMES, filters)
+    async with app.run_test():
+        # coleção fora das opções do Select → fica no default "todas"
+        assert app.query_one("#collection-select", Select).value == "todas"
+
+
+def test_run_tui_constructs_and_runs(monkeypatch):
+    from steam_hltb.tui import SteamHLTBApp, run_tui
+
+    ran = []
+    monkeypatch.setattr(SteamHLTBApp, "run", lambda self: ran.append(True))
+    run_tui(SAMPLE_GAMES, INITIAL_FILTERS)
+    assert ran == [True]

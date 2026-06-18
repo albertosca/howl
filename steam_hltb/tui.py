@@ -1,11 +1,14 @@
-from textual.app import App, ComposeResult
-from textual.widgets import DataTable, Input, Select, Footer, Header, Label, Static, Checkbox
-from textual.containers import Horizontal, Vertical
-from textual.binding import Binding
-from textual.reactive import reactive
+from typing import Any, ClassVar
 
-from .classify import apply_filters, filter_name, ERA_LABELS
-from .score import compute_score, SORT_OPTIONS
+from textual.app import App, ComposeResult
+from textual.binding import Binding, BindingType
+from textual.containers import Horizontal, Vertical
+from textual.reactive import reactive
+from textual.widgets import Checkbox, DataTable, Footer, Header, Input, Label, Select, Static
+
+from .classify import ERA_LABELS
+from .score import SORT_OPTIONS
+from .selection import select_games
 
 
 def _era_id(era: str) -> str:
@@ -87,7 +90,7 @@ class FilterPanel(Vertical):
             yield Checkbox(era, value=True, id=_era_id(era))
 
 
-class SteamHLTBApp(App):
+class SteamHLTBApp(App[None]):
     CSS = """
     Screen {
         layout: vertical;
@@ -107,7 +110,7 @@ class SteamHLTBApp(App):
     }
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit", "Sair"),
         Binding("f", "toggle_filters", "Filtros"),
         Binding("g", "toggle_genres", "Gêneros"),
@@ -118,7 +121,9 @@ class SteamHLTBApp(App):
     show_genres: reactive[bool] = reactive(True)
     show_tags: reactive[bool] = reactive(False)
 
-    def __init__(self, all_games: list, initial_filters: dict | None = None):
+    def __init__(
+        self, all_games: list[dict[str, Any]], initial_filters: dict[str, Any] | None = None
+    ):
         super().__init__()
         self.all_games = all_games
         self.filters = (initial_filters or {}).copy()
@@ -137,7 +142,7 @@ class SteamHLTBApp(App):
         self.filters.setdefault("collection", None)
         self.filters.setdefault("name_query", None)
         self.filters.setdefault("eras", None)  # None = todas as eras
-        self._games: list = []
+        self._games: list[dict[str, Any]] = []
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -169,36 +174,9 @@ class SteamHLTBApp(App):
             table.add_column("Tags", width=22)
 
     def _rebuild_table(self) -> None:
-        rows = apply_filters(
-            self.all_games,
-            genre=self.filters["genre"],
-            genre_any=self.filters["genre_any"],
-            exclude_genre=self.filters["exclude_genre"],
-            progress=self.filters["progress"],
-            category=self.filters["category"],
-            min_hours=self.filters["min_hours"],
-            max_hours=self.filters["max_hours"],
-            eras=self.filters.get("eras"),
-        )
-        rows = filter_name(rows, query=self.filters.get("name_query"))
-        vdf_path = self.filters.get("vdf_path", "sharedconfig.vdf")
-        if not self.filters.get("show_finished", False):
-            from .steam_collections import exclude_finished
-            rows = exclude_finished(rows, vdf_path)
-        if self.filters.get("collection"):
-            try:
-                from .steam_collections import load_collections, filter_collection
-                collection_map = load_collections(vdf_path)
-                rows = filter_collection(rows, self.filters["collection"], collection_map)
-            except Exception:
-                pass
+        rows = select_games(self.all_games, self.filters)
+        self._games = rows[: self.filters["top"]]
         sort_by = self.filters["sort"]
-        weights = self.filters["weights"]
-        for g in rows:
-            g["_score"] = compute_score(g, sort_by, weights)
-        rows.sort(key=lambda g: g["_score"], reverse=True)
-        top_n = self.filters["top"]
-        self._games = rows[:top_n]
 
         table = self.query_one(DataTable)
         table.clear()
@@ -229,102 +207,50 @@ class SteamHLTBApp(App):
         )
 
     def _sync_panel_to_filters(self) -> None:
-        self.query_one("#top-input", Input).value = str(self.filters["top"])
-        sort_val = self.filters["sort"]
-        if sort_val in SORT_OPTIONS:
-            self.query_one("#sort-select", Select).value = sort_val
-        progress = self.filters["progress"]
-        if progress in ("default", "not_started", "in_progress", "all"):
-            self.query_one("#progress-select", Select).value = progress
-        category = self.filters["category"]
-        if category in ("all", "singleplayer", "coop"):
-            self.query_one("#category-select", Select).value = category
-        if self.filters["genre"]:
-            self.query_one("#genre-input", Input).value = ", ".join(self.filters["genre"])
-        if self.filters["exclude_genre"]:
-            self.query_one("#exclude-genre-input", Input).value = ", ".join(self.filters["exclude_genre"])
-        if self.filters["min_hours"] is not None:
-            self.query_one("#min-hours-input", Input).value = str(self.filters["min_hours"])
-        if self.filters["max_hours"] is not None:
-            self.query_one("#max-hours-input", Input).value = str(self.filters["max_hours"])
-        col = self.filters.get("collection") or "todas"
-        if col in ("todas", "Jogando", "Multiplayer"):
-            self.query_one("#collection-select", Select).value = col
-        # era checkboxes: se eras != None, desmarcar as que não estão na lista
-        eras = self.filters.get("eras")
+        f = self.filters
+        self.query_one("#top-input", Input).value = str(f["top"])
+        self.query_one("#sort-select", Select).value = f["sort"]
+        self.query_one("#progress-select", Select).value = f["progress"]
+        self.query_one("#category-select", Select).value = f["category"]
+        if f["genre"]:
+            self.query_one("#genre-input", Input).value = ", ".join(f["genre"])
+        if f["exclude_genre"]:
+            self.query_one("#exclude-genre-input", Input).value = ", ".join(f["exclude_genre"])
+        if f["min_hours"] is not None:
+            self.query_one("#min-hours-input", Input).value = str(f["min_hours"])
+        if f["max_hours"] is not None:
+            self.query_one("#max-hours-input", Input).value = str(f["max_hours"])
+        # --collection é livre; só pré-seleciona se for uma opção do Select
+        collection = f.get("collection") or "todas"
+        if collection in ("todas", "Jogando", "Multiplayer"):
+            self.query_one("#collection-select", Select).value = collection
+        # eras != None → desmarca as épocas fora da lista
+        eras = f.get("eras")
         if eras is not None:
             for era in ERA_LABELS:
-                try:
-                    cb = self.query_one(f"#{_era_id(era)}", Checkbox)
-                    cb.value = era in eras
-                except Exception:
-                    pass
+                self.query_one(f"#{_era_id(era)}", Checkbox).value = era in eras
 
     def _read_filters_from_panel(self) -> None:
-        try:
-            raw = self.query_one("#name-input", Input).value.strip()
-            self.filters["name_query"] = raw if raw else None
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#top-input", Input).value.strip()
-            self.filters["top"] = int(raw) if raw.isdigit() else self.filters["top"]
-        except Exception:
-            pass
-        try:
-            val = self.query_one("#sort-select", Select).value
-            if val and val in SORT_OPTIONS:
-                self.filters["sort"] = val
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#genre-input", Input).value.strip()
-            self.filters["genre"] = [v.strip() for v in raw.split(",") if v.strip()] or None
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#exclude-genre-input", Input).value.strip()
-            self.filters["exclude_genre"] = [v.strip() for v in raw.split(",") if v.strip()] or None
-        except Exception:
-            pass
-        try:
-            val = self.query_one("#progress-select", Select).value
-            if val and val in ("default", "not_started", "in_progress", "all"):
-                self.filters["progress"] = val
-        except Exception:
-            pass
-        try:
-            val = self.query_one("#category-select", Select).value
-            if val and val in ("all", "singleplayer", "coop"):
-                self.filters["category"] = val
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#min-hours-input", Input).value.strip()
-            self.filters["min_hours"] = float(raw) if raw else None
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#max-hours-input", Input).value.strip()
-            self.filters["max_hours"] = float(raw) if raw else None
-        except Exception:
-            pass
-        try:
-            val = self.query_one("#collection-select", Select).value
-            self.filters["collection"] = None if val == "todas" else val
-        except Exception:
-            pass
-        # era checkboxes
-        try:
-            checked = []
-            for era in ERA_LABELS:
-                cb = self.query_one(f"#era-{era}", Checkbox)
-                if cb.value:
-                    checked.append(era)
-            # None = todas marcadas (sem filtro); lista = subconjunto
-            self.filters["eras"] = None if len(checked) == len(ERA_LABELS) else (checked or None)
-        except Exception:
-            pass
+        f = self.filters
+        f["name_query"] = self.query_one("#name-input", Input).value.strip() or None
+        top_raw = self.query_one("#top-input", Input).value.strip()
+        f["top"] = int(top_raw) if top_raw.isdigit() else f["top"]
+        f["sort"] = self.query_one("#sort-select", Select).value
+        genre_raw = self.query_one("#genre-input", Input).value.strip()
+        f["genre"] = [v.strip() for v in genre_raw.split(",") if v.strip()] or None
+        excl_raw = self.query_one("#exclude-genre-input", Input).value.strip()
+        f["exclude_genre"] = [v.strip() for v in excl_raw.split(",") if v.strip()] or None
+        f["progress"] = self.query_one("#progress-select", Select).value
+        f["category"] = self.query_one("#category-select", Select).value
+        min_raw = self.query_one("#min-hours-input", Input).value.strip()
+        f["min_hours"] = float(min_raw) if min_raw else None
+        max_raw = self.query_one("#max-hours-input", Input).value.strip()
+        f["max_hours"] = float(max_raw) if max_raw else None
+        collection = self.query_one("#collection-select", Select).value
+        f["collection"] = None if collection == "todas" else collection
+        checked = [e for e in ERA_LABELS if self.query_one(f"#{_era_id(e)}", Checkbox).value]
+        # None = todas marcadas (sem filtro); lista = subconjunto
+        f["eras"] = None if len(checked) == len(ERA_LABELS) else (checked or None)
 
     def on_input_changed(self, _: Input.Changed) -> None:
         self._read_filters_from_panel()
@@ -357,10 +283,11 @@ class SteamHLTBApp(App):
         self.show_tags = not self.show_tags
 
     def action_save(self) -> None:
-        from .main import save_results
+        from .report import save_results
+
         save_results(self._games, "how_long_to_beat_output")
         self.notify("Salvo em how_long_to_beat_output.csv e .md")
 
 
-def run_tui(all_games: list, initial_filters: dict | None = None) -> None:
+def run_tui(all_games: list[dict[str, Any]], initial_filters: dict[str, Any] | None = None) -> None:
     SteamHLTBApp(all_games, initial_filters).run()

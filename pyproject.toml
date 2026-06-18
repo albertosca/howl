@@ -20,6 +20,10 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-mock",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "types-requests",
 ]
 
 [project.scripts]
@@ -31,3 +35,34 @@ include = ["steam_hltb*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]
+addopts = "--cov=steam_hltb --cov-branch"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["legacy"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RET", "PTH", "RUF"]
+# pt-BR usa acentos e setas (→) em strings/docstrings/comentários de propósito
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# testes podem usar open(), linhas longas e asserts livres
+"tests/*" = ["E501", "PTH"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["howlongtobeatpy.*", "textual.*", "bs4.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["steam_hltb"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100

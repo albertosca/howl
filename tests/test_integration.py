@@ -1,9 +1,10 @@
 import json
 import os
-import pytest
-from steam_hltb.classify import build_game_rows, apply_filters
-from steam_hltb.score import compute_score
 
+import pytest
+
+from steam_hltb.classify import apply_filters, build_game_rows
+from steam_hltb.score import compute_score
 
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "games_cache.json")
 
@@ -18,7 +19,11 @@ def real_cache():
 
 def test_build_game_rows_produces_valid_rows(real_cache):
     steam_games = [
-        {"name": name, "appid": entry.get("steam", {}).get("appid", 0) if entry.get("steam") else 0, "hours_played": 0.0}
+        {
+            "name": name,
+            "appid": entry.get("steam", {}).get("appid", 0) if entry.get("steam") else 0,
+            "hours_played": 0.0,
+        }
         for name, entry in real_cache.items()
     ]
     rows = build_game_rows(real_cache, steam_games)
@@ -30,10 +35,7 @@ def test_build_game_rows_produces_valid_rows(real_cache):
 
 
 def test_filter_and_score_pipeline(real_cache):
-    steam_games = [
-        {"name": name, "appid": 0, "hours_played": 0.0}
-        for name in real_cache
-    ]
+    steam_games = [{"name": name, "appid": 0, "hours_played": 0.0} for name in real_cache]
     rows = build_game_rows(real_cache, steam_games)
     filtered = apply_filters(rows, progress="all", category="all")
     for g in filtered:
