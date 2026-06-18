@@ -638,3 +638,26 @@ def test_build_game_rows_ignores_non_dict_override(tmp_path, monkeypatch):
     steam_games = [{"name": "Hades", "appid": 1, "hours_played": 0}]
     rows = classify.build_game_rows(cache, steam_games)
     assert rows[0]["metacritic"] == 90  # override não-dict é ignorado
+
+
+def test_category_multiplayer_only():
+    from steam_hltb.classify import _category
+
+    # só categoria multiplayer, sem single/coop → "multiplayer"
+    assert _category(["multiplayer"], 0) == "multiplayer"
+
+
+def test_build_game_rows_no_genres_no_rawg(tmp_path, monkeypatch):
+    from steam_hltb import classify
+
+    monkeypatch.chdir(tmp_path)  # isola do howl_overrides.json real
+    cache = {
+        "G": {
+            "hltb": {"game_name": "G", "main_story": 10, "main_extra": 12},
+            "steam": {"appid": 1},  # sem 'genres' e sem rawg → ramo else
+        }
+    }
+    steam_games = [{"name": "G", "appid": 1, "hours_played": 0}]
+    rows = classify.build_game_rows(cache, steam_games)
+    assert rows[0]["genres"] == []
+    assert rows[0]["metacritic"] is None
