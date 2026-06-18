@@ -207,104 +207,50 @@ class SteamHLTBApp(App[None]):
         )
 
     def _sync_panel_to_filters(self) -> None:
-        self.query_one("#top-input", Input).value = str(self.filters["top"])
-        sort_val = self.filters["sort"]
-        if sort_val in SORT_OPTIONS:
-            self.query_one("#sort-select", Select).value = sort_val
-        progress = self.filters["progress"]
-        if progress in ("default", "not_started", "in_progress", "all"):
-            self.query_one("#progress-select", Select).value = progress
-        category = self.filters["category"]
-        if category in ("all", "singleplayer", "coop"):
-            self.query_one("#category-select", Select).value = category
-        if self.filters["genre"]:
-            self.query_one("#genre-input", Input).value = ", ".join(self.filters["genre"])
-        if self.filters["exclude_genre"]:
-            self.query_one("#exclude-genre-input", Input).value = ", ".join(
-                self.filters["exclude_genre"]
-            )
-        if self.filters["min_hours"] is not None:
-            self.query_one("#min-hours-input", Input).value = str(self.filters["min_hours"])
-        if self.filters["max_hours"] is not None:
-            self.query_one("#max-hours-input", Input).value = str(self.filters["max_hours"])
-        col = self.filters.get("collection") or "todas"
-        if col in ("todas", "Jogando", "Multiplayer"):
-            self.query_one("#collection-select", Select).value = col
-        # era checkboxes: se eras != None, desmarcar as que não estão na lista
-        eras = self.filters.get("eras")
+        f = self.filters
+        self.query_one("#top-input", Input).value = str(f["top"])
+        self.query_one("#sort-select", Select).value = f["sort"]
+        self.query_one("#progress-select", Select).value = f["progress"]
+        self.query_one("#category-select", Select).value = f["category"]
+        if f["genre"]:
+            self.query_one("#genre-input", Input).value = ", ".join(f["genre"])
+        if f["exclude_genre"]:
+            self.query_one("#exclude-genre-input", Input).value = ", ".join(f["exclude_genre"])
+        if f["min_hours"] is not None:
+            self.query_one("#min-hours-input", Input).value = str(f["min_hours"])
+        if f["max_hours"] is not None:
+            self.query_one("#max-hours-input", Input).value = str(f["max_hours"])
+        # --collection é livre; só pré-seleciona se for uma opção do Select
+        collection = f.get("collection") or "todas"
+        if collection in ("todas", "Jogando", "Multiplayer"):
+            self.query_one("#collection-select", Select).value = collection
+        # eras != None → desmarca as épocas fora da lista
+        eras = f.get("eras")
         if eras is not None:
             for era in ERA_LABELS:
-                try:
-                    cb = self.query_one(f"#{_era_id(era)}", Checkbox)
-                    cb.value = era in eras
-                except Exception:
-                    pass
+                self.query_one(f"#{_era_id(era)}", Checkbox).value = era in eras
 
     def _read_filters_from_panel(self) -> None:
-        try:
-            raw = self.query_one("#name-input", Input).value.strip()
-            self.filters["name_query"] = raw if raw else None
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#top-input", Input).value.strip()
-            self.filters["top"] = int(raw) if raw.isdigit() else self.filters["top"]
-        except Exception:
-            pass
-        try:
-            val = self.query_one("#sort-select", Select).value
-            if val and val in SORT_OPTIONS:
-                self.filters["sort"] = val
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#genre-input", Input).value.strip()
-            self.filters["genre"] = [v.strip() for v in raw.split(",") if v.strip()] or None
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#exclude-genre-input", Input).value.strip()
-            self.filters["exclude_genre"] = [v.strip() for v in raw.split(",") if v.strip()] or None
-        except Exception:
-            pass
-        try:
-            val = self.query_one("#progress-select", Select).value
-            if val and val in ("default", "not_started", "in_progress", "all"):
-                self.filters["progress"] = val
-        except Exception:
-            pass
-        try:
-            val = self.query_one("#category-select", Select).value
-            if val and val in ("all", "singleplayer", "coop"):
-                self.filters["category"] = val
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#min-hours-input", Input).value.strip()
-            self.filters["min_hours"] = float(raw) if raw else None
-        except Exception:
-            pass
-        try:
-            raw = self.query_one("#max-hours-input", Input).value.strip()
-            self.filters["max_hours"] = float(raw) if raw else None
-        except Exception:
-            pass
-        try:
-            val = self.query_one("#collection-select", Select).value
-            self.filters["collection"] = None if val == "todas" else val
-        except Exception:
-            pass
-        # era checkboxes
-        try:
-            checked = []
-            for era in ERA_LABELS:
-                cb = self.query_one(f"#era-{era}", Checkbox)
-                if cb.value:
-                    checked.append(era)
-            # None = todas marcadas (sem filtro); lista = subconjunto
-            self.filters["eras"] = None if len(checked) == len(ERA_LABELS) else (checked or None)
-        except Exception:
-            pass
+        f = self.filters
+        f["name_query"] = self.query_one("#name-input", Input).value.strip() or None
+        top_raw = self.query_one("#top-input", Input).value.strip()
+        f["top"] = int(top_raw) if top_raw.isdigit() else f["top"]
+        f["sort"] = self.query_one("#sort-select", Select).value
+        genre_raw = self.query_one("#genre-input", Input).value.strip()
+        f["genre"] = [v.strip() for v in genre_raw.split(",") if v.strip()] or None
+        excl_raw = self.query_one("#exclude-genre-input", Input).value.strip()
+        f["exclude_genre"] = [v.strip() for v in excl_raw.split(",") if v.strip()] or None
+        f["progress"] = self.query_one("#progress-select", Select).value
+        f["category"] = self.query_one("#category-select", Select).value
+        min_raw = self.query_one("#min-hours-input", Input).value.strip()
+        f["min_hours"] = float(min_raw) if min_raw else None
+        max_raw = self.query_one("#max-hours-input", Input).value.strip()
+        f["max_hours"] = float(max_raw) if max_raw else None
+        collection = self.query_one("#collection-select", Select).value
+        f["collection"] = None if collection == "todas" else collection
+        checked = [e for e in ERA_LABELS if self.query_one(f"#{_era_id(e)}", Checkbox).value]
+        # None = todas marcadas (sem filtro); lista = subconjunto
+        f["eras"] = None if len(checked) == len(ERA_LABELS) else (checked or None)
 
     def on_input_changed(self, _: Input.Changed) -> None:
         self._read_filters_from_panel()
