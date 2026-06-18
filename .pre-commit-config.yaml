@@ -1,0 +1,10 @@
+# Roda o ruff antes de cada commit (lint + format). Instalar uma vez:
+#   pip install -e ".[dev]" && pre-commit install
+# Rodar manualmente em tudo: pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.17
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
