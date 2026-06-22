@@ -6,9 +6,9 @@ from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widgets import Checkbox, DataTable, Footer, Header, Input, Label, Select, Static
 
-from .classify import ERA_LABELS
-from .score import SORT_OPTIONS
-from .selection import select_games
+from ..core.classify import ERA_LABELS
+from ..core.score import SORT_OPTIONS
+from ..core.selection import select_games
 
 
 def _era_id(era: str) -> str:

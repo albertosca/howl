@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from steam_hltb.score import (
+from steam_hltb.core.score import (
     SORT_OPTIONS,
     compute_score,
     score_composto,
@@ -161,7 +161,7 @@ def test_compute_score_raises_on_unknown_sort():
 
 
 def test_score_composto_zero_total_weight():
-    from steam_hltb.score import score_composto
+    from steam_hltb.core.score import score_composto
 
     # mc presente mas peso zero → total_weight == 0 → 0.0
     assert score_composto({"metacritic": 80}, {"mc": 0.0, "steam": 0.0}) == 0.0

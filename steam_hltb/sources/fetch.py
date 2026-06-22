@@ -8,7 +8,7 @@ from typing import Any
 import requests
 from howlongtobeatpy import HowLongToBeat
 
-from steam_hltb import igdb
+from . import igdb
 
 CACHE_FILE = "games_cache.json"
 

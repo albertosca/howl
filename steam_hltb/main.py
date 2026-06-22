@@ -1,11 +1,11 @@
 import argparse
 
-from .classify import build_game_rows
-from .cli import _resolve_username, filters_from_args, parse_args
-from .fetch import build_library, get_api_key, load_cache
-from .report import list_available, list_collections_cmd, print_table, save_results
-from .selection import select_games
-from .steam_collections import load_collections
+from .core.classify import build_game_rows
+from .core.selection import select_games
+from .sources.collections import load_collections
+from .sources.fetch import build_library, get_api_key, load_cache
+from .ui.args import _resolve_username, filters_from_args, parse_args
+from .ui.report import list_available, list_collections_cmd, print_table, save_results
 
 
 def run(args: argparse.Namespace) -> None:
@@ -32,7 +32,7 @@ def run(args: argparse.Namespace) -> None:
 
 
 def _run_tui(args: argparse.Namespace) -> None:
-    from .tui import run_tui
+    from .ui.tui import run_tui
 
     steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
     username = _resolve_username(args)
@@ -47,19 +47,19 @@ def _run_tui(args: argparse.Namespace) -> None:
 def main() -> None:
     from dotenv import load_dotenv
 
-    from .paths import config_path
+    from .config.paths import config_path
 
     load_dotenv(config_path())
     args = parse_args()
 
     if args.setup:
-        from .setup import run_setup
+        from .config.setup import run_setup
 
         run_setup(verbose=args.verbose)
         return
 
     if args.migrate_cache:
-        from .fetch import migrate_steam_details
+        from .sources.fetch import migrate_steam_details
 
         print("⚠  Isso pode demorar 15-30 min. Ctrl+C para interromper (progresso salvo).")
         migrate_steam_details(load_cache(), verbose=True)
@@ -67,7 +67,7 @@ def main() -> None:
         return
 
     if args.migrate_igdb:
-        from .fetch import migrate_igdb_data
+        from .sources.fetch import migrate_igdb_data
 
         cache = load_cache()
         migrate_igdb_data(cache, verbose=True)
@@ -89,7 +89,7 @@ def main() -> None:
         return
 
     if args.interactive:
-        from .interactive import run_interactive
+        from .ui.interactive import run_interactive
 
         run_interactive(args)
         return

@@ -1,6 +1,6 @@
 import pytest
 
-from steam_hltb.steam_collections import filter_collection, load_collections
+from steam_hltb.sources.collections import filter_collection, load_collections
 
 SAMPLE_VDF = """
 "UserLocalConfigStore"
@@ -94,7 +94,7 @@ def test_filter_collection_returns_empty_when_no_match(vdf_file):
 
 
 def test_exclude_finished_removes_terminados(vdf_file):
-    from steam_hltb.steam_collections import exclude_finished
+    from steam_hltb.sources.collections import exclude_finished
 
     games = [
         {"appid": 220, "name": "Half-Life 2"},  # Terminados
@@ -109,7 +109,7 @@ def test_exclude_finished_removes_terminados(vdf_file):
 
 
 def test_exclude_finished_silent_when_vdf_missing():
-    from steam_hltb.steam_collections import exclude_finished
+    from steam_hltb.sources.collections import exclude_finished
 
     games = [{"appid": 220, "name": "Half-Life 2"}]
     result = exclude_finished(games, "/nonexistent/path.vdf")
@@ -117,7 +117,7 @@ def test_exclude_finished_silent_when_vdf_missing():
 
 
 def test_exclude_finished_no_op_when_no_terminados(vdf_file):
-    from steam_hltb.steam_collections import exclude_finished
+    from steam_hltb.sources.collections import exclude_finished
 
     games = [{"appid": 570, "name": "Dota 2"}]  # sem tag
     result = exclude_finished(games, vdf_file)
@@ -130,7 +130,7 @@ def test_load_collections_uses_steam_vdf_path_env(monkeypatch, tmp_path):
     monkeypatch.setenv("STEAM_VDF_PATH", str(vdf))
     import importlib
 
-    import steam_hltb.steam_collections as sc
+    import steam_hltb.sources.collections as sc
 
     importlib.reload(sc)
     assert str(vdf) == sc.DEFAULT_VDF_PATH
@@ -138,7 +138,7 @@ def test_load_collections_uses_steam_vdf_path_env(monkeypatch, tmp_path):
 
 
 def test_load_collections_skips_blocks_without_tags(tmp_path):
-    from steam_hltb.steam_collections import load_collections
+    from steam_hltb.sources.collections import load_collections
 
     vdf = tmp_path / "sc.vdf"
     vdf.write_text('"123"\n{\n"tags"\n{\n}\n}\n')

@@ -1,7 +1,7 @@
 import argparse
 
-from .classify import apply_filters
-from .score import SORT_OPTIONS, compute_score
+from ..core.classify import apply_filters
+from ..core.score import SORT_OPTIONS, compute_score
 
 
 def _ask(prompt: str, options: list[str] | None = None, default: str | None = None) -> str:
@@ -26,7 +26,7 @@ def _csv_or_none(value: str) -> list[str] | None:
 
 
 def run_interactive(base_args: argparse.Namespace) -> None:
-    from .cli import _weights
+    from .args import _weights
     from .report import print_table, save_results
 
     print("\n=== Modo Interativo ===\n")
@@ -55,8 +55,8 @@ def run_interactive(base_args: argparse.Namespace) -> None:
 
     output = _ask("Nome base do arquivo de saída", default="how_long_to_beat_output")
 
-    from .classify import build_game_rows
-    from .fetch import build_library, get_api_key, load_cache
+    from ..core.classify import build_game_rows
+    from ..sources.fetch import build_library, get_api_key, load_cache
 
     steam_key = get_api_key("STEAM_API_KEY", "Steam API key")
     cache = load_cache()
@@ -75,12 +75,12 @@ def run_interactive(base_args: argparse.Namespace) -> None:
     )
 
     vdf_path = getattr(base_args, "vdf_path", "sharedconfig.vdf")
-    from .steam_collections import exclude_finished
+    from ..sources.collections import exclude_finished
 
     rows = exclude_finished(rows, vdf_path)
 
     if collection_raw:
-        from .steam_collections import filter_collection, load_collections
+        from ..sources.collections import filter_collection, load_collections
 
         collection_map = load_collections(vdf_path)
         rows = filter_collection(rows, collection_raw, collection_map)

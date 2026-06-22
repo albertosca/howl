@@ -3,8 +3,8 @@ import os
 import time
 from unittest.mock import MagicMock, patch
 
-from steam_hltb import igdb
-from steam_hltb.igdb import fetch_by_appid, fetch_by_name, get_token
+from steam_hltb.sources import igdb
+from steam_hltb.sources.igdb import fetch_by_appid, fetch_by_name, get_token
 
 
 def test_save_token_writes_to_config_dir(tmp_path, monkeypatch):
@@ -28,9 +28,9 @@ def test_load_token_reads_from_config_dir(tmp_path, monkeypatch):
 
 def test_get_token_fetches_when_no_file():
     with (
-        patch("steam_hltb.igdb._load_token", return_value=None),
+        patch("steam_hltb.sources.igdb._load_token", return_value=None),
         patch(
-            "steam_hltb.igdb._refresh_token", return_value=("tok123", time.time() + 9999)
+            "steam_hltb.sources.igdb._refresh_token", return_value=("tok123", time.time() + 9999)
         ) as mock_refresh,
     ):
         token = get_token("cid", "csecret")
@@ -40,7 +40,7 @@ def test_get_token_fetches_when_no_file():
 
 def test_get_token_uses_cached_when_valid():
     valid = {"access_token": "cached", "expires_at": time.time() + 9999}
-    with patch("steam_hltb.igdb._load_token", return_value=valid):
+    with patch("steam_hltb.sources.igdb._load_token", return_value=valid):
         token = get_token("cid", "csecret")
     assert token == "cached"
 
@@ -48,8 +48,10 @@ def test_get_token_uses_cached_when_valid():
 def test_get_token_refreshes_when_expired():
     expired = {"access_token": "old", "expires_at": time.time() - 1}
     with (
-        patch("steam_hltb.igdb._load_token", return_value=expired),
-        patch("steam_hltb.igdb._refresh_token", return_value=("new", time.time() + 9999)) as mock_r,
+        patch("steam_hltb.sources.igdb._load_token", return_value=expired),
+        patch(
+            "steam_hltb.sources.igdb._refresh_token", return_value=("new", time.time() + 9999)
+        ) as mock_r,
     ):
         token = get_token("cid", "csecret")
     assert token == "new"

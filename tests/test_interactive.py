@@ -36,13 +36,15 @@ def _run(inputs, **args_kwargs):
     args = _make_args(**args_kwargs)
     with (
         patch("builtins.input", side_effect=inputs + [""] * 20),
-        patch("steam_hltb.fetch.get_api_key", return_value="fake_key"),
-        patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
-        patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
-        patch("steam_hltb.report.save_results"),
-        patch("steam_hltb.steam_collections.load_collections", return_value={}),
+        patch("steam_hltb.sources.fetch.get_api_key", return_value="fake_key"),
+        patch("steam_hltb.sources.fetch.load_cache", return_value=MOCK_CACHE),
+        patch(
+            "steam_hltb.sources.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)
+        ),
+        patch("steam_hltb.ui.report.save_results"),
+        patch("steam_hltb.sources.collections.load_collections", return_value={}),
     ):
-        from steam_hltb.interactive import run_interactive
+        from steam_hltb.ui.interactive import run_interactive
 
         run_interactive(args)
 
@@ -61,13 +63,15 @@ def test_interactive_does_not_ask_rawg_key():
     args = _make_args()
     with (
         patch("builtins.input", side_effect=mock_input),
-        patch("steam_hltb.fetch.get_api_key", return_value="fake"),
-        patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
-        patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
-        patch("steam_hltb.report.save_results"),
-        patch("steam_hltb.steam_collections.load_collections", return_value={}),
+        patch("steam_hltb.sources.fetch.get_api_key", return_value="fake"),
+        patch("steam_hltb.sources.fetch.load_cache", return_value=MOCK_CACHE),
+        patch(
+            "steam_hltb.sources.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)
+        ),
+        patch("steam_hltb.ui.report.save_results"),
+        patch("steam_hltb.sources.collections.load_collections", return_value={}),
     ):
-        from steam_hltb.interactive import run_interactive
+        from steam_hltb.ui.interactive import run_interactive
 
         run_interactive(args)
 
@@ -91,13 +95,15 @@ def test_interactive_default_sort_is_shortest():
     args = _make_args()
     with (
         patch("builtins.input", side_effect=mock_input),
-        patch("steam_hltb.fetch.get_api_key", return_value="fake"),
-        patch("steam_hltb.fetch.load_cache", return_value=MOCK_CACHE),
-        patch("steam_hltb.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)),
-        patch("steam_hltb.report.save_results"),
-        patch("steam_hltb.steam_collections.load_collections", return_value={}),
+        patch("steam_hltb.sources.fetch.get_api_key", return_value="fake"),
+        patch("steam_hltb.sources.fetch.load_cache", return_value=MOCK_CACHE),
+        patch(
+            "steam_hltb.sources.fetch.build_library", return_value=(MOCK_CACHE, MOCK_STEAM_GAMES)
+        ),
+        patch("steam_hltb.ui.report.save_results"),
+        patch("steam_hltb.sources.collections.load_collections", return_value={}),
     ):
-        from steam_hltb.interactive import run_interactive
+        from steam_hltb.ui.interactive import run_interactive
 
         run_interactive(args)
 
@@ -113,14 +119,14 @@ def test_interactive_output_shows_results(capsys):
 
 
 def test_ask_with_options_no_default(monkeypatch):
-    from steam_hltb.interactive import _ask
+    from steam_hltb.ui.interactive import _ask
 
     monkeypatch.setattr("builtins.input", lambda _: "x")
     assert _ask("Q", options=["a", "b"]) == "x"
 
 
 def test_csv_or_none_parses_and_empties():
-    from steam_hltb.interactive import _csv_or_none
+    from steam_hltb.ui.interactive import _csv_or_none
 
     assert _csv_or_none("a, b ,c") == ["a", "b", "c"]
     assert _csv_or_none("") is None

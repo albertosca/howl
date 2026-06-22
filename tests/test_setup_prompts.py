@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-import steam_hltb.setup_prompts as prompts
+import steam_hltb.config.prompts as prompts
 
 # --- _detect_vdf_paths ---
 

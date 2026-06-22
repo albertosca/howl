@@ -1,4 +1,4 @@
-from steam_hltb.selection import select_games
+from steam_hltb.core.selection import select_games
 
 
 def _game(name, mc, steam, hours, genres=None, played=0.0, category="singleplayer", appid=0):
@@ -58,7 +58,7 @@ def test_does_not_slice_top():
 
 
 def test_applies_collection_filter(monkeypatch):
-    from steam_hltb import selection
+    from steam_hltb.core import selection
 
     monkeypatch.setattr(selection, "load_collections", lambda vdf: {"1": ["Jogando"]})
     games = [_game("A", 90, 90, 10, appid=1), _game("B", 90, 90, 10, appid=2)]
@@ -67,7 +67,7 @@ def test_applies_collection_filter(monkeypatch):
 
 
 def test_excludes_finished_when_not_show_finished(monkeypatch):
-    from steam_hltb import selection
+    from steam_hltb.core import selection
 
     # show_finished ausente → exclude_finished roda (aqui mockado pra cortar 1)
     monkeypatch.setattr(selection, "exclude_finished", lambda rows, vdf: rows[:1])

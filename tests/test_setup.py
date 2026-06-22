@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-import steam_hltb.setup as setup
+import steam_hltb.config.setup as setup
 
 # --- _config_path ---
 
