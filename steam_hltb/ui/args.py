@@ -3,7 +3,7 @@ import os
 import sys
 from typing import Any
 
-from .score import SORT_OPTIONS
+from ..core.score import SORT_OPTIONS
 
 
 def parse_args() -> argparse.Namespace:

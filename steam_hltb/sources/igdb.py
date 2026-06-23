@@ -8,7 +8,7 @@ from typing import Any
 
 import requests
 
-from steam_hltb import paths
+from ..config import paths
 
 IGDB_API = "https://api.igdb.com/v4"
 TWITCH_URL = "https://id.twitch.tv/oauth2/token"

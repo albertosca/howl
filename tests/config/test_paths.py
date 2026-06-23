@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from steam_hltb import paths
+from steam_hltb.config import paths
 
 
 def test_config_dir_respects_xdg(monkeypatch):

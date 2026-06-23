@@ -3,8 +3,8 @@ import os
 
 import pytest
 
-from steam_hltb.classify import apply_filters, build_game_rows
-from steam_hltb.score import compute_score
+from steam_hltb.core.classify import apply_filters, build_game_rows
+from steam_hltb.core.score import compute_score
 
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "games_cache.json")
 

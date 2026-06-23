@@ -2,9 +2,9 @@
 
 from typing import Any
 
+from ..sources.collections import exclude_finished, filter_collection, load_collections
 from .classify import apply_filters, filter_name
 from .score import compute_score
-from .steam_collections import exclude_finished, filter_collection, load_collections
 
 
 def select_games(all_games: list[dict[str, Any]], filters: dict[str, Any]) -> list[dict[str, Any]]:

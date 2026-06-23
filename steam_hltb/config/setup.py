@@ -2,16 +2,16 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-from steam_hltb.paths import (
+from .paths import (
     config_path as _config_path,
 )
-from steam_hltb.paths import (
+from .paths import (
     ensure_config_dir,
 )
-from steam_hltb.paths import (
+from .paths import (
     log_path as _log_path,
 )
-from steam_hltb.setup_prompts import _prompt_api_key, _prompt_username, _prompt_vdf_path
+from .prompts import _prompt_api_key, _prompt_username, _prompt_vdf_path
 
 # --- caminhos de configuração: ver steam_hltb/paths.py ---
 

@@ -2,14 +2,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from steam_hltb.fetch import migrate_igdb_data
+from steam_hltb.sources.fetch import migrate_igdb_data
 
 
 def test_load_cache_returns_empty_dict_when_file_missing(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     import importlib
 
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     importlib.reload(fetch)
     assert fetch.load_cache() == {}
@@ -19,7 +19,7 @@ def test_save_and_load_cache_roundtrip(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     import importlib
 
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     importlib.reload(fetch)
     data = {"Half-Life 2": {"hltb": {"main_story": 12}}}
@@ -28,37 +28,37 @@ def test_save_and_load_cache_roundtrip(tmp_path, monkeypatch):
 
 
 def test_fetch_hltb_returns_none_when_no_results():
-    with patch("steam_hltb.fetch.HowLongToBeat") as MockHLTB:
+    with patch("steam_hltb.sources.fetch.HowLongToBeat") as MockHLTB:
         MockHLTB.return_value.search.return_value = []
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         assert fetch.fetch_hltb("NonExistentGame99999") is None
 
 
 def test_fetch_hltb_returns_none_when_low_similarity():
-    with patch("steam_hltb.fetch.HowLongToBeat") as MockHLTB:
+    with patch("steam_hltb.sources.fetch.HowLongToBeat") as MockHLTB:
         r = MagicMock()
         r.similarity = 0.3
         MockHLTB.return_value.search.return_value = [r]
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         assert fetch.fetch_hltb("SomeGame") is None
 
 
 def test_fetch_hltb_returns_none_at_boundary_similarity():
     """similarity < 0.6 deve rejeitar — garante que FEZTAL (0.55) é rejeitado."""
-    with patch("steam_hltb.fetch.HowLongToBeat") as MockHLTB:
+    with patch("steam_hltb.sources.fetch.HowLongToBeat") as MockHLTB:
         r = MagicMock()
         r.similarity = 0.55
         r.game_name = "FEZTAL"
         MockHLTB.return_value.search.return_value = [r]
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         assert fetch.fetch_hltb("FEZ") is None
 
 
 def test_fetch_hltb_returns_data_when_good_match():
-    with patch("steam_hltb.fetch.HowLongToBeat") as MockHLTB:
+    with patch("steam_hltb.sources.fetch.HowLongToBeat") as MockHLTB:
         r = MagicMock()
         r.similarity = 0.9
         r.game_name = "Half-Life 2"
@@ -66,7 +66,7 @@ def test_fetch_hltb_returns_data_when_good_match():
         r.main_extra = 15.0
         r.completionist = 19.0
         MockHLTB.return_value.search.return_value = [r]
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.fetch_hltb("Half-Life 2")
         assert result == {
@@ -79,7 +79,7 @@ def test_fetch_hltb_returns_data_when_good_match():
 
 def test_fetch_hltb_returns_none_for_missing_or_zero_times():
     """Tempos negativos ou zero = dado ausente → None, não 0."""
-    with patch("steam_hltb.fetch.HowLongToBeat") as MockHLTB:
+    with patch("steam_hltb.sources.fetch.HowLongToBeat") as MockHLTB:
         r = MagicMock()
         r.similarity = 0.9
         r.game_name = "Some Game"
@@ -87,7 +87,7 @@ def test_fetch_hltb_returns_none_for_missing_or_zero_times():
         r.main_extra = 0.0
         r.completionist = 5.0
         MockHLTB.return_value.search.return_value = [r]
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.fetch_hltb("Some Game")
         assert result["main_story"] is None
@@ -96,24 +96,24 @@ def test_fetch_hltb_returns_none_for_missing_or_zero_times():
 
 
 def test_fetch_steam_app_details_returns_none_on_non_200():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 500
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         assert fetch.fetch_steam_app_details(220) is None
 
 
 def test_fetch_steam_app_details_returns_none_when_not_success():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {"220": {"success": False}}
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         assert fetch.fetch_steam_app_details(220) is None
 
 
 def test_fetch_steam_app_details_returns_metacritic_genres_categories():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {
             "220": {
@@ -128,7 +128,7 @@ def test_fetch_steam_app_details_returns_metacritic_genres_categories():
                 },
             }
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.fetch_steam_app_details(220)
         assert result == {
@@ -140,7 +140,7 @@ def test_fetch_steam_app_details_returns_metacritic_genres_categories():
 
 
 def test_fetch_steam_app_details_extracts_release_year():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {
             "220": {
@@ -152,14 +152,14 @@ def test_fetch_steam_app_details_extracts_release_year():
                 },
             }
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.fetch_steam_app_details(220)
         assert result["release_year"] == 2004
 
 
 def test_fetch_steam_app_details_release_year_none_when_missing():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {
             "220": {
@@ -170,33 +170,33 @@ def test_fetch_steam_app_details_release_year_none_when_missing():
                 },
             }
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.fetch_steam_app_details(220)
         assert result["release_year"] is None
 
 
 def test_fetch_steam_reviews_returns_none_on_non_200():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 500
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         assert fetch.fetch_steam_reviews(220) is None
 
 
 def test_fetch_steam_reviews_returns_none_when_zero_reviews():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {
             "query_summary": {"total_reviews": 0, "total_positive": 0}
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         assert fetch.fetch_steam_reviews(220) is None
 
 
 def test_fetch_steam_reviews_returns_positive_pct():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {
             "query_summary": {
@@ -204,14 +204,14 @@ def test_fetch_steam_reviews_returns_positive_pct():
                 "total_positive": 970,
             }
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.fetch_steam_reviews(220)
         assert result == {"positive_pct": 97, "total_reviews": 1000}
 
 
 def test_get_steam_games_parses_response():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.raise_for_status = MagicMock()
         mock_get.return_value.json.return_value = {
             "response": {
@@ -221,7 +221,7 @@ def test_get_steam_games_parses_response():
                 ]
             }
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         games = fetch.get_steam_games("KEY", "STEAMID")
         assert len(games) == 2
@@ -230,24 +230,26 @@ def test_get_steam_games_parses_response():
 
 
 def test_resolve_steamid_raises_on_failure():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.raise_for_status = MagicMock()
         mock_get.return_value.json.return_value = {
             "response": {"success": 42, "message": "No match"}
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         with pytest.raises(ValueError, match="not found"):
             fetch.resolve_steamid("KEY", "unknownuser")
 
 
 def test_build_library_verbose_false_hides_cache_lines(capsys, monkeypatch):
-    monkeypatch.setattr("steam_hltb.fetch.resolve_steamid", lambda key, user: "76561198000000")
     monkeypatch.setattr(
-        "steam_hltb.fetch.get_steam_games",
+        "steam_hltb.sources.fetch.resolve_steamid", lambda key, user: "76561198000000"
+    )
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.get_steam_games",
         lambda key, sid: [{"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}],
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
 
     cache = {
         "Half-Life 2": {
@@ -262,7 +264,7 @@ def test_build_library_verbose_false_hides_cache_lines(capsys, monkeypatch):
         }
     }
 
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     fetch.build_library("key", "user", cache, verbose=False)
 
@@ -271,12 +273,14 @@ def test_build_library_verbose_false_hides_cache_lines(capsys, monkeypatch):
 
 
 def test_build_library_verbose_true_shows_cache_lines(capsys, monkeypatch):
-    monkeypatch.setattr("steam_hltb.fetch.resolve_steamid", lambda key, user: "76561198000000")
     monkeypatch.setattr(
-        "steam_hltb.fetch.get_steam_games",
+        "steam_hltb.sources.fetch.resolve_steamid", lambda key, user: "76561198000000"
+    )
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.get_steam_games",
         lambda key, sid: [{"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}],
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
 
     cache = {
         "Half-Life 2": {
@@ -291,7 +295,7 @@ def test_build_library_verbose_true_shows_cache_lines(capsys, monkeypatch):
         }
     }
 
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     fetch.build_library("key", "user", cache, verbose=True)
 
@@ -313,16 +317,16 @@ def test_migrate_steam_details_fills_missing_genres(monkeypatch):
         }
     }
     monkeypatch.setattr(
-        "steam_hltb.fetch.fetch_steam_app_details",
+        "steam_hltb.sources.fetch.fetch_steam_app_details",
         lambda appid: {
             "metacritic": 96,
             "genres": ["action"],
             "categories": ["single-player"],
         },
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
-    monkeypatch.setattr("steam_hltb.fetch.time.sleep", lambda s: None)
-    from steam_hltb.fetch import migrate_steam_details
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.time.sleep", lambda s: None)
+    from steam_hltb.sources.fetch import migrate_steam_details
 
     updated = migrate_steam_details(cache, verbose=False)
     steam = updated["Half-Life 2"]["steam"]
@@ -347,11 +351,11 @@ def test_migrate_steam_details_skips_already_migrated(monkeypatch):
     }
     called = []
     monkeypatch.setattr(
-        "steam_hltb.fetch.fetch_steam_app_details", lambda appid: called.append(appid) or {}
+        "steam_hltb.sources.fetch.fetch_steam_app_details", lambda appid: called.append(appid) or {}
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
-    monkeypatch.setattr("steam_hltb.fetch.time.sleep", lambda s: None)
-    from steam_hltb.fetch import migrate_steam_details
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.time.sleep", lambda s: None)
+    from steam_hltb.sources.fetch import migrate_steam_details
 
     migrate_steam_details(cache, verbose=False)
     assert called == []
@@ -366,11 +370,11 @@ def test_migrate_steam_details_skips_no_appid(monkeypatch):
     }
     called = []
     monkeypatch.setattr(
-        "steam_hltb.fetch.fetch_steam_app_details", lambda appid: called.append(appid) or {}
+        "steam_hltb.sources.fetch.fetch_steam_app_details", lambda appid: called.append(appid) or {}
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
-    monkeypatch.setattr("steam_hltb.fetch.time.sleep", lambda s: None)
-    from steam_hltb.fetch import migrate_steam_details
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.time.sleep", lambda s: None)
+    from steam_hltb.sources.fetch import migrate_steam_details
 
     migrate_steam_details(cache, verbose=False)
     assert called == []
@@ -379,7 +383,7 @@ def test_migrate_steam_details_skips_no_appid(monkeypatch):
 
 def test_fetch_steam_app_details_us_date_format():
     """Formato "Nov 16, 2004" também deve extrair o ano."""
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {
             "220": {
@@ -391,14 +395,14 @@ def test_fetch_steam_app_details_us_date_format():
                 },
             }
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.fetch_steam_app_details(220)
         assert result["release_year"] == 2004
 
 
 def test_fetch_steam_app_details_invalid_date_returns_none():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {
             "220": {
@@ -410,19 +414,19 @@ def test_fetch_steam_app_details_invalid_date_returns_none():
                 },
             }
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.fetch_steam_app_details(220)
         assert result["release_year"] is None
 
 
 def test_resolve_steamid_returns_steamid_on_success():
-    with patch("steam_hltb.fetch.requests.get") as mock_get:
+    with patch("steam_hltb.sources.fetch.requests.get") as mock_get:
         mock_get.return_value.raise_for_status = MagicMock()
         mock_get.return_value.json.return_value = {
             "response": {"success": 1, "steamid": "76561198012345678"}
         }
-        from steam_hltb import fetch
+        from steam_hltb.sources import fetch
 
         result = fetch.resolve_steamid("KEY", "testuser")
         assert result == "76561198012345678"
@@ -430,15 +434,17 @@ def test_resolve_steamid_returns_steamid_on_success():
 
 def test_build_library_refresh_re_fetches_cached_games(capsys, monkeypatch):
     """Com refresh=True, games já no cache devem ser rebuscados."""
-    monkeypatch.setattr("steam_hltb.fetch.resolve_steamid", lambda key, user: "76561198000000")
     monkeypatch.setattr(
-        "steam_hltb.fetch.get_steam_games",
+        "steam_hltb.sources.fetch.resolve_steamid", lambda key, user: "76561198000000"
+    )
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.get_steam_games",
         lambda key, sid: [{"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}],
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
     fetch_calls = []
     monkeypatch.setattr(
-        "steam_hltb.fetch.fetch_hltb", lambda name: fetch_calls.append(name) or None
+        "steam_hltb.sources.fetch.fetch_hltb", lambda name: fetch_calls.append(name) or None
     )
 
     cache = {
@@ -453,7 +459,7 @@ def test_build_library_refresh_re_fetches_cached_games(capsys, monkeypatch):
         }
     }
 
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     fetch.build_library("key", "user", cache, refresh=True, verbose=False)
     assert "Half-Life 2" in fetch_calls  # foi rebuscado apesar de estar no cache
@@ -472,7 +478,7 @@ def test_migrate_steam_details_verbose_prints_progress(capsys, monkeypatch):
         }
     }
     monkeypatch.setattr(
-        "steam_hltb.fetch.fetch_steam_app_details",
+        "steam_hltb.sources.fetch.fetch_steam_app_details",
         lambda appid: {
             "metacritic": 96,
             "genres": ["action"],
@@ -480,9 +486,9 @@ def test_migrate_steam_details_verbose_prints_progress(capsys, monkeypatch):
             "release_year": 2004,
         },
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
-    monkeypatch.setattr("steam_hltb.fetch.time.sleep", lambda s: None)
-    from steam_hltb.fetch import migrate_steam_details
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.time.sleep", lambda s: None)
+    from steam_hltb.sources.fetch import migrate_steam_details
 
     migrate_steam_details(cache, verbose=True)
     out = capsys.readouterr().out
@@ -491,17 +497,19 @@ def test_migrate_steam_details_verbose_prints_progress(capsys, monkeypatch):
 
 
 def test_build_library_verbose_false_silent_for_new_games(capsys, monkeypatch):
-    monkeypatch.setattr("steam_hltb.fetch.resolve_steamid", lambda key, user: "76561198000000")
     monkeypatch.setattr(
-        "steam_hltb.fetch.get_steam_games",
+        "steam_hltb.sources.fetch.resolve_steamid", lambda key, user: "76561198000000"
+    )
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.get_steam_games",
         lambda key, sid: [{"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}],
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
-    monkeypatch.setattr("steam_hltb.fetch.fetch_hltb", lambda name: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.fetch_hltb", lambda name: None)
 
     cache = {}
 
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     fetch.build_library("key", "user", cache, verbose=False)
 
@@ -510,17 +518,19 @@ def test_build_library_verbose_false_silent_for_new_games(capsys, monkeypatch):
 
 
 def test_build_library_verbose_true_prints_indexed_for_new_games(capsys, monkeypatch):
-    monkeypatch.setattr("steam_hltb.fetch.resolve_steamid", lambda key, user: "76561198000000")
     monkeypatch.setattr(
-        "steam_hltb.fetch.get_steam_games",
+        "steam_hltb.sources.fetch.resolve_steamid", lambda key, user: "76561198000000"
+    )
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.get_steam_games",
         lambda key, sid: [{"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}],
     )
-    monkeypatch.setattr("steam_hltb.fetch.save_cache", lambda c: None)
-    monkeypatch.setattr("steam_hltb.fetch.fetch_hltb", lambda name: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr("steam_hltb.sources.fetch.fetch_hltb", lambda name: None)
 
     cache = {}
 
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     fetch.build_library("key", "user", cache, verbose=True)
 
@@ -548,9 +558,9 @@ def test_migrate_igdb_fills_missing_metacritic():
         "release_year": 2021,
     }
     with (
-        patch("steam_hltb.fetch.igdb.fetch_by_appid", return_value=igdb_data),
-        patch("steam_hltb.fetch.igdb.get_token", return_value="tok"),
-        patch("steam_hltb.fetch.save_cache"),
+        patch("steam_hltb.sources.fetch.igdb.fetch_by_appid", return_value=igdb_data),
+        patch("steam_hltb.sources.fetch.igdb.get_token", return_value="tok"),
+        patch("steam_hltb.sources.fetch.save_cache"),
         patch("time.sleep"),
     ):
         result = migrate_igdb_data(cache, client_id="cid", client_secret="csec")
@@ -571,9 +581,9 @@ def test_migrate_igdb_skips_games_with_metacritic():
         }
     }
     with (
-        patch("steam_hltb.fetch.igdb.fetch_by_appid") as mock_fetch,
-        patch("steam_hltb.fetch.igdb.get_token", return_value="tok"),
-        patch("steam_hltb.fetch.save_cache"),
+        patch("steam_hltb.sources.fetch.igdb.fetch_by_appid") as mock_fetch,
+        patch("steam_hltb.sources.fetch.igdb.get_token", return_value="tok"),
+        patch("steam_hltb.sources.fetch.save_cache"),
         patch("time.sleep"),
     ):
         migrate_igdb_data(cache, client_id="cid", client_secret="csec")
@@ -589,9 +599,9 @@ def test_migrate_igdb_skips_games_already_with_igdb_entry():
         }
     }
     with (
-        patch("steam_hltb.fetch.igdb.fetch_by_appid") as mock_fetch,
-        patch("steam_hltb.fetch.igdb.get_token", return_value="tok"),
-        patch("steam_hltb.fetch.save_cache"),
+        patch("steam_hltb.sources.fetch.igdb.fetch_by_appid") as mock_fetch,
+        patch("steam_hltb.sources.fetch.igdb.get_token", return_value="tok"),
+        patch("steam_hltb.sources.fetch.save_cache"),
         patch("time.sleep"),
     ):
         migrate_igdb_data(cache, client_id="cid", client_secret="csec")
@@ -612,10 +622,10 @@ def test_migrate_igdb_falls_back_to_name_when_appid_returns_none():
         "release_year": 2011,
     }
     with (
-        patch("steam_hltb.fetch.igdb.fetch_by_appid", return_value=None),
-        patch("steam_hltb.fetch.igdb.fetch_by_name", return_value=igdb_data),
-        patch("steam_hltb.fetch.igdb.get_token", return_value="tok"),
-        patch("steam_hltb.fetch.save_cache"),
+        patch("steam_hltb.sources.fetch.igdb.fetch_by_appid", return_value=None),
+        patch("steam_hltb.sources.fetch.igdb.fetch_by_name", return_value=igdb_data),
+        patch("steam_hltb.sources.fetch.igdb.get_token", return_value="tok"),
+        patch("steam_hltb.sources.fetch.save_cache"),
         patch("time.sleep"),
     ):
         result = migrate_igdb_data(cache, client_id="cid", client_secret="csec")
@@ -624,21 +634,21 @@ def test_migrate_igdb_falls_back_to_name_when_appid_returns_none():
 
 def test_migrate_igdb_returns_early_without_credentials():
     cache = {"Game": {"steam": {"metacritic": None}, "hltb": {}}}
-    with patch("steam_hltb.fetch.igdb.get_token") as mock_token:
+    with patch("steam_hltb.sources.fetch.igdb.get_token") as mock_token:
         result = migrate_igdb_data(cache, client_id=None, client_secret=None)
     mock_token.assert_not_called()
     assert "igdb" not in result["Game"]
 
 
 def test_get_api_key_from_env(monkeypatch):
-    from steam_hltb.fetch import get_api_key
+    from steam_hltb.sources.fetch import get_api_key
 
     monkeypatch.setenv("MY_KEY", "secret")
     assert get_api_key("MY_KEY", "prompt") == "secret"
 
 
 def test_get_api_key_prompts_when_absent(monkeypatch):
-    from steam_hltb.fetch import get_api_key
+    from steam_hltb.sources.fetch import get_api_key
 
     monkeypatch.delenv("MY_KEY", raising=False)
     monkeypatch.setattr("builtins.input", lambda _: "  typed  ")
@@ -647,7 +657,7 @@ def test_get_api_key_prompts_when_absent(monkeypatch):
 
 def test_build_library_fetches_new_game_with_hltb(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch, "resolve_steamid", lambda k, u: "1")
     monkeypatch.setattr(
@@ -679,7 +689,7 @@ def test_build_library_fetches_new_game_with_hltb(tmp_path, monkeypatch):
 
 
 def test_migrate_igdb_verbose_no_credentials(capsys, monkeypatch):
-    from steam_hltb.fetch import migrate_igdb_data
+    from steam_hltb.sources.fetch import migrate_igdb_data
 
     monkeypatch.delenv("IGDB_CLIENT_ID", raising=False)
     monkeypatch.delenv("IGDB_CLIENT_SECRET", raising=False)
@@ -688,7 +698,7 @@ def test_migrate_igdb_verbose_no_credentials(capsys, monkeypatch):
 
 
 def test_migrate_igdb_verbose_token_failure(capsys, monkeypatch):
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: None)
     fetch.migrate_igdb_data({}, client_id="x", client_secret="y", verbose=True)
@@ -697,7 +707,7 @@ def test_migrate_igdb_verbose_token_failure(capsys, monkeypatch):
 
 def test_migrate_igdb_verbose_found(capsys, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
     monkeypatch.setattr(
@@ -714,7 +724,7 @@ def test_migrate_igdb_verbose_found(capsys, tmp_path, monkeypatch):
 
 def test_migrate_igdb_verbose_not_found(capsys, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
     monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda cid, tok, appid: None)
@@ -727,7 +737,7 @@ def test_migrate_igdb_verbose_not_found(capsys, tmp_path, monkeypatch):
 
 def test_migrate_steam_details_skips_when_details_none(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch, "fetch_steam_app_details", lambda appid: None)
     monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
@@ -737,7 +747,7 @@ def test_migrate_steam_details_skips_when_details_none(tmp_path, monkeypatch):
 
 
 def test_migrate_igdb_token_failure_quiet(monkeypatch):
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: None)
     assert fetch.migrate_igdb_data({}, client_id="x", client_secret="y") == {}  # verbose False
@@ -745,7 +755,7 @@ def test_migrate_igdb_token_failure_quiet(monkeypatch):
 
 def test_migrate_igdb_not_found_quiet(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    from steam_hltb import fetch
+    from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
     monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda c, t, a: None)
