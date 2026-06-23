@@ -1,25 +1,21 @@
-# cache e outputs gerados pelo howl
-games_cache.json
+# outputs e config gerados/locais do howl
+output/
 howl_overrides.json
-howl_output.csv
-howl_output.md
-how_long_to_beat_output.csv
-how_long_to_beat_output.md
 
 # arquivo de coleções Steam (contém dados pessoais)
 sharedconfig.vdf
+
+# caches (ferramentas + app: ruff/mypy/pytest/coverage/games_cache)
+.cache/
 
 # Python
 venv/
 __pycache__/
 *.pyc
 *.pyo
-.pytest_cache/
 *.egg-info/
 dist/
 build/
-.mypy_cache/
-.ruff_cache/
 .coverage
 coverage.xml
 htmlcov/
