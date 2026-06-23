@@ -285,8 +285,8 @@ class SteamHLTBApp(App[None]):
     def action_save(self) -> None:
         from .report import save_results
 
-        save_results(self._games, "how_long_to_beat_output")
-        self.notify("Salvo em how_long_to_beat_output.csv e .md")
+        save_results(self._games, "output/howl")
+        self.notify("Salvo em output/howl.csv e .md")
 
 
 def run_tui(all_games: list[dict[str, Any]], initial_filters: dict[str, Any] | None = None) -> None:

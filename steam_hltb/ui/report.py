@@ -99,6 +99,7 @@ def list_available(cache: dict[str, Any], field: str) -> None:
 def save_results(games: list[dict[str, Any]], output_base: str) -> None:
     csv_path = Path(output_base + ".csv")
     md_path = Path(output_base + ".md")
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
 
     fields = [
         "name",

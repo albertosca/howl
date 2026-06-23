@@ -74,7 +74,7 @@ Formatos de entrada:
     p.add_argument("--top", type=int, default=10, help="Quantos jogos exibir (padrão: %(default)s)")
     p.add_argument(
         "--output",
-        default="howl_output",
+        default="output/howl",
         help="Nome base dos arquivos de saída .csv e .md (padrão: %(default)s)",
     )
     p.add_argument(

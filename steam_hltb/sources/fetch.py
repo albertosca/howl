@@ -10,7 +10,7 @@ from howlongtobeatpy import HowLongToBeat
 
 from . import igdb
 
-CACHE_FILE = "games_cache.json"
+CACHE_FILE = ".cache/games_cache.json"
 
 
 def load_cache() -> dict[str, Any]:
@@ -22,7 +22,9 @@ def load_cache() -> dict[str, Any]:
 
 
 def save_cache(cache: dict[str, Any]) -> None:
-    Path(CACHE_FILE).write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    path = Path(CACHE_FILE)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _hltb_hours(val: float | None) -> int | None:
