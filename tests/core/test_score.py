@@ -66,6 +66,20 @@ def test_shortest_missing_both_returns_zero():
     assert score_shortest({"metacritic": None, "steam_pct": None, "main_extra": 10}) == 0.0
 
 
+def test_shortest_ultra_short_does_not_inflate():
+    """Piso de 1h: jogo de 0.25h não estoura o composite (bug: 90/√0.25 = 180)."""
+    g = {"metacritic": 90, "steam_pct": 90, "main_extra": 0.25}
+    assert score_shortest(g) <= 90.0
+
+
+def test_shortest_floored_below_one_hour():
+    """Abaixo de 1h tudo conta como 1h → score == composite (não cresce)."""
+    half = {"metacritic": 80, "steam_pct": 80, "main_extra": 0.5}
+    one = {"metacritic": 80, "steam_pct": 80, "main_extra": 1}
+    assert score_shortest(half) == pytest.approx(80.0)
+    assert score_shortest(half) == pytest.approx(score_shortest(one))
+
+
 def test_longest_log_cap_formula():
     game = {"metacritic": 80, "steam_pct": 80, "main_extra": 4}
     # composite=80, curva log+cap: 80 * ln(1+4) / ln(1+100)
@@ -235,5 +249,5 @@ def test_hidden_gems_at_steam_floor_included():
 def test_bounded_scorers_stay_within_0_100():
     """rated/loved/composto/longest ficam em [0, 100] mesmo com horas absurdas."""
     g = {"metacritic": 100, "steam_pct": 100, "main_extra": 100000}
-    for sort in ("rated", "loved", "composto", "longest"):
+    for sort in ("rated", "loved", "composto", "longest", "shortest"):
         assert 0.0 <= compute_score(g, sort) <= 100.0

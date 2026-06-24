@@ -30,15 +30,20 @@ def score_composto(game: dict[str, Any], weights: dict[str, float] | None = None
     return float(sum(sources[k] * weights.get(k, 0) / total_weight for k in sources))
 
 
+SHORTEST_HOURS_FLOOR = 1.0  # abaixo disso é "muito curto"; não infla além do composite
+
+
 def score_shortest(game: dict[str, Any], weights: dict[str, float] | None = None) -> float:
-    """Bons jogos mais curtos: composite / √horas."""
+    """Bons jogos mais curtos: composite / √max(horas, 1).
+
+    O piso de 1h evita que jogos curtíssimos (ex: 0.25h) estourem o composite
+    (sem ele, 90/√0.25 = 180). Score ≤ composite. Sem duração também rende
+    o composite cheio (sem penalidade de tempo)."""
     score = score_composto(game, weights)
-    hours = game.get("main_extra") or 0
     if score == 0:
         return 0.0
-    if hours > 0:
-        return score / math.sqrt(hours)
-    return score
+    hours = game.get("main_extra") or 0
+    return score / math.sqrt(max(float(hours), SHORTEST_HOURS_FLOOR))
 
 
 LONGEST_HOURS_CAP = 100.0  # acima disso é "muito longo"; horas extras não inflam o score
