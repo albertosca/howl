@@ -370,6 +370,155 @@ def test_name_similarity_short_vs_very_long():
     assert _name_similarity("Batman", "Batman: Arkham Origins - Cold Cold Heart DLC") < 0.6
 
 
+def test_normalize_strips_standalone_goty():
+    """'GOTY' sem separador: 'Borderlands GOTY Enhanced' → 'Borderlands'."""
+    assert _normalize_for_igdb("Borderlands GOTY Enhanced") == "Borderlands"
+    assert _normalize_for_igdb("Borderlands GOTY") == "Borderlands"
+
+
+def test_normalize_strips_standalone_remastered():
+    assert _normalize_for_igdb("DARK SOULS REMASTERED") == "DARK SOULS"
+
+
+def test_normalize_preserves_words_not_in_standalone_list():
+    """Palavras que não são keywords de edição não devem ser removidas."""
+    assert _normalize_for_igdb("Worms Reloaded") == "Worms Reloaded"  # "Reloaded" não é keyword
+    assert _normalize_for_igdb("Shadowrun Returns") == "Shadowrun Returns"
+    assert _normalize_for_igdb("Batman - The Telltale Series") == "Batman - The Telltale Series"
+
+
+# ---------------------------------------------------------------------------
+# fetch_by_appid / fetch_by_name — verbose logging
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_by_appid_verbose_not_found(capsys):
+    """verbose=True imprime no stderr quando appid não está no IGDB."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = []
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_appid("cid", "tok", 99999, verbose=True)
+    assert result is None
+    assert "não encontrado" in capsys.readouterr().err
+
+
+def test_fetch_by_name_verbose_no_api_results(capsys):
+    """verbose=True imprime no stderr quando a API não retorna resultados."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = []
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_name("cid", "tok", "Nonexistent Game", verbose=True)
+    assert result is None
+    assert "sem resultados" in capsys.readouterr().err
+
+
+def test_fetch_by_name_verbose_similarity_rejected(capsys):
+    """verbose=True imprime no stderr quando similaridade < threshold."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = [{"name": "Completely Different Game", "aggregated_rating": 90}]
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_name("cid", "tok", "Portal 2", verbose=True)
+    assert result is None
+    err = capsys.readouterr().err
+    assert "descartado" in err
+    assert "sim=" in err
+
+
+def test_fetch_by_appid_verbose_found(capsys):
+    """verbose=True imprime ✓ quando appid é encontrado com resultado válido."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = [
+        {
+            "name": "Valheim",
+            "aggregated_rating": 90.0,
+            "aggregated_rating_count": 8,
+            "genres": [{"name": "RPG"}],
+            "first_release_date": None,
+        }
+    ]
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_appid("cid", "tok", 892970, verbose=True)
+    assert result is not None
+    err = capsys.readouterr().err
+    assert "Valheim" in err
+    assert "✓" in err
+
+
+def test_fetch_by_appid_verbose_found_but_parse_none(capsys):
+    """verbose=True imprime 'descartado' quando appid encontrado mas _parse_result → None."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = [
+        {
+            "name": "Obscure Game",
+            "aggregated_rating": None,
+            "aggregated_rating_count": 0,
+            "genres": [],
+            "first_release_date": None,
+        }
+    ]
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_appid("cid", "tok", 12345, verbose=True)
+    assert result is None
+    assert "descartado" in capsys.readouterr().err
+
+
+def test_fetch_by_name_verbose_found(capsys):
+    """verbose=True imprime ✓ quando nome passa similaridade e _parse_result é válido."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = [
+        {
+            "name": "Deus Ex: Human Revolution",
+            "aggregated_rating": 89.0,
+            "aggregated_rating_count": 25,
+            "genres": [{"name": "RPG"}],
+            "first_release_date": 1313452800,
+        }
+    ]
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_name("cid", "tok", "Deus Ex: Human Revolution", verbose=True)
+    assert result is not None
+    err = capsys.readouterr().err
+    assert "✓" in err
+    assert "sim=" in err
+
+
+def test_fetch_by_name_verbose_parse_none(capsys):
+    """verbose=True imprime 'descartado' quando similaridade OK mas _parse_result → None."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = [
+        {
+            "name": "Ticket to Ride",
+            "aggregated_rating": None,
+            "aggregated_rating_count": 0,
+            "genres": [],
+            "first_release_date": None,
+        }
+    ]
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_name("cid", "tok", "Ticket to Ride", verbose=True)
+    assert result is None
+    err = capsys.readouterr().err
+    assert "descartado" in err
+    assert "sim=" in err
+
+
+def test_fetch_by_appid_verbose_silent_by_default(capsys):
+    """Sem verbose=True, nenhuma saída no stderr."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = []
+    with patch("requests.post", return_value=mock_resp):
+        fetch_by_appid("cid", "tok", 99999)
+    assert capsys.readouterr().err == ""
+
+
 # ---------------------------------------------------------------------------
 # fetch_by_name — normalização e validação de similaridade
 # ---------------------------------------------------------------------------

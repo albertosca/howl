@@ -209,17 +209,31 @@ def migrate_igdb_data(
         print(f"Buscando dados IGDB para {len(pending)} jogos sem metacritic...")
 
     for idx, (name, entry) in enumerate(pending, 1):
+        if verbose:
+            print(f"  [{idx}/{len(pending)}] {name}")
         appid = entry["steam"].get("appid")
-        result = igdb.fetch_by_appid(client_id, token, appid) if appid else None
+        result = igdb.fetch_by_appid(client_id, token, appid, verbose=verbose) if appid else None
         if result is None:
-            result = igdb.fetch_by_name(client_id, token, name)
+            result = igdb.fetch_by_name(client_id, token, name, verbose=verbose)
         if result:
             cache[name]["igdb"] = result
             if verbose:
-                print(f"  [{idx}/{len(pending)}] {name} → {result['aggregated_rating']}")
+                rating = result.get("aggregated_rating")
+                if rating is not None:
+                    print(
+                        f"    → ✓ rating={rating}"
+                        f" (count={result.get('aggregated_rating_count')},"
+                        f" gêneros={result.get('genres')})"
+                    )
+                else:
+                    print(
+                        f"    → ~ parcial: gêneros={result.get('genres')},"
+                        f" ano={result.get('release_year')}"
+                        f" (sem avaliação: count={result.get('aggregated_rating_count')})"
+                    )
         else:
             if verbose:
-                print(f"  [{idx}/{len(pending)}] {name} → não encontrado")
+                print("    → ✗ não encontrado")
         save_cache(cache)
         time.sleep(_IGDB_RATE_LIMIT_S)
 

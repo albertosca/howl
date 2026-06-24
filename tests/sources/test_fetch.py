@@ -711,7 +711,7 @@ def test_migrate_igdb_verbose_found(capsys, tmp_path, monkeypatch):
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
     monkeypatch.setattr(
-        fetch.igdb, "fetch_by_appid", lambda cid, tok, appid: {"aggregated_rating": 88}
+        fetch.igdb, "fetch_by_appid", lambda cid, tok, appid, **kw: {"aggregated_rating": 88}
     )
     monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
     cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
@@ -727,12 +727,34 @@ def test_migrate_igdb_verbose_not_found(capsys, tmp_path, monkeypatch):
     from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
-    monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda cid, tok, appid: None)
-    monkeypatch.setattr(fetch.igdb, "fetch_by_name", lambda cid, tok, name: None)
+    monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda cid, tok, appid, **kw: None)
+    monkeypatch.setattr(fetch.igdb, "fetch_by_name", lambda cid, tok, name, **kw: None)
     monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
     cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
     fetch.migrate_igdb_data(cache, client_id="x", client_secret="y", verbose=True)
     assert "não encontrado" in capsys.readouterr().out
+
+
+def test_migrate_igdb_verbose_partial(capsys, tmp_path, monkeypatch):
+    """Resultado parcial (genres/ano mas sem rating) aparece como '~ parcial' no log."""
+    monkeypatch.chdir(tmp_path)
+    from steam_hltb.sources import fetch
+
+    partial = {
+        "aggregated_rating": None,
+        "aggregated_rating_count": 0,
+        "genres": ["Adventure"],
+        "release_year": 2011,
+    }
+    monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
+    monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda cid, tok, appid, **kw: partial)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
+    fetch.migrate_igdb_data(cache, client_id="x", client_secret="y", verbose=True)
+    out = capsys.readouterr().out
+    assert "parcial" in out
+    assert "Adventure" in out
+    assert cache["G"]["igdb"]["aggregated_rating"] is None
 
 
 def test_migrate_steam_details_skips_when_details_none(tmp_path, monkeypatch):
@@ -758,8 +780,8 @@ def test_migrate_igdb_not_found_quiet(tmp_path, monkeypatch):
     from steam_hltb.sources import fetch
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: "tok")
-    monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda c, t, a: None)
-    monkeypatch.setattr(fetch.igdb, "fetch_by_name", lambda c, t, n: None)
+    monkeypatch.setattr(fetch.igdb, "fetch_by_appid", lambda c, t, a, **kw: None)
+    monkeypatch.setattr(fetch.igdb, "fetch_by_name", lambda c, t, n, **kw: None)
     monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
     cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
     fetch.migrate_igdb_data(cache, client_id="x", client_secret="y")  # verbose False
