@@ -11,6 +11,11 @@ from howlongtobeatpy import HowLongToBeat
 from . import igdb
 
 CACHE_FILE = ".cache/games_cache.json"
+HTTP_TIMEOUT = 15  # segundos — evita travar indefinidamente se a API pendurar
+HLTB_MIN_SIMILARITY = 0.6  # abaixo disso o match do HowLongToBeat é fraco demais
+_STEAM_RATE_LIMIT_S = 1.0  # pausa entre jogos novos no build_library
+_IGDB_RATE_LIMIT_S = 0.25  # pausa entre buscas IGDB
+_DETAILS_RATE_LIMIT_S = 0.5  # pausa entre buscas de detalhes na migração
 
 
 def load_cache() -> dict[str, Any]:
@@ -37,7 +42,7 @@ def fetch_hltb(name: str) -> dict[str, Any] | None:
     if not results:
         return None
     best = max(results, key=lambda e: e.similarity)
-    if best.similarity < 0.6:
+    if best.similarity < HLTB_MIN_SIMILARITY:
         return None
     return {
         "game_name": best.game_name,
@@ -49,7 +54,9 @@ def fetch_hltb(name: str) -> dict[str, Any] | None:
 
 def fetch_steam_app_details(appid: int) -> dict[str, Any] | None:
     params: dict[str, str | int] = {"appids": appid, "cc": "US", "l": "english"}
-    resp = requests.get("https://store.steampowered.com/api/appdetails", params=params)
+    resp = requests.get(
+        "https://store.steampowered.com/api/appdetails", params=params, timeout=HTTP_TIMEOUT
+    )
     if resp.status_code != 200:
         return None
     result = resp.json().get(str(appid), {})
@@ -71,7 +78,9 @@ def fetch_steam_app_details(appid: int) -> dict[str, Any] | None:
 
 def fetch_steam_reviews(appid: int) -> dict[str, Any] | None:
     params: dict[str, str | int] = {"json": 1, "language": "all", "purchase_type": "all"}
-    resp = requests.get(f"https://store.steampowered.com/appreviews/{appid}", params=params)
+    resp = requests.get(
+        f"https://store.steampowered.com/appreviews/{appid}", params=params, timeout=HTTP_TIMEOUT
+    )
     if resp.status_code != 200:
         return None
     summary = resp.json().get("query_summary", {})
@@ -96,6 +105,7 @@ def resolve_steamid(api_key: str, username: str) -> str:
     resp = requests.get(
         "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/",
         params={"key": api_key, "vanityurl": username},
+        timeout=HTTP_TIMEOUT,
     )
     resp.raise_for_status()
     data = resp.json()["response"]
@@ -113,7 +123,9 @@ def get_steam_games(api_key: str, steamid: str) -> list[dict[str, Any]]:
         "include_played_free_games": True,
     }
     resp = requests.get(
-        "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/", params=params
+        "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
+        params=params,
+        timeout=HTTP_TIMEOUT,
     )
     resp.raise_for_status()
     games = resp.json()["response"].get("games", [])
@@ -155,7 +167,7 @@ def build_library(
             continue
         steam_reviews = fetch_steam_reviews(appid)
         steam_details = fetch_steam_app_details(appid)
-        time.sleep(1.0)
+        time.sleep(_STEAM_RATE_LIMIT_S)
         cache[name] = {
             "hltb": hltb,
             "steam": {
@@ -209,7 +221,7 @@ def migrate_igdb_data(
             if verbose:
                 print(f"  [{idx}/{len(pending)}] {name} → não encontrado")
         save_cache(cache)
-        time.sleep(0.25)
+        time.sleep(_IGDB_RATE_LIMIT_S)
 
     return cache
 
@@ -234,5 +246,5 @@ def migrate_steam_details(cache: dict[str, Any], verbose: bool = False) -> dict[
         if verbose:
             print(f"[{idx}/{len(pending)}] {name}")
         save_cache(cache)
-        time.sleep(0.5)
+        time.sleep(_DETAILS_RATE_LIMIT_S)
     return cache

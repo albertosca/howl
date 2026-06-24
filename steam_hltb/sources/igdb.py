@@ -13,6 +13,8 @@ from ..config import paths
 IGDB_API = "https://api.igdb.com/v4"
 TWITCH_URL = "https://id.twitch.tv/oauth2/token"
 MIN_RATING_COUNT = 3
+HTTP_TIMEOUT = 15  # segundos — evita travar indefinidamente se a API pendurar
+_TOKEN_EXPIRY_MARGIN_S = 60  # renova o token 60s antes de expirar (folga de relógio)
 
 
 # ---------------------------------------------------------------------------
@@ -46,10 +48,11 @@ def _refresh_token(client_id: str, client_secret: str) -> tuple[str, float]:
             "client_secret": client_secret,
             "grant_type": "client_credentials",
         },
+        timeout=HTTP_TIMEOUT,
     )
     resp.raise_for_status()
     data = resp.json()
-    expires_at: float = time.time() + data["expires_in"] - 60
+    expires_at: float = time.time() + data["expires_in"] - _TOKEN_EXPIRY_MARGIN_S
     access_token: str = data["access_token"]
     _save_token(access_token, expires_at)
     return access_token, expires_at
@@ -88,6 +91,7 @@ def _post(client_id: str, token: str, endpoint: str, body: str) -> list[dict[str
             "Authorization": f"Bearer {token}",
         },
         data=body,
+        timeout=HTTP_TIMEOUT,
     )
     if not resp.ok:
         print(f"IGDB API error {resp.status_code}: {resp.text[:200]}", file=sys.stderr)
