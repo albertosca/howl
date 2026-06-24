@@ -235,15 +235,68 @@ def test_normalize_preserves_regular_subtitles():
     """Subtítulos legítimos (não edição) devem ser preservados."""
     assert _normalize_for_igdb("Batman: Arkham Knight") == "Batman: Arkham Knight"
     assert _normalize_for_igdb("Deus Ex: Human Revolution") == "Deus Ex: Human Revolution"
+    assert (
+        _normalize_for_igdb("BioShock Infinite: Burial at Sea")
+        == "BioShock Infinite: Burial at Sea"
+    )
+    assert _normalize_for_igdb("Mass Effect: Andromeda") == "Mass Effect: Andromeda"
+    assert _normalize_for_igdb("The Witcher 3: Wild Hunt") == "The Witcher 3: Wild Hunt"
 
 
 def test_normalize_no_change_for_clean_name():
     assert _normalize_for_igdb("Ticket to Ride") == "Ticket to Ride"
     assert _normalize_for_igdb("Portal 2") == "Portal 2"
+    assert _normalize_for_igdb("Stardew Valley") == "Stardew Valley"
+
+
+def test_normalize_strips_special_edition():
+    assert (
+        _normalize_for_igdb("The Elder Scrolls V: Skyrim - Special Edition")
+        == "The Elder Scrolls V: Skyrim"
+    )
+
+
+def test_normalize_strips_goty():
+    assert _normalize_for_igdb("Fallout 4 - Game of the Year Edition") == "Fallout 4"
+
+
+def test_normalize_strips_definitive_edition():
+    assert _normalize_for_igdb("Mafia II: Definitive Edition") == "Mafia II"
+
+
+def test_normalize_strips_the_definitive_edition():
+    """'The X Edition' com artigo — variante muito comum no Steam (ex: GTA Trilogy)."""
+    assert _normalize_for_igdb("Grand Theft Auto V: The Definitive Edition") == "Grand Theft Auto V"
+    assert _normalize_for_igdb("Mafia: The Definitive Edition") == "Mafia"
+
+
+def test_normalize_strips_the_complete_edition():
+    assert _normalize_for_igdb("L.A. Noire: The Complete Edition") == "L.A. Noire"
+
+
+def test_normalize_strips_enhanced_edition():
+    assert (
+        _normalize_for_igdb("The Witcher 2: Assassins of Kings - Enhanced Edition")
+        == "The Witcher 2: Assassins of Kings"
+    )
+
+
+def test_normalize_strips_trademark_only():
+    """Apenas trademark, sem sufixo de edição — só remove símbolo."""
+    assert _normalize_for_igdb("XCOM® 2") == "XCOM 2"
+    assert _normalize_for_igdb("Deus Ex: Mankind Divided™") == "Deus Ex: Mankind Divided"
+    assert _normalize_for_igdb("DARK SOULS™ III") == "DARK SOULS III"
+
+
+def test_normalize_combined_trademark_and_the_edition():
+    assert (
+        _normalize_for_igdb("Batman™: The Complete Series")
+        == "Batman: The Complete Series"  # "Series" não é "edition/version" → preservado
+    )
 
 
 # ---------------------------------------------------------------------------
-# _name_similarity
+# _name_similarity — grafias similares mas não idênticas
 # ---------------------------------------------------------------------------
 
 
@@ -253,15 +306,68 @@ def test_name_similarity_exact():
 
 def test_name_similarity_case_insensitive():
     assert _name_similarity("batman", "BATMAN") == pytest.approx(1.0)
+    assert _name_similarity("DARK SOULS III", "Dark Souls III") == pytest.approx(1.0)
 
 
-def test_name_similarity_very_different():
-    assert _name_similarity("Batman", "Completely Different Game") < 0.6
+def test_name_similarity_missing_colon():
+    """Dois-pontos ausentes: grafia comum em bases de dados alternativas."""
+    assert _name_similarity("Batman Arkham Knight", "Batman: Arkham Knight") >= 0.6
 
 
-def test_name_similarity_partial_match():
-    sim = _name_similarity("Assassin's Creed IV Black Flag", "Assassin's Creed IV Black Flag")
-    assert sim == pytest.approx(1.0)
+def test_name_similarity_missing_apostrophe():
+    """Apóstrofo ausente — frequente em tags e scrapers."""
+    assert (
+        _name_similarity("Assassins Creed IV Black Flag", "Assassin's Creed IV Black Flag") >= 0.6
+    )
+
+
+def test_name_similarity_missing_article():
+    """Artigo 'The' ausente — comum em buscas informais."""
+    assert _name_similarity("Witcher 3 Wild Hunt", "The Witcher 3: Wild Hunt") >= 0.6
+    assert _name_similarity("Elder Scrolls V Skyrim", "The Elder Scrolls V: Skyrim") >= 0.6
+
+
+def test_name_similarity_roman_vs_arabic():
+    """Número romano vs arábico — Steam e IGDB às vezes divergem."""
+    assert _name_similarity("Civilization V", "Civilization 5") >= 0.6
+    assert _name_similarity("Battlefield 1942", "Battlefield 1942") >= 0.6
+
+
+def test_name_similarity_missing_hyphen():
+    """Hífen ausente: 'Half Life 2' vs 'Half-Life 2'."""
+    assert _name_similarity("Half Life 2", "Half-Life 2") >= 0.6
+
+
+def test_name_similarity_extra_subtitle_proportional():
+    """Subtítulo curto relativo ao nome base → passa. Extensão desproporcional → rejeita.
+
+    SequenceMatcher: ratio = 2*matches / (len(a)+len(b)).
+    'Ticket to Ride' (14) vs '...Europe' (22) → ~0.78 ✓
+    'Portal 2' (8) vs '...Still Alive' (21) → ~0.55 ✗ (corretamente descartado;
+    busca por appid teria encontrado antes do fallback por nome).
+    """
+    assert _name_similarity("Ticket to Ride", "Ticket to Ride: Europe") >= 0.6
+    assert _name_similarity("Portal 2", "Portal 2: Still Alive") < 0.6  # extensão desproporcional
+
+
+def test_name_similarity_different_sequel_acknowledged_limitation():
+    """Sequências da mesma série têm similaridade alta — limitação do SequenceMatcher.
+    A API de busca do IGDB é responsável por retornar o jogo correto para a query;
+    a similaridade só filtra resultados completamente errados."""
+    assert _name_similarity("Civilization V", "Civilization VI") >= 0.6  # limitação documentada
+
+
+def test_name_similarity_completely_different_games():
+    """Jogos sem relação: similaridade < 0.6 → descartado."""
+    assert _name_similarity("Portal 2", "The Elder Scrolls V: Skyrim") < 0.6
+    assert _name_similarity("Dota 2", "Stardew Valley") < 0.6
+    assert _name_similarity("Batman", "Superman Returns") < 0.6
+    assert _name_similarity("Ticket to Ride", "Rayman Legends") < 0.6
+
+
+def test_name_similarity_short_vs_very_long():
+    """Nome muito curto vs versão muito expandida: similaridade cai abaixo de 0.6."""
+    assert _name_similarity("Batman", "Batman: Arkham Origins - Cold Cold Heart DLC") < 0.6
 
 
 # ---------------------------------------------------------------------------

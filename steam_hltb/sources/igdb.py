@@ -19,10 +19,11 @@ HTTP_TIMEOUT = 15  # segundos — evita travar indefinidamente se a API pendurar
 _TOKEN_EXPIRY_MARGIN_S = 60  # renova o token 60s antes de expirar (folga de relógio)
 
 # Sufixos que indicam edição especial / DLC — não fazem parte do nome canônico.
+# (?:the\s+)? cobre variantes como "The Definitive Edition", "The Complete Edition".
 _EDITION_RE = re.compile(
-    r"\s*[-–:]\s*(?:gold|deluxe|complete|goty|game of the year|enhanced|definitive|"
-    r"ultimate|special|premium|season pass|anniversary|director'?s cut|legendary|"
-    r"commander|titans?|remaster(?:ed)?|censored)(?:\s+(?:edition|version))?\s*$",
+    r"\s*[-–:]\s*(?:the\s+)?(?:gold|deluxe|complete|goty|game of the year|enhanced|"
+    r"definitive|ultimate|special|premium|season pass|anniversary|director'?s cut|"
+    r"legendary|commander|titans?|remaster(?:ed)?|censored)(?:\s+(?:edition|version))?\s*$",
     re.IGNORECASE,
 )
 _TRADEMARK_RE = re.compile(r"[™®©]")
