@@ -24,6 +24,9 @@ MULTIPLAYER_ONLY_CATEGORIES: frozenset[str] = frozenset(
 
 ERA_LABELS: list[str] = ["pre-2005", "2005-2010", "2010-2015", "2015-2020", "2020+", "unknown"]
 
+# "iniciado" / "não terminado" = jogou até metade do main+extra (com piso de 1h)
+_IN_PROGRESS_FRACTION = 0.5
+
 
 def _category(categories: list[str], main_story: int) -> str:
     cat_set = {c.lower() for c in categories}
@@ -51,6 +54,53 @@ def _load_overrides() -> dict[str, Any]:
     return {_normalize_name(k): v for k, v in raw.items()}
 
 
+def _resolve_source_fields(entry: dict[str, Any]) -> dict[str, Any]:
+    """Resolve genres/categories/metacritic/release_year de uma entrada do cache.
+
+    Prioriza Steam (formato novo), cai pra RAWG (cache legado) ou vazio, e usa
+    IGDB como fallback para metacritic/genres ausentes.
+    """
+    steam = entry.get("steam") or {}
+    rawg = entry.get("rawg") or {}
+    igdb_data = entry.get("igdb") or {}
+
+    if steam.get("genres") is not None:
+        genres, categories, metacritic = (
+            steam.get("genres", []),
+            steam.get("categories", []),
+            steam.get("metacritic"),
+        )
+    elif rawg:
+        genres, categories, metacritic = (
+            rawg.get("genres", []),
+            rawg.get("tags", []),
+            rawg.get("metacritic"),
+        )
+    else:
+        genres, categories, metacritic = [], [], None
+
+    if metacritic is None:
+        metacritic = igdb_data.get("aggregated_rating")
+    if not genres:
+        genres = [g.lower() for g in igdb_data.get("genres", [])]
+
+    return {
+        "genres": genres,
+        "categories": categories,
+        "metacritic": metacritic,
+        "release_year": steam.get("release_year") or igdb_data.get("release_year"),
+    }
+
+
+def _apply_overrides(row: dict[str, Any], overrides: dict[str, Any], name: str) -> None:
+    """Sobrescreve campos da row com howl_overrides.json (ignora a chave 'comment')."""
+    ov = overrides.get(_normalize_name(name), {})
+    if isinstance(ov, dict):
+        for key, val in ov.items():
+            if key != "comment":
+                row[key] = val
+
+
 def build_game_rows(
     cache: dict[str, Any], steam_games: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -60,53 +110,33 @@ def build_game_rows(
         name = game["name"]
         entry = cache.get(name, {})
         hltb = entry.get("hltb")
-        steam = entry.get("steam")
         if not hltb:
             continue
-        # suporte a cache antigo (rawg) e novo (steam com genres/categories)
-        rawg = entry.get("rawg")
-        if steam and "genres" in steam:
-            genres = steam.get("genres", [])
-            categories = steam.get("categories", [])
-            metacritic = steam.get("metacritic")
-        elif rawg:
-            genres = rawg.get("genres", [])
-            categories = rawg.get("tags", [])
-            metacritic = rawg.get("metacritic")
-        else:
-            genres, categories, metacritic = [], [], None
-        # fallback IGDB para campos ausentes do Steam
-        igdb_data = entry.get("igdb") or {}
-        if igdb_data:
-            if metacritic is None:
-                metacritic = igdb_data.get("aggregated_rating")
-            if not genres:
-                genres = [g.lower() for g in igdb_data.get("genres", [])]
+        steam = entry.get("steam")
+        fields = _resolve_source_fields(entry)
         row: dict[str, Any] = {
             "name": hltb["game_name"],
             "steam_name": name,
             "appid": steam.get("appid") if steam else game.get("appid"),
             "hours_played": game["hours_played"],
-            "category": _category(categories, hltb.get("main_story") or 0),
-            "genres": genres,
-            "tags": categories,
-            "metacritic": metacritic,
+            "category": _category(fields["categories"], hltb.get("main_story") or 0),
+            "genres": fields["genres"],
+            "tags": fields["categories"],
+            "metacritic": fields["metacritic"],
             "steam_pct": steam.get("positive_pct") if steam else None,
             "steam_total_reviews": steam.get("total_reviews") if steam else None,
             "main_story": hltb.get("main_story"),
             "main_extra": hltb.get("main_extra"),
             "completionist": hltb.get("completionist"),
-            "release_year": (steam.get("release_year") if steam else None)
-            or igdb_data.get("release_year"),
+            "release_year": fields["release_year"],
         }
-        # aplica overrides (ex: howl_overrides.json com metacritic/release_year hardcoded)
-        ov = overrides.get(_normalize_name(name), {})
-        if isinstance(ov, dict):
-            for key, val in ov.items():
-                if key != "comment":
-                    row[key] = val
+        _apply_overrides(row, overrides, name)
         rows.append(row)
     return rows
+
+
+def _genres_of(game: dict[str, Any]) -> set[str]:
+    return {g.lower() for g in game["genres"]}
 
 
 def filter_genre(
@@ -117,17 +147,20 @@ def filter_genre(
 ) -> list[dict[str, Any]]:
     result = games
     if must_have:
-        lower = [g.lower() for g in must_have]
-        result = [g for g in result if all(m in [x.lower() for x in g["genres"]] for m in lower)]
+        wanted = {g.lower() for g in must_have}
+        result = [g for g in result if wanted <= _genres_of(g)]  # todos presentes
     if any_of:
-        lower = [g.lower() for g in any_of]
-        result = [g for g in result if any(m in [x.lower() for x in g["genres"]] for m in lower)]
+        wanted = {g.lower() for g in any_of}
+        result = [g for g in result if wanted & _genres_of(g)]  # ao menos um
     if exclude:
-        lower = [g.lower() for g in exclude]
-        result = [
-            g for g in result if not any(e in [x.lower() for x in g["genres"]] for e in lower)
-        ]
+        unwanted = {g.lower() for g in exclude}
+        result = [g for g in result if not (unwanted & _genres_of(g))]  # nenhum proibido
     return result
+
+
+def _halfway_hours(game: dict[str, Any]) -> float:
+    """Metade do main+extra (piso de 1h) — limiar de 'ainda não terminado'."""
+    return _IN_PROGRESS_FRACTION * max(game["main_extra"] or 0, 1)
 
 
 def filter_progress(games: list[dict[str, Any]], mode: str = "default") -> list[dict[str, Any]]:
@@ -136,8 +169,8 @@ def filter_progress(games: list[dict[str, Any]], mode: str = "default") -> list[
     if mode == "not_started":
         return [g for g in games if g["hours_played"] == 0]
     if mode == "in_progress":
-        return [g for g in games if 0 < g["hours_played"] < 0.5 * max(g["main_extra"] or 0, 1)]
-    return [g for g in games if g["hours_played"] <= 0.5 * max(g["main_extra"] or 0, 1)]
+        return [g for g in games if 0 < g["hours_played"] < _halfway_hours(g)]
+    return [g for g in games if g["hours_played"] <= _halfway_hours(g)]
 
 
 def filter_category(games: list[dict[str, Any]], category: str = "all") -> list[dict[str, Any]]:
