@@ -14,7 +14,7 @@ def run(args: argparse.Namespace) -> None:
 
     cache = load_cache()
     cache, steam_games = build_library(
-        steam_key, username, cache, refresh=args.refresh, verbose=args.verbose
+        steam_key, username, cache, refresh=args.refresh_all, verbose=args.verbose
     )
 
     all_games = build_game_rows(cache, steam_games)
@@ -38,7 +38,7 @@ def _run_tui(args: argparse.Namespace) -> None:
     username = _resolve_username(args)
     cache = load_cache()
     cache, steam_games = build_library(
-        steam_key, username, cache, refresh=args.refresh, verbose=args.verbose
+        steam_key, username, cache, refresh=args.refresh_all, verbose=args.verbose
     )
     rows = build_game_rows(cache, steam_games)
     run_tui(rows, filters_from_args(args))

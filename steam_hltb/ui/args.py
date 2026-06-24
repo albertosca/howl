@@ -118,7 +118,16 @@ Formatos de entrada:
         action="store_true",
         help="Lista coleções Steam disponíveis no VDF e sai",
     )
-    p.add_argument("--refresh", action="store_true", help="Ignora o cache e rebusca todos os jogos")
+    p.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Busca novos jogos da biblioteca Steam (mesmo comportamento do default)",
+    )
+    p.add_argument(
+        "--refresh-all",
+        action="store_true",
+        help="Re-fetcha dados de todos os jogos, inclusive os já em cache (lento)",
+    )
     p.add_argument(
         "--migrate-cache",
         action="store_true",

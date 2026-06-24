@@ -14,6 +14,16 @@ def test_parse_args_defaults():
     assert args.sort == "shortest"
     assert args.verbose is False
     assert args.show_tags is False
+    assert args.refresh is False
+    assert args.refresh_all is False
+
+
+def test_parse_args_refresh():
+    assert _parse(["--refresh"]).refresh is True
+
+
+def test_parse_args_refresh_all():
+    assert _parse(["--refresh-all"]).refresh_all is True
 
 
 def test_parse_args_verbose_short():

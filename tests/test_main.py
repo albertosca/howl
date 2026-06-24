@@ -5,6 +5,7 @@ def _ns(**over):
     base = {
         "username": "u",
         "refresh": False,
+        "refresh_all": False,
         "verbose": False,
         "sort": "rated",
         "top": 10,
