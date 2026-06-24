@@ -1,4 +1,4 @@
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
@@ -9,6 +9,7 @@ from textual.widgets import Checkbox, DataTable, Footer, Header, Input, Label, S
 from ..core.classify import ERA_LABELS
 from ..core.score import SORT_OPTIONS
 from ..core.selection import select_games
+from ..core.types import Filters, Game
 
 
 def _era_id(era: str) -> str:
@@ -121,9 +122,7 @@ class SteamHLTBApp(App[None]):
     show_genres: reactive[bool] = reactive(True)
     show_tags: reactive[bool] = reactive(False)
 
-    def __init__(
-        self, all_games: list[dict[str, Any]], initial_filters: dict[str, Any] | None = None
-    ):
+    def __init__(self, all_games: list[Game], initial_filters: Filters | None = None):
         super().__init__()
         self.all_games = all_games
         self.filters = (initial_filters or {}).copy()
@@ -142,7 +141,7 @@ class SteamHLTBApp(App[None]):
         self.filters.setdefault("collection", None)
         self.filters.setdefault("name_query", None)
         self.filters.setdefault("eras", None)  # None = todas as eras
-        self._games: list[dict[str, Any]] = []
+        self._games: list[Game] = []
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -289,5 +288,5 @@ class SteamHLTBApp(App[None]):
         self.notify("Salvo em output/howl.csv e .md")
 
 
-def run_tui(all_games: list[dict[str, Any]], initial_filters: dict[str, Any] | None = None) -> None:
+def run_tui(all_games: list[Game], initial_filters: Filters | None = None) -> None:
     SteamHLTBApp(all_games, initial_filters).run()

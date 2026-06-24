@@ -764,3 +764,21 @@ def test_migrate_igdb_not_found_quiet(tmp_path, monkeypatch):
     cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
     fetch.migrate_igdb_data(cache, client_id="x", client_secret="y")  # verbose False
     assert "igdb" not in cache["G"]
+
+
+def test_steam_http_calls_use_timeout(monkeypatch):
+    """Robustez: chamadas HTTP da Steam não podem ficar sem timeout (trava infinita)."""
+    from steam_hltb.sources import fetch
+
+    seen = []
+
+    def fake_get(*args, **kwargs):
+        seen.append(kwargs.get("timeout"))
+        resp = MagicMock()
+        resp.status_code = 500
+        return resp
+
+    monkeypatch.setattr("steam_hltb.sources.fetch.requests.get", fake_get)
+    fetch.fetch_steam_app_details(1)
+    fetch.fetch_steam_reviews(1)
+    assert seen and all(t == fetch.HTTP_TIMEOUT for t in seen)

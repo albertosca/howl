@@ -1,5 +1,6 @@
 import math
-from typing import Any
+
+from .types import Game
 
 SORT_OPTIONS = [
     "shortest",  # curto, qualidade ajuda: composite / √h
@@ -12,7 +13,7 @@ SORT_OPTIONS = [
 ]
 
 
-def score_composto(game: dict[str, Any], weights: dict[str, float] | None = None) -> float:
+def score_composto(game: Game, weights: dict[str, float] | None = None) -> float:
     if weights is None:
         weights = {"mc": 0.5, "steam": 0.5}
     sources = {}
@@ -33,7 +34,7 @@ def score_composto(game: dict[str, Any], weights: dict[str, float] | None = None
 SHORTEST_HOURS_FLOOR = 1.0  # abaixo disso é "muito curto"; não infla além do composite
 
 
-def score_shortest(game: dict[str, Any], weights: dict[str, float] | None = None) -> float:
+def score_shortest(game: Game, weights: dict[str, float] | None = None) -> float:
     """Bons jogos mais curtos: composite / √max(horas, 1).
 
     O piso de 1h evita que jogos curtíssimos (ex: 0.25h) estourem o composite
@@ -49,7 +50,7 @@ def score_shortest(game: dict[str, Any], weights: dict[str, float] | None = None
 LONGEST_HOURS_CAP = 100.0  # acima disso é "muito longo"; horas extras não inflam o score
 
 
-def score_longest(game: dict[str, Any], weights: dict[str, float] | None = None) -> float:
+def score_longest(game: Game, weights: dict[str, float] | None = None) -> float:
     """Jogos mais longos, curva log com teto: composite × ln(1+min(h,cap)) / ln(1+cap).
 
     Cresce suave com a duração até `cap` (100h) e satura depois — então jogos
@@ -64,17 +65,17 @@ def score_longest(game: dict[str, Any], weights: dict[str, float] | None = None)
     return score * math.log1p(capped) / math.log1p(LONGEST_HOURS_CAP)
 
 
-def score_rated(game: dict[str, Any]) -> float:
+def score_rated(game: Game) -> float:
     """Mais aclamados pela crítica: Metacritic puro."""
     return float(game.get("metacritic") or 0)
 
 
-def score_loved(game: dict[str, Any]) -> float:
+def score_loved(game: Game) -> float:
     """Mais amados pelos jogadores: Steam % positivo."""
     return float(game.get("steam_pct") or 0)
 
 
-def score_quick_wins(game: dict[str, Any], weights: dict[str, float] | None = None) -> float:
+def score_quick_wins(game: Game, weights: dict[str, float] | None = None) -> float:
     """Jogo bom (composite ≥ 75) e curto: composite / (1 + horas/5). Sem dado = excluído."""
     score = score_composto(game, weights)
     hours = game.get("main_extra")
@@ -83,7 +84,7 @@ def score_quick_wins(game: dict[str, Any], weights: dict[str, float] | None = No
     return score / (1 + float(hours) / 5)
 
 
-def score_hidden_gems(game: dict[str, Any]) -> float:
+def score_hidden_gems(game: Game) -> float:
     """Muito amado pelos players (≥80% steam), ignorado pela crítica: steam × (1 - mc/100).
     Sem MC = dado ausente → excluído. Steam < 80% = não é muito aclamado → excluído."""
     steam = game.get("steam_pct")
@@ -93,9 +94,7 @@ def score_hidden_gems(game: dict[str, Any]) -> float:
     return float(steam) * (1 - float(mc) / 100)
 
 
-def compute_score(
-    game: dict[str, Any], sort_by: str, weights: dict[str, float] | None = None
-) -> float:
+def compute_score(game: Game, sort_by: str, weights: dict[str, float] | None = None) -> float:
     if sort_by == "shortest":
         return score_shortest(game, weights)
     if sort_by == "longest":

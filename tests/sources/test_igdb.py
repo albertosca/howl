@@ -174,3 +174,13 @@ def test_fetch_by_name_returns_none_when_empty():
     resp.json.return_value = []
     with patch("requests.post", return_value=resp):
         assert igdb.fetch_by_name("cid", "tok", "x") is None
+
+
+def test_igdb_post_uses_timeout():
+    """Robustez: o POST na API IGDB não pode ficar sem timeout."""
+    resp = MagicMock()
+    resp.ok = True
+    resp.json.return_value = []
+    with patch("requests.post", return_value=resp) as mock_post:
+        igdb._post("cid", "tok", "games", "body")
+    assert mock_post.call_args.kwargs.get("timeout") == igdb.HTTP_TIMEOUT
