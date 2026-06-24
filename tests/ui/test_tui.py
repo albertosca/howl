@@ -250,7 +250,6 @@ async def test_tui_show_genres_toggle_adds_column():
 
 
 async def test_tui_status_bar_shows_count():
-
     from steam_hltb.ui.tui import SteamHLTBApp
 
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
