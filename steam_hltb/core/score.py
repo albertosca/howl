@@ -41,13 +41,22 @@ def score_shortest(game: dict[str, Any], weights: dict[str, float] | None = None
     return score
 
 
+LONGEST_HOURS_CAP = 100.0  # acima disso é "muito longo"; horas extras não inflam o score
+
+
 def score_longest(game: dict[str, Any], weights: dict[str, float] | None = None) -> float:
-    """Jogos mais longos: composite × √horas / 10. Sem dado de duração = excluído."""
+    """Jogos mais longos, curva log com teto: composite × ln(1+min(h,cap)) / ln(1+cap).
+
+    Cresce suave com a duração até `cap` (100h) e satura depois — então jogos
+    endless/grind com horas absurdas do HLTB (ex: MOBAs com 1000h+) não dominam,
+    e entre os longos a qualidade desempata. Score ≤ composite. Sem duração = 0.
+    """
     score = score_composto(game, weights)
     hours = game.get("main_extra")
     if not score or not hours:
         return 0.0
-    return score * math.sqrt(hours) / 10
+    capped = min(float(hours), LONGEST_HOURS_CAP)
+    return score * math.log1p(capped) / math.log1p(LONGEST_HOURS_CAP)
 
 
 def score_rated(game: dict[str, Any]) -> float:
