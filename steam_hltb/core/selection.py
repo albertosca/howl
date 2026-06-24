@@ -1,13 +1,12 @@
 """Pipeline de seleção: filtra, pontua e ordena jogos. Sem dependência de UI."""
 
-from typing import Any
-
 from ..sources.collections import exclude_finished, filter_collection, load_collections
 from .classify import apply_filters, filter_name
 from .score import compute_score
+from .types import Filters, Game
 
 
-def select_games(all_games: list[dict[str, Any]], filters: dict[str, Any]) -> list[dict[str, Any]]:
+def select_games(all_games: list[Game], filters: Filters) -> list[Game]:
     """Aplica filtros, calcula `_score` e ordena (desc). Não corta no top — o
     chamador fatia `[: filters['top']]` conforme precisa (CLI salva tudo, TUI
     mostra o top)."""

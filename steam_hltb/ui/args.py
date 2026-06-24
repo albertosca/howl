@@ -1,9 +1,9 @@
 import argparse
 import os
 import sys
-from typing import Any
 
 from ..core.score import SORT_OPTIONS
+from ..core.types import Filters
 
 
 def parse_args() -> argparse.Namespace:
@@ -191,7 +191,7 @@ def _csv_list(value: str | None) -> list[str] | None:
     return result or None
 
 
-def filters_from_args(args: argparse.Namespace) -> dict[str, Any]:
+def filters_from_args(args: argparse.Namespace) -> Filters:
     """Deriva o dict de filtros consumido por selection.select_games."""
     return {
         "genre": _csv_list(args.genre),

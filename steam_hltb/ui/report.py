@@ -2,6 +2,8 @@ import csv
 from pathlib import Path
 from typing import Any
 
+from ..core.types import Game
+
 # Categorias Steam de infraestrutura — não relevantes para gameplay
 STEAM_NOISE_CATEGORIES: frozenset[str] = frozenset(
     {
@@ -23,12 +25,12 @@ STEAM_NOISE_CATEGORIES: frozenset[str] = frozenset(
 )
 
 
-def _gameplay_categories(game: dict[str, Any]) -> list[str]:
+def _gameplay_categories(game: Game) -> list[str]:
     """Retorna steam.categories filtradas de ruído de infraestrutura."""
     return [c for c in game.get("tags", []) if c.lower() not in STEAM_NOISE_CATEGORIES]
 
 
-def print_table(games: list[dict[str, Any]], sort_by: str, show_tags: bool = False) -> None:
+def print_table(games: list[Game], sort_by: str, show_tags: bool = False) -> None:
     header = (
         f"{'#':>3}  {'Nome':<45}  {'Ano':>4}  {'MC':>4}  "
         f"{'Steam':>6}  {'HLTB':>5}  {'Jogadas':>8}  {'Score':>8}"
@@ -96,7 +98,7 @@ def list_available(cache: dict[str, Any], field: str) -> None:
         print(f"  {count:>4}x  {value}")
 
 
-def save_results(games: list[dict[str, Any]], output_base: str) -> None:
+def save_results(games: list[Game], output_base: str) -> None:
     csv_path = Path(output_base + ".csv")
     md_path = Path(output_base + ".md")
     csv_path.parent.mkdir(parents=True, exist_ok=True)
