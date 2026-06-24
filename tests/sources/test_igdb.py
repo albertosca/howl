@@ -3,8 +3,16 @@ import os
 import time
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from steam_hltb.sources import igdb
-from steam_hltb.sources.igdb import fetch_by_appid, fetch_by_name, get_token
+from steam_hltb.sources.igdb import (
+    _name_similarity,
+    _normalize_for_igdb,
+    fetch_by_appid,
+    fetch_by_name,
+    get_token,
+)
 
 
 def test_save_token_writes_to_config_dir(tmp_path, monkeypatch):
@@ -109,7 +117,8 @@ def test_fetch_by_name_returns_data():
     assert result["release_year"] == 2011
 
 
-def test_fetch_by_name_ignores_low_rating_count():
+def test_fetch_by_name_ignores_low_rating_count_no_genres():
+    """Rating count < 3 e sem gêneros/ano → None."""
     mock_resp = MagicMock()
     mock_resp.ok = True
     mock_resp.json.return_value = [
@@ -184,3 +193,184 @@ def test_igdb_post_uses_timeout():
     with patch("requests.post", return_value=resp) as mock_post:
         igdb._post("cid", "tok", "games", "body")
     assert mock_post.call_args.kwargs.get("timeout") == igdb.HTTP_TIMEOUT
+
+
+# ---------------------------------------------------------------------------
+# _normalize_for_igdb
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_strips_trademarks():
+    assert _normalize_for_igdb("Assassin's Creed® IV") == "Assassin's Creed IV"
+    assert _normalize_for_igdb("Batman™: Arkham Knight") == "Batman: Arkham Knight"
+    assert _normalize_for_igdb("Game©") == "Game"
+
+
+def test_normalize_strips_gold_edition():
+    assert (
+        _normalize_for_igdb("Assassin's Creed IV Black Flag - Gold Edition")
+        == "Assassin's Creed IV Black Flag"
+    )
+
+
+def test_normalize_strips_season_pass():
+    assert (
+        _normalize_for_igdb("Batman: The Telltale Series - Season Pass")
+        == "Batman: The Telltale Series"
+    )
+
+
+def test_normalize_strips_titans_subtitle():
+    assert _normalize_for_igdb("Planetary Annihilation: TITANS") == "Planetary Annihilation"
+
+
+def test_normalize_strips_combined_trademark_and_edition():
+    assert (
+        _normalize_for_igdb("Assassin's Creed® IV Black Flag - Gold Edition")
+        == "Assassin's Creed IV Black Flag"
+    )
+
+
+def test_normalize_preserves_regular_subtitles():
+    """Subtítulos legítimos (não edição) devem ser preservados."""
+    assert _normalize_for_igdb("Batman: Arkham Knight") == "Batman: Arkham Knight"
+    assert _normalize_for_igdb("Deus Ex: Human Revolution") == "Deus Ex: Human Revolution"
+
+
+def test_normalize_no_change_for_clean_name():
+    assert _normalize_for_igdb("Ticket to Ride") == "Ticket to Ride"
+    assert _normalize_for_igdb("Portal 2") == "Portal 2"
+
+
+# ---------------------------------------------------------------------------
+# _name_similarity
+# ---------------------------------------------------------------------------
+
+
+def test_name_similarity_exact():
+    assert _name_similarity("Batman", "Batman") == pytest.approx(1.0)
+
+
+def test_name_similarity_case_insensitive():
+    assert _name_similarity("batman", "BATMAN") == pytest.approx(1.0)
+
+
+def test_name_similarity_very_different():
+    assert _name_similarity("Batman", "Completely Different Game") < 0.6
+
+
+def test_name_similarity_partial_match():
+    sim = _name_similarity("Assassin's Creed IV Black Flag", "Assassin's Creed IV Black Flag")
+    assert sim == pytest.approx(1.0)
+
+
+# ---------------------------------------------------------------------------
+# fetch_by_name — normalização e validação de similaridade
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_by_name_normalizes_before_search():
+    """A busca usa nome normalizado — sem ® e sem 'Gold Edition' no body da request."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = [
+        {
+            "name": "Assassin's Creed IV Black Flag",
+            "aggregated_rating": 85.0,
+            "aggregated_rating_count": 30,
+            "genres": [{"name": "Action-adventure"}],
+            "first_release_date": 1383177600,
+        }
+    ]
+    with patch("requests.post", return_value=mock_resp) as mock_post:
+        result = fetch_by_name("cid", "tok", "Assassin's Creed® IV Black Flag - Gold Edition")
+    assert result is not None
+    assert result["aggregated_rating"] == 85
+    body = mock_post.call_args.kwargs.get("data", "")
+    assert "Gold Edition" not in body
+    assert "®" not in body
+
+
+def test_fetch_by_name_rejects_wrong_game():
+    """Resultado IGDB com nome muito diferente do query é descartado."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = [
+        {
+            "name": "Completely Different Game",
+            "aggregated_rating": 90.0,
+            "aggregated_rating_count": 15,
+            "genres": [{"name": "Action"}],
+            "first_release_date": 1000000000,
+        }
+    ]
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_name("cid", "tok", "Ticket to Ride")
+    assert result is None
+
+
+def test_fetch_by_name_accepts_similar_game():
+    """Resultado IGDB com nome próximo do query (≥0.6) é aceito."""
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = [
+        {
+            "name": "Batman: The Telltale Series",
+            "aggregated_rating": 75.0,
+            "aggregated_rating_count": 10,
+            "genres": [{"name": "Adventure"}],
+            "first_release_date": 1470009600,
+        }
+    ]
+    with patch("requests.post", return_value=mock_resp):
+        result = fetch_by_name("cid", "tok", "Batman: The Telltale Series - Season Pass")
+    assert result is not None
+    assert result["aggregated_rating"] == 75
+
+
+# ---------------------------------------------------------------------------
+# _parse_result — resultado parcial quando rating insuficiente mas tem gêneros
+# ---------------------------------------------------------------------------
+
+
+def test_parse_result_partial_when_genres_present_low_rating():
+    """Rating count < 3 mas com gêneros → resultado parcial sem rating."""
+    data = {
+        "name": "Indie Game",
+        "aggregated_rating": 80.0,
+        "aggregated_rating_count": 2,
+        "genres": [{"name": "Indie"}, {"name": "Adventure"}],
+        "first_release_date": 1500000000,
+    }
+    result = igdb._parse_result(data)
+    assert result is not None
+    assert result["aggregated_rating"] is None  # rating descartado (count insuficiente)
+    assert "Indie" in result["genres"]
+    assert result["release_year"] == 2017
+
+
+def test_parse_result_none_when_low_rating_and_no_genres():
+    """Rating count < 3 e sem gêneros/ano → None (nada útil)."""
+    data = {
+        "name": "Mystery",
+        "aggregated_rating": 90.0,
+        "aggregated_rating_count": 1,
+        "genres": [],
+        "first_release_date": None,
+    }
+    assert igdb._parse_result(data) is None
+
+
+def test_parse_result_full_when_sufficient_rating():
+    """Rating count >= 3 → resultado completo com rating."""
+    data = {
+        "name": "Great Game",
+        "aggregated_rating": 88.5,
+        "aggregated_rating_count": 10,
+        "genres": [{"name": "RPG"}],
+        "first_release_date": 1400000000,
+    }
+    result = igdb._parse_result(data)
+    assert result is not None
+    assert result["aggregated_rating"] == round(88.5)  # banker's rounding Python 3 → 88
+    assert result["genres"] == ["RPG"]

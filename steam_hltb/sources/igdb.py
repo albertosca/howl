@@ -1,9 +1,11 @@
 """Client IGDB com OAuth automático via Twitch client_credentials."""
 
 import json
+import re
 import sys
 import time
 from datetime import UTC, datetime
+from difflib import SequenceMatcher
 from typing import Any
 
 import requests
@@ -15,6 +17,16 @@ TWITCH_URL = "https://id.twitch.tv/oauth2/token"
 MIN_RATING_COUNT = 3
 HTTP_TIMEOUT = 15  # segundos — evita travar indefinidamente se a API pendurar
 _TOKEN_EXPIRY_MARGIN_S = 60  # renova o token 60s antes de expirar (folga de relógio)
+
+# Sufixos que indicam edição especial / DLC — não fazem parte do nome canônico.
+_EDITION_RE = re.compile(
+    r"\s*[-–:]\s*(?:gold|deluxe|complete|goty|game of the year|enhanced|definitive|"
+    r"ultimate|special|premium|season pass|anniversary|director'?s cut|legendary|"
+    r"commander|titans?|remaster(?:ed)?|censored)(?:\s+(?:edition|version))?\s*$",
+    re.IGNORECASE,
+)
+_TRADEMARK_RE = re.compile(r"[™®©]")
+_IGDB_MIN_SIMILARITY = 0.6  # abaixo disso o resultado é um jogo diferente
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +90,27 @@ def get_token(client_id: str | None, client_secret: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Name normalization
+# ---------------------------------------------------------------------------
+
+
+def _normalize_for_igdb(name: str) -> str:
+    """Remove ™/® e sufixos de edição/DLC para busca mais precisa no IGDB.
+
+    Ex: "Assassin's Creed® IV Black Flag - Gold Edition" →
+        "Assassin's Creed IV Black Flag"
+    """
+    name = _TRADEMARK_RE.sub("", name)
+    name = _EDITION_RE.sub("", name)
+    return name.strip()
+
+
+def _name_similarity(a: str, b: str) -> float:
+    """Similaridade de sequência entre dois nomes (case-insensitive), em [0, 1]."""
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+
+# ---------------------------------------------------------------------------
 # API calls
 # ---------------------------------------------------------------------------
 
@@ -101,22 +134,29 @@ def _post(client_id: str, token: str, endpoint: str, body: str) -> list[dict[str
 
 
 def _parse_result(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Extrai rating/genres/release_year do resultado IGDB.
+
+    Se aggregated_rating_count < MIN_RATING_COUNT, ainda salva gêneros e ano
+    (quando disponíveis) — só omite o rating, que seria pouco confiável.
+    Retorna None apenas quando não há absolutamente nada útil.
     """
-    Extrai rating/genres/release_year do resultado IGDB.
-    Retorna None se aggregated_rating_count < MIN_RATING_COUNT.
-    """
+    genres = [g["name"] for g in data.get("genres") or []]
+    ts = data.get("first_release_date")
+    release_year: int | None = datetime.fromtimestamp(ts, tz=UTC).year if ts else None
     count = data.get("aggregated_rating_count", 0) or 0
+
     if count < MIN_RATING_COUNT:
-        return None
+        if not genres and release_year is None:
+            return None
+        # Rating insuficiente mas tem gêneros/ano — retorna resultado parcial
+        return {
+            "aggregated_rating": None,
+            "aggregated_rating_count": count,
+            "genres": genres,
+            "release_year": release_year,
+        }
 
     rating = data.get("aggregated_rating")
-    genres = [g["name"] for g in data.get("genres") or []]
-
-    ts = data.get("first_release_date")
-    release_year = None
-    if ts:
-        release_year = datetime.fromtimestamp(ts, tz=UTC).year
-
     return {
         "aggregated_rating": round(rating) if rating is not None else None,
         "aggregated_rating_count": count,
@@ -141,16 +181,27 @@ def fetch_by_appid(client_id: str | None, token: str | None, appid: int) -> dict
 
 
 def fetch_by_name(client_id: str | None, token: str | None, name: str) -> dict[str, Any] | None:
-    """Busca jogo por nome. Retorna o primeiro resultado IGDB — sem validação de similaridade."""
+    """Busca jogo por nome normalizado, validando similaridade com o resultado.
+
+    Normaliza o nome antes de buscar (remove ™/® e sufixos de edição) para
+    evitar mismatches com jogos como "Assassin's Creed® IV - Gold Edition".
+    Descarta resultados com similaridade < _IGDB_MIN_SIMILARITY (jogo errado).
+    """
     if not client_id or not token:
         return None
 
-    safe_name = name.replace('"', '\\"')
+    normalized = _normalize_for_igdb(name)
+    safe = normalized.replace('"', '\\"')
     body = (
-        f"fields name,aggregated_rating,aggregated_rating_count,genres.name,first_release_date; "
-        f'search "{safe_name}"; limit 1;'
+        "fields name,aggregated_rating,aggregated_rating_count,genres.name,first_release_date; "
+        f'search "{safe}"; limit 1;'
     )
     results = _post(client_id, token, "games", body)
     if not results:
         return None
+
+    igdb_name = results[0].get("name", "")
+    if _name_similarity(normalized, igdb_name) < _IGDB_MIN_SIMILARITY:
+        return None
+
     return _parse_result(results[0])
