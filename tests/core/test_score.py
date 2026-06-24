@@ -4,6 +4,7 @@ import pytest
 
 from steam_hltb.core.score import (
     SORT_OPTIONS,
+    _fallback_score,
     compute_score,
     score_composto,
     score_hidden_gems,
@@ -42,8 +43,75 @@ def test_score_composto_redistributes_missing_source():
     assert score_composto(game, weights={"mc": 0.5, "steam": 0.5}) == pytest.approx(80.0)
 
 
-def test_score_composto_no_sources_returns_zero():
-    assert score_composto({"metacritic": None, "steam_pct": None}) == 0.0
+# --- fallback (sem dados de qualidade) ---
+
+
+def test_score_composto_no_scores_no_hours_returns_neutral():
+    """Sem MC, sem Steam%, sem horas → neutro (50) — desconhecido ≠ ruim."""
+    assert score_composto({"metacritic": None, "steam_pct": None}) == pytest.approx(50.0)
+    assert score_composto({}) == pytest.approx(50.0)
+    assert score_composto(
+        {"metacritic": None, "steam_pct": None, "main_extra": 0, "hours_played": 0}
+    ) == pytest.approx(50.0)
+
+
+def test_score_composto_no_scores_hltb_hours_above_neutral():
+    """Sem MC/Steam% mas com horas HLTB → acima de 50."""
+    assert score_composto({"main_extra": 20}) > 50.0
+
+
+def test_score_composto_no_scores_personal_hours_above_neutral():
+    """Sem MC/Steam% mas com horas pessoais → acima de 50."""
+    assert score_composto({"hours_played": 10}) > 50.0
+
+
+def test_score_composto_personal_outweighs_hltb():
+    """Horas pessoais têm peso 2× — mesmo volume em horas rende mais que HLTB."""
+    hltb_only = score_composto({"main_extra": 20, "hours_played": 0})
+    personal_only = score_composto({"main_extra": 0, "hours_played": 20})
+    assert personal_only > hltb_only
+
+
+# --- _fallback_score ---
+
+
+def test_fallback_neutral_when_no_hours():
+    assert _fallback_score({}) == pytest.approx(50.0)
+    assert _fallback_score({"main_extra": 0, "hours_played": 0}) == pytest.approx(50.0)
+
+
+def test_fallback_positive_from_hltb():
+    assert _fallback_score({"main_extra": 20}) > 50.0
+
+
+def test_fallback_positive_from_personal():
+    assert _fallback_score({"hours_played": 5}) > 50.0
+
+
+def test_fallback_personal_outweighs_hltb():
+    hltb_max = _fallback_score({"main_extra": 40, "hours_played": 0})
+    personal_max = _fallback_score({"main_extra": 0, "hours_played": 20})
+    assert personal_max > hltb_max
+
+
+def test_fallback_capped_at_60():
+    assert _fallback_score({"main_extra": 9999, "hours_played": 9999}) == pytest.approx(60.0)
+
+
+def test_fallback_always_in_range():
+    cases = [
+        {},
+        {"main_extra": 10},
+        {"hours_played": 5},
+        {"main_extra": 40, "hours_played": 20},
+        {"main_extra": 9999, "hours_played": 9999},
+    ]
+    for g in cases:
+        s = _fallback_score(g)
+        assert 50.0 <= s <= 60.0 + 1e-9, f"fora de [50,60]: {s} para {g}"
+
+
+# --- shortest ---
 
 
 def test_shortest_formula():
@@ -62,8 +130,12 @@ def test_shortest_no_hours_returns_composite():
     )
 
 
-def test_shortest_missing_both_returns_zero():
-    assert score_shortest({"metacritic": None, "steam_pct": None, "main_extra": 10}) == 0.0
+def test_shortest_no_quality_uses_fallback():
+    """Sem MC/Steam%, score_shortest usa fallback dividido pela raiz das horas."""
+    g = {"metacritic": None, "steam_pct": None, "main_extra": 10, "hours_played": 0}
+    s = score_shortest(g)
+    assert s > 0.0  # não é mais zero — fallback entra
+    assert s < 50.0  # penalizado pela duração (sqrt(10) > 1)
 
 
 def test_shortest_ultra_short_does_not_inflate():
@@ -78,6 +150,9 @@ def test_shortest_floored_below_one_hour():
     one = {"metacritic": 80, "steam_pct": 80, "main_extra": 1}
     assert score_shortest(half) == pytest.approx(80.0)
     assert score_shortest(half) == pytest.approx(score_shortest(one))
+
+
+# --- longest ---
 
 
 def test_longest_log_cap_formula():
@@ -120,6 +195,15 @@ def test_longest_smooth_below_cap():
     assert score_longest(g100) > score_longest(g25)
 
 
+def test_longest_no_quality_with_hltb_hours_uses_fallback():
+    """Sem MC/Steam% mas com HLTB: longest usa fallback × fator de duração."""
+    g = {"metacritic": None, "steam_pct": None, "main_extra": 20, "hours_played": 0}
+    assert score_longest(g) > 0.0  # fallback ativa, horas presentes
+
+
+# --- rated / loved ---
+
+
 def test_rated_direct():
     assert score_rated({"metacritic": 85}) == 85.0
     assert score_rated({"metacritic": None}) == 0.0
@@ -128,6 +212,9 @@ def test_rated_direct():
 def test_loved_direct():
     assert score_loved({"steam_pct": 92}) == 92.0
     assert score_loved({"steam_pct": None}) == 0.0
+
+
+# --- quick-wins ---
 
 
 def test_quick_wins_formula():
@@ -146,6 +233,14 @@ def test_quick_wins_below_quality_floor_returns_zero():
     """Composite < 75 = não é 'bom como um todo' → excluído do quick-wins."""
     assert score_quick_wins({"metacritic": 70, "steam_pct": 70, "main_extra": 1}) == 0.0
     assert score_quick_wins({"metacritic": 74, "steam_pct": 74, "main_extra": 1}) == 0.0
+
+
+def test_quick_wins_unscored_excluded():
+    """Sem MC/Steam%: fallback é max 60 < 75 → nunca entra em quick-wins."""
+    assert score_quick_wins({"main_extra": 5, "hours_played": 20}) == 0.0
+
+
+# --- hidden-gems ---
 
 
 def test_hidden_gems_formula():
@@ -168,6 +263,9 @@ def test_hidden_gems_low_steam_returns_zero():
     """Steam < 80% = não é muito aclamado pelos jogadores → excluído."""
     assert score_hidden_gems({"steam_pct": 79, "metacritic": 30}) == 0.0
     assert score_hidden_gems({"steam_pct": 70, "metacritic": 40}) == 0.0
+
+
+# --- compute_score dispatch ---
 
 
 def test_compute_score_dispatches_correctly():
@@ -209,18 +307,29 @@ def test_score_composto_zero_total_weight():
     assert score_composto({"metacritic": 80}, {"mc": 0.0, "steam": 0.0}) == 0.0
 
 
-# --- propriedades transversais (todo tipo de bug de pontuação) ---
+# --- propriedades transversais ---
 
-_ALL_SORTS = ["shortest", "longest", "rated", "loved", "quick-wins", "hidden-gems", "composto"]
+# Scorers que devolvem 0.0 para jogo completamente vazio (sem horas, sem qualidade)
+_ZERO_FOR_EMPTY_SORTS = ["longest", "rated", "loved", "quick-wins", "hidden-gems"]
 
 
-@pytest.mark.parametrize("sort", _ALL_SORTS)
-def test_all_scorers_return_zero_for_empty_game(sort):
-    """Sem nenhum dado, todo scorer devolve 0.0 (nunca inventa pontuação)."""
+@pytest.mark.parametrize("sort", _ZERO_FOR_EMPTY_SORTS)
+def test_scorers_return_zero_for_empty_game(sort):
+    """Sem qualquer dado, estes scorers devolvem 0.0."""
     assert compute_score({}, sort) == 0.0
 
 
-@pytest.mark.parametrize("sort", _ALL_SORTS)
+def test_composto_returns_neutral_for_empty_game():
+    """Sem qualquer dado, composto retorna neutro (50) — desconhecido ≠ ruim."""
+    assert compute_score({}, "composto") == pytest.approx(50.0)
+
+
+def test_shortest_returns_neutral_for_empty_game():
+    """Sem qualquer dado, shortest retorna neutro (50/√1 = 50)."""
+    assert compute_score({}, "shortest") == pytest.approx(50.0)
+
+
+@pytest.mark.parametrize("sort", [*_ZERO_FOR_EMPTY_SORTS, "composto", "shortest"])
 def test_all_scorers_never_negative(sort):
     g = {"metacritic": 70, "steam_pct": 60, "main_extra": 30}
     assert compute_score(g, sort) >= 0.0
@@ -251,3 +360,15 @@ def test_bounded_scorers_stay_within_0_100():
     g = {"metacritic": 100, "steam_pct": 100, "main_extra": 100000}
     for sort in ("rated", "loved", "composto", "longest", "shortest"):
         assert 0.0 <= compute_score(g, sort) <= 100.0
+
+
+def test_shortest_zero_total_weight_returns_zero():
+    """score_composto retorna 0 quando total_weight=0 → score_shortest também retorna 0."""
+    assert score_shortest({"metacritic": 80}, {"mc": 0.0, "steam": 0.0}) == 0.0
+
+
+def test_fallback_never_beats_rated_game():
+    """Jogo com qualquer score real sempre supera um jogo sem score com max fallback."""
+    rated = {"metacritic": 61, "steam_pct": 61}
+    fallback = {"main_extra": 9999, "hours_played": 9999}
+    assert score_composto(rated) > score_composto(fallback)

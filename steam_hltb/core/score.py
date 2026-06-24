@@ -12,6 +12,34 @@ SORT_OPTIONS = [
     "composto",  # média ponderada mc+steam configurável
 ]
 
+# Fallback para jogos sem dados de qualidade (sem MC e sem Steam%).
+# Usa horas como proxy: HLTB (sinal positivo) + pessoais (peso 2×).
+# Faixa [50, 60] — nunca compete com jogos bem avaliados (que chegam a 100).
+_FALLBACK_NEUTRAL = 50.0
+_FALLBACK_MAX = 60.0
+_FALLBACK_HLTB_CAP_H = 40.0  # saturação: 40h de HLTB = máximo sinal HLTB
+_FALLBACK_PERSONAL_CAP_H = 20.0  # saturação: 20h pessoais = máximo sinal pessoal
+_FALLBACK_PERSONAL_WEIGHT = 2.0  # horas pessoais valem o dobro das do HLTB
+
+
+def _fallback_score(game: Game) -> float:
+    """Score proxy quando não há dados de qualidade (MC nem Steam%).
+
+    Sem nenhuma hora → neutro (50, desconhecido).
+    Com horas HLTB ou pessoais → acima de 50 (sinal positivo).
+    Horas pessoais têm peso 2× em relação às do HLTB.
+    Teto 60 — jogo bem avaliado sempre ganha.
+    """
+    hltb_h = float(game.get("main_extra") or 0)
+    personal_h = float(game.get("hours_played") or 0)
+    if hltb_h == 0 and personal_h == 0:
+        return _FALLBACK_NEUTRAL
+    hltb_sig = min(hltb_h / _FALLBACK_HLTB_CAP_H, 1.0)
+    personal_sig = min(personal_h / _FALLBACK_PERSONAL_CAP_H, 1.0)
+    w_total = 1.0 + _FALLBACK_PERSONAL_WEIGHT
+    weighted = (hltb_sig + _FALLBACK_PERSONAL_WEIGHT * personal_sig) / w_total
+    return _FALLBACK_NEUTRAL + weighted * (_FALLBACK_MAX - _FALLBACK_NEUTRAL)
+
 
 def score_composto(game: Game, weights: dict[str, float] | None = None) -> float:
     if weights is None:
@@ -24,7 +52,7 @@ def score_composto(game: Game, weights: dict[str, float] | None = None) -> float
     if steam is not None:
         sources["steam"] = steam
     if not sources:
-        return 0.0
+        return _fallback_score(game)
     total_weight = sum(weights.get(k, 0) for k in sources)
     if total_weight == 0:
         return 0.0
