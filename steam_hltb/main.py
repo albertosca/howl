@@ -62,7 +62,7 @@ def main() -> None:
         from .sources.fetch import migrate_steam_details
 
         print("⚠  Isso pode demorar 15-30 min. Ctrl+C para interromper (progresso salvo).")
-        migrate_steam_details(load_cache(), verbose=True)
+        migrate_steam_details(load_cache(), verbose=args.verbose)
         print("Migração concluída.")
         return
 
@@ -70,7 +70,7 @@ def main() -> None:
         from .sources.fetch import migrate_igdb_data
 
         cache = load_cache()
-        migrate_igdb_data(cache, verbose=True)
+        migrate_igdb_data(cache, verbose=args.verbose)
         print("Migração IGDB concluída.")
         return
 

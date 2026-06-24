@@ -122,7 +122,7 @@ def test_main_dispatch_migrate_cache(monkeypatch):
     monkeypatch.setattr("steam_hltb.main.load_cache", lambda: {})
     monkeypatch.setattr(
         "steam_hltb.sources.fetch.migrate_steam_details",
-        lambda c, verbose=True: called.append("mc"),
+        lambda c, verbose=False: called.append("mc"),
     )
     _call_main(monkeypatch, ["--migrate-cache"])
     assert called == ["mc"]
@@ -132,7 +132,7 @@ def test_main_dispatch_migrate_igdb(monkeypatch):
     called = []
     monkeypatch.setattr("steam_hltb.main.load_cache", lambda: {})
     monkeypatch.setattr(
-        "steam_hltb.sources.fetch.migrate_igdb_data", lambda c, verbose=True: called.append("ig")
+        "steam_hltb.sources.fetch.migrate_igdb_data", lambda c, verbose=False: called.append("ig")
     )
     _call_main(monkeypatch, ["--migrate-igdb"])
     assert called == ["ig"]

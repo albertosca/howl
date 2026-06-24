@@ -43,7 +43,6 @@ _IGDB_MIN_SIMILARITY = 0.6  # abaixo disso o resultado é um jogo diferente
 
 
 def _load_token() -> dict[str, Any] | None:
-    """Lê ~/.config/howl/.igdb_token.json se existir."""
     token_file = paths.token_path()
     if not token_file.exists():
         return None
@@ -53,14 +52,12 @@ def _load_token() -> dict[str, Any] | None:
 
 
 def _save_token(access_token: str, expires_at: float) -> None:
-    """Salva token em ~/.config/howl/.igdb_token.json."""
     paths.ensure_config_dir()
     with paths.token_path().open("w") as f:
         json.dump({"access_token": access_token, "expires_at": expires_at}, f)
 
 
 def _refresh_token(client_id: str, client_secret: str) -> tuple[str, float]:
-    """Obtém novo token via Twitch client_credentials, salva e retorna (token, expires_at)."""
     resp = requests.post(
         TWITCH_URL,
         params={
@@ -79,12 +76,6 @@ def _refresh_token(client_id: str, client_secret: str) -> tuple[str, float]:
 
 
 def get_token(client_id: str | None, client_secret: str | None) -> str | None:
-    """
-    Retorna token válido para a API IGDB.
-    - Se client_id/secret ausentes: retorna None
-    - Se token em cache e não expirado: usa cache
-    - Caso contrário: chama _refresh_token
-    """
     if not client_id or not client_secret:
         return None
 
@@ -103,12 +94,8 @@ def get_token(client_id: str | None, client_secret: str | None) -> str | None:
 
 
 def _normalize_for_igdb(name: str) -> str:
-    """Remove ™/® e sufixos de edição/DLC para busca mais precisa no IGDB.
-
-    Dois passes: separador explícito (-–:) e keywords soltas sem separador.
-    Ex: "Assassin's Creed® IV Black Flag - Gold Edition" → "Assassin's Creed IV Black Flag"
-    Ex: "Borderlands GOTY Enhanced" → "Borderlands"
-    """
+    # "Assassin's Creed® IV - Gold Edition" → "Assassin's Creed IV"
+    # "Borderlands GOTY Enhanced" → "Borderlands"
     name = _TRADEMARK_RE.sub("", name)
     name = _EDITION_RE.sub("", name)
     name = _STANDALONE_EDITION_RE.sub("", name)
@@ -116,7 +103,6 @@ def _normalize_for_igdb(name: str) -> str:
 
 
 def _name_similarity(a: str, b: str) -> float:
-    """Similaridade de sequência entre dois nomes (case-insensitive), em [0, 1]."""
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
@@ -126,7 +112,6 @@ def _name_similarity(a: str, b: str) -> float:
 
 
 def _post(client_id: str, token: str, endpoint: str, body: str) -> list[dict[str, Any]]:
-    """Faz POST na API IGDB e retorna lista de resultados."""
     resp = requests.post(
         f"{IGDB_API}/{endpoint}",
         headers={
@@ -144,12 +129,7 @@ def _post(client_id: str, token: str, endpoint: str, body: str) -> list[dict[str
 
 
 def _parse_result(data: dict[str, Any]) -> dict[str, Any] | None:
-    """Extrai rating/genres/release_year do resultado IGDB.
-
-    Se aggregated_rating_count < MIN_RATING_COUNT, ainda salva gêneros e ano
-    (quando disponíveis) — só omite o rating, que seria pouco confiável.
-    Retorna None apenas quando não há absolutamente nada útil.
-    """
+    # Com count < MIN_RATING_COUNT, ainda salva gêneros/ano — rating seria pouco confiável.
     genres = [g["name"] for g in data.get("genres") or []]
     ts = data.get("first_release_date")
     release_year: int | None = datetime.fromtimestamp(ts, tz=UTC).year if ts else None
@@ -178,7 +158,7 @@ def _parse_result(data: dict[str, Any]) -> dict[str, Any] | None:
 def fetch_by_appid(
     client_id: str | None, token: str | None, appid: int, *, verbose: bool = False
 ) -> dict[str, Any] | None:
-    """Busca jogo no IGDB pelo Steam appid (external_games.category = 1)."""
+    # external_games.category = 1 é o código Steam na API do IGDB.
     if not client_id or not token:
         return None
 
@@ -209,12 +189,6 @@ def fetch_by_appid(
 def fetch_by_name(
     client_id: str | None, token: str | None, name: str, *, verbose: bool = False
 ) -> dict[str, Any] | None:
-    """Busca jogo por nome normalizado, validando similaridade com o resultado.
-
-    Normaliza o nome antes de buscar (remove ™/® e sufixos de edição) para
-    evitar mismatches com jogos como "Assassin's Creed® IV - Gold Edition".
-    Descarta resultados com similaridade < _IGDB_MIN_SIMILARITY (jogo errado).
-    """
     if not client_id or not token:
         return None
 
