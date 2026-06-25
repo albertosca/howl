@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "howl-cli"
+name = "howl-steam-backlog"
 version = "0.2.0"
 description = "HOWL — Hoard Optimizer, What to Launch. Ranks your Steam backlog by quality × playtime."
 readme = "README.md"

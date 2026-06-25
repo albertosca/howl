@@ -1,25 +1,28 @@
-# Publicação no PyPI — howl-cli
+# Publicação no PyPI — howl-steam-backlog
 
-## Status
+## Status (atualizado 2026-06-25, commit 525d5eb)
 
-- [ ] pyproject.toml completo
-- [ ] LICENSE criado
+- [x] pyproject.toml completo (`howl-steam-backlog`, v0.2.0, MIT SPDX, authors, classifiers, urls)
+- [x] LICENSE criado (MIT)
+- [x] workflow publish.yml criado (Trusted Publisher OIDC)
+- [x] READMEs atualizados (badge PyPI + pip/pipx install)
+- [ ] Conta PyPI + 2FA criada
 - [ ] Trusted Publisher configurado no PyPI
-- [ ] workflow publish.yml criado
-- [ ] primeira release publicada
+- [ ] Environment `pypi` criado no GitHub
+- [ ] Release v0.2.0 publicada no GitHub
 
 ---
 
 ## 1. Nome do pacote
 
-`howl` está tomado no PyPI. Nome escolhido: **`howl-cli`**.
+`howl` está tomado no PyPI. Nome escolhido: **`howl-steam-backlog`**.
 
 O comando instalado continua `howl` (definido em `[project.scripts]`).
-Ou seja: `pip install howl-cli` → `howl` no terminal.
+Ou seja: `pip install howl-steam-backlog` → `howl` no terminal.
 
 Verificar disponibilidade antes de prosseguir:
 ```bash
-pip index versions howl-cli 2>&1 | head -3
+pip index versions howl-steam-backlog 2>&1 | head -3
 # "ERROR: No matching distribution" = disponível
 ```
 
@@ -31,7 +34,7 @@ Adicionar ao bloco `[project]`:
 
 ```toml
 [project]
-name = "howl-cli"
+name = "howl-steam-backlog"
 version = "0.2.0"
 description = "HOWL — ranks your Steam backlog by quality × playtime."
 readme = "README.md"
@@ -102,7 +105,7 @@ Trusted Publisher permite que o GitHub Actions publique no PyPI via OIDC — sem
 2. Ativar 2FA (obrigatório para publicar)
 3. Ir em **Account Settings → Publishing → Add a new pending publisher**
 4. Preencher:
-   - PyPI project name: `howl-cli`
+   - PyPI project name: `howl-steam-backlog`
    - GitHub repo owner: `albertosca`
    - GitHub repo name: `howl`
    - Workflow filename: `publish.yml`
@@ -177,7 +180,7 @@ Versão atual do código: `0.1.0` → próxima release: `0.2.0` (várias feature
 ## 7. Checklist de publicação — primeira vez
 
 ```
-[ ] pip index versions howl-cli  → confirmar nome disponível
+[ ] pip index versions howl-steam-backlog  → confirmar nome disponível
 [ ] Atualizar pyproject.toml (name, version, authors, license, readme, classifiers, urls)
 [ ] Criar LICENSE
 [ ] Criar .github/workflows/publish.yml
@@ -186,7 +189,7 @@ Versão atual do código: `0.1.0` → próxima release: `0.2.0` (várias feature
 [ ] Configurar Trusted Publisher no PyPI (pending publisher)
 [ ] Criar environment "pypi" no GitHub
 [ ] Criar release v0.2.0 no GitHub → workflow publica automaticamente
-[ ] Verificar: pip install howl-cli && howl --help
+[ ] Verificar: pip install howl-steam-backlog && howl --help
 ```
 
 ---
@@ -194,13 +197,13 @@ Versão atual do código: `0.1.0` → próxima release: `0.2.0` (várias feature
 ## 8. Instalação para usuários (após publicar)
 
 ```bash
-pip install howl-cli
+pip install howl-steam-backlog
 howl --help
 ```
 
 Ou via pipx (recomendado para CLIs):
 ```bash
-pipx install howl-cli
+pipx install howl-steam-backlog
 howl --help
 ```
 
@@ -208,8 +211,8 @@ howl --help
 
 ## 9. Divulgação
 
-- README.md: adicionar badge `[![PyPI](https://img.shields.io/pypi/v/howl-cli)](https://pypi.org/project/howl-cli/)`
-- README.md: substituir `pip install git+https://github.com/albertosca/howl.git` por `pip install howl-cli`
+- README.md: adicionar badge `[![PyPI](https://img.shields.io/pypi/v/howl-steam-backlog)](https://pypi.org/project/howl-steam-backlog/)`
+- README.md: substituir `pip install git+https://github.com/albertosca/howl.git` por `pip install howl-steam-backlog`
 - README.pt-BR.md: idem
 
 Homebrew tap: esforço alto, vale só se a base de usuários crescer. Deixar para depois.

@@ -5,7 +5,7 @@
 **Hoard Optimizer, What to Launch**
 
 [![CI](https://github.com/albertosca/howl/actions/workflows/ci.yml/badge.svg)](https://github.com/albertosca/howl/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/howl-cli)](https://pypi.org/project/howl-cli/)
+[![PyPI](https://img.shields.io/pypi/v/howl-steam-backlog)](https://pypi.org/project/howl-steam-backlog/)
 ![Coverage](.github/badges/coverage.svg)
 ![Ruff](.github/badges/ruff.svg)
 
@@ -35,13 +35,13 @@ Ranks your Steam library by quality × time invested using data from [HowLongToB
 ## Installation
 
 ```bash
-pip install howl-cli
+pip install howl-steam-backlog
 ```
 
 Or with [pipx](https://pipx.pypa.io/) (recommended for CLI tools — isolated environment):
 
 ```bash
-pipx install howl-cli
+pipx install howl-steam-backlog
 ```
 
 **For development:**
