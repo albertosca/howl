@@ -5,6 +5,7 @@
 **Hoard Optimizer, What to Launch**
 
 [![CI](https://github.com/albertosca/howl/actions/workflows/ci.yml/badge.svg)](https://github.com/albertosca/howl/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/howl-cli)](https://pypi.org/project/howl-cli/)
 ![Coverage](.github/badges/coverage.svg)
 ![Ruff](.github/badges/ruff.svg)
 
@@ -34,6 +35,18 @@ Ranks your Steam library by quality × time invested using data from [HowLongToB
 ## Installation
 
 ```bash
+pip install howl-cli
+```
+
+Or with [pipx](https://pipx.pypa.io/) (recommended for CLI tools — isolated environment):
+
+```bash
+pipx install howl-cli
+```
+
+**For development:**
+
+```bash
 git clone https://github.com/albertosca/howl.git
 cd howl
 python -m venv venv
@@ -41,7 +54,7 @@ source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-After installing, the `howl` command becomes available in the environment:
+After installing, the `howl` command becomes available:
 
 ```bash
 howl --help
