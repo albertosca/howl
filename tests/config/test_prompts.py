@@ -91,7 +91,7 @@ def test_validate_api_key_verbose_prints(capsys):
 def test_validate_api_key_verbose_network_error(capsys):
     with patch("requests.get", side_effect=Exception("x")):
         assert prompts._validate_api_key("k", verbose=True) is False
-    assert "erro de rede" in capsys.readouterr().out
+    assert "network error" in capsys.readouterr().out
 
 
 def test_validate_username_verbose_prints(capsys):
@@ -105,7 +105,7 @@ def test_validate_username_verbose_prints(capsys):
 def test_validate_username_verbose_network_error(capsys):
     with patch("requests.get", side_effect=Exception("x")):
         assert prompts._validate_username("k", "u", verbose=True) is None
-    assert "erro de rede" in capsys.readouterr().out
+    assert "network error" in capsys.readouterr().out
 
 
 # --- _prompt_api_key ---

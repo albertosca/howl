@@ -3,32 +3,32 @@ import math
 from .types import Game
 
 SORT_OPTIONS = [
-    "shortest",  # curto, qualidade ajuda: composite / √h
-    "longest",  # longo, qualidade ajuda: composite × √h / 10
-    "rated",  # Metacritic puro
-    "loved",  # Steam % positivo puro
-    "quick-wins",  # jogo bom (≥75 composite) e curto: composite / (1 + h/5)
-    "hidden-gems",  # muito amado pelos players (≥80% steam), ignorado pela crítica
-    "composto",  # média ponderada mc+steam configurável
+    "shortest",  # short, quality helps: composite / √h
+    "longest",  # long, quality helps: composite × √h / 10
+    "rated",  # pure Metacritic
+    "loved",  # pure Steam % positive
+    "quick-wins",  # good game (≥75 composite) and short: composite / (1 + h/5)
+    "hidden-gems",  # loved by players (≥80% steam), ignored by critics
+    "composto",  # configurable weighted average mc+steam
 ]
 
-# Fallback para jogos sem dados de qualidade (sem MC e sem Steam%).
-# Usa horas como proxy: HLTB (sinal positivo) + pessoais (peso 2×).
-# Faixa [50, 60] — nunca compete com jogos bem avaliados (que chegam a 100).
+# Fallback for games with no quality data (no MC and no Steam%).
+# Uses hours as proxy: HLTB (positive signal) + personal (weight 2×).
+# Range [50, 60] — never competes with well-rated games (which reach 100).
 _FALLBACK_NEUTRAL = 50.0
 _FALLBACK_MAX = 60.0
-_FALLBACK_HLTB_CAP_H = 40.0  # saturação: 40h de HLTB = máximo sinal HLTB
-_FALLBACK_PERSONAL_CAP_H = 20.0  # saturação: 20h pessoais = máximo sinal pessoal
-_FALLBACK_PERSONAL_WEIGHT = 2.0  # horas pessoais valem o dobro das do HLTB
+_FALLBACK_HLTB_CAP_H = 40.0  # saturation: 40h HLTB = max HLTB signal
+_FALLBACK_PERSONAL_CAP_H = 20.0  # saturation: 20h personal = max personal signal
+_FALLBACK_PERSONAL_WEIGHT = 2.0  # personal hours count double vs HLTB hours
 
 
 def _fallback_score(game: Game) -> float:
-    """Score proxy quando não há dados de qualidade (MC nem Steam%).
+    """Proxy score when no quality data (no MC or Steam%).
 
-    Sem nenhuma hora → neutro (50, desconhecido).
-    Com horas HLTB ou pessoais → acima de 50 (sinal positivo).
-    Horas pessoais têm peso 2× em relação às do HLTB.
-    Teto 60 — jogo bem avaliado sempre ganha.
+    No hours at all → neutral (50, unknown).
+    With HLTB or personal hours → above 50 (positive signal).
+    Personal hours have 2× weight relative to HLTB hours.
+    Ceiling 60 — a well-rated game always wins.
     """
     hltb_h = float(game.get("main_extra") or 0)
     personal_h = float(game.get("hours_played") or 0)
@@ -59,15 +59,15 @@ def score_composto(game: Game, weights: dict[str, float] | None = None) -> float
     return float(sum(sources[k] * weights.get(k, 0) / total_weight for k in sources))
 
 
-SHORTEST_HOURS_FLOOR = 1.0  # abaixo disso é "muito curto"; não infla além do composite
+SHORTEST_HOURS_FLOOR = 1.0  # below this is "very short"; doesn't inflate beyond composite
 
 
 def score_shortest(game: Game, weights: dict[str, float] | None = None) -> float:
-    """Bons jogos mais curtos: composite / √max(horas, 1).
+    """Good and short games: composite / √max(hours, 1).
 
-    O piso de 1h evita que jogos curtíssimos (ex: 0.25h) estourem o composite
-    (sem ele, 90/√0.25 = 180). Score ≤ composite. Sem duração também rende
-    o composite cheio (sem penalidade de tempo)."""
+    The 1h floor prevents ultra-short games (e.g. 0.25h) from blowing up composite
+    (without it, 90/√0.25 = 180). Score ≤ composite. No duration also yields
+    the full composite (no time penalty)."""
     score = score_composto(game, weights)
     if score == 0:
         return 0.0
@@ -75,15 +75,15 @@ def score_shortest(game: Game, weights: dict[str, float] | None = None) -> float
     return score / math.sqrt(max(float(hours), SHORTEST_HOURS_FLOOR))
 
 
-LONGEST_HOURS_CAP = 100.0  # acima disso é "muito longo"; horas extras não inflam o score
+LONGEST_HOURS_CAP = 100.0  # above this is "very long"; extra hours don't inflate the score
 
 
 def score_longest(game: Game, weights: dict[str, float] | None = None) -> float:
-    """Jogos mais longos, curva log com teto: composite × ln(1+min(h,cap)) / ln(1+cap).
+    """Longer games, log curve with cap: composite × ln(1+min(h,cap)) / ln(1+cap).
 
-    Cresce suave com a duração até `cap` (100h) e satura depois — então jogos
-    endless/grind com horas absurdas do HLTB (ex: MOBAs com 1000h+) não dominam,
-    e entre os longos a qualidade desempata. Score ≤ composite. Sem duração = 0.
+    Grows smoothly with duration up to `cap` (100h) then saturates — so
+    endless/grind games with absurd HLTB hours (e.g. MOBAs at 1000h+) don't
+    dominate, and quality breaks ties among long games. Score ≤ composite. No duration = 0.
     """
     score = score_composto(game, weights)
     hours = game.get("main_extra")
@@ -94,17 +94,17 @@ def score_longest(game: Game, weights: dict[str, float] | None = None) -> float:
 
 
 def score_rated(game: Game) -> float:
-    """Mais aclamados pela crítica: Metacritic puro."""
+    """Most critically acclaimed: pure Metacritic."""
     return float(game.get("metacritic") or 0)
 
 
 def score_loved(game: Game) -> float:
-    """Mais amados pelos jogadores: Steam % positivo."""
+    """Most loved by players: pure Steam % positive."""
     return float(game.get("steam_pct") or 0)
 
 
 def score_quick_wins(game: Game, weights: dict[str, float] | None = None) -> float:
-    """Jogo bom (composite ≥ 75) e curto: composite / (1 + horas/5). Sem dado = excluído."""
+    """Good game (composite ≥ 75) and short: composite / (1 + hours/5). No data = excluded."""
     score = score_composto(game, weights)
     hours = game.get("main_extra")
     if not score or not hours or score < 75:
@@ -113,8 +113,8 @@ def score_quick_wins(game: Game, weights: dict[str, float] | None = None) -> flo
 
 
 def score_hidden_gems(game: Game) -> float:
-    """Muito amado pelos players (≥80% steam), ignorado pela crítica: steam × (1 - mc/100).
-    Sem MC = dado ausente → excluído. Steam < 80% = não é muito aclamado → excluído."""
+    """Loved by players (≥80% steam), ignored by critics: steam × (1 - mc/100).
+    No MC = missing data → excluded. Steam < 80% = not widely loved → excluded."""
     steam = game.get("steam_pct")
     mc = game.get("metacritic")
     if steam is None or mc is None or steam < 80:

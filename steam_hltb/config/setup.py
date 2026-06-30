@@ -13,11 +13,11 @@ from .paths import (
 )
 from .prompts import _prompt_api_key, _prompt_username, _prompt_vdf_path
 
-# --- caminhos de configuração: ver steam_hltb/paths.py ---
+# --- config paths: see steam_hltb/config/paths.py ---
 
 
 def _log_error(msg: str) -> None:
-    """Grava uma entrada no setup.log. Logging nunca deve quebrar o setup."""
+    """Appends an entry to setup.log. Logging must never break setup."""
     try:
         ensure_config_dir()
         with _log_path().open("a") as f:
@@ -39,10 +39,10 @@ def _read_env_file(path: Path) -> dict[str, str]:
 
 
 def _write_env(env_vars: dict[str, str], confirm_overwrite: bool = True) -> Path:
-    """Escreve as variáveis em ~/.config/howl/.env (dir 0700, arquivo 0600).
+    """Writes variables to ~/.config/howl/.env (dir 0700, file 0600).
 
-    Se confirm_overwrite e já houver valores diferentes para alguma chave,
-    pergunta antes de sobrescrever; ao recusar, mantém os valores existentes.
+    If confirm_overwrite and any key already has a different value,
+    asks before overwriting; on refusal, keeps the existing values.
     """
     env_vars = dict(env_vars)
     env_path = _config_path()
@@ -52,12 +52,12 @@ def _write_env(env_vars: dict[str, str], confirm_overwrite: bool = True) -> Path
     if confirm_overwrite:
         clobbered = [k for k in env_vars if k in existing and existing[k] != env_vars[k]]
         if clobbered:
-            print(f"\n  {env_path} já tem valores para: {', '.join(clobbered)}")
-            choice = input("  Sobrescrever esses valores? [s/N] ").strip().lower()
+            print(f"\n  {env_path} already has values for: {', '.join(clobbered)}")
+            choice = input("  Overwrite these values? [y/N] ").strip().lower()
             if choice not in ("s", "sim", "y", "yes"):
                 for k in clobbered:
                     env_vars[k] = existing[k]
-                print("  Mantendo os valores existentes.")
+                print("  Keeping existing values.")
 
     existing.update(env_vars)
     env_path.write_text("".join(f"{k}={v}\n" for k, v in existing.items()))
@@ -66,21 +66,21 @@ def _write_env(env_vars: dict[str, str], confirm_overwrite: bool = True) -> Path
 
 
 def _maybe_migrate_legacy_env() -> None:
-    """Se houver ./.env no cwd mas ainda não ~/.config/howl/.env, oferece migrar."""
+    """If ./.env exists in cwd but ~/.config/howl/.env does not, offers to migrate."""
     legacy = Path.cwd() / ".env"
     target = _config_path()
     if not legacy.exists() or target.exists():
         return
-    print(f"\n  Encontrei um .env legado em {legacy}")
-    print(f"  A partir de agora o howl lê de {target}.")
-    choice = input("  Migrar para lá agora? [S/n] ").strip().lower()
-    if choice in ("n", "não", "nao"):
+    print(f"\n  Found a legacy .env at {legacy}")
+    print(f"  From now on howl reads from {target}.")
+    choice = input("  Migrate there now? [Y/n] ").strip().lower()
+    if choice in ("n", "não", "nao", "no"):
         return
     ensure_config_dir()
     target.write_text(legacy.read_text())
     target.chmod(0o600)
-    print(f"  Migrado para {target}")
-    print(f"  Pode remover o antigo quando quiser: rm {legacy}")
+    print(f"  Migrated to {target}")
+    print(f"  You can remove the old one whenever: rm {legacy}")
 
 
 def _run_setup_inner(verbose: bool = False) -> None:
@@ -99,11 +99,11 @@ def _run_setup_inner(verbose: bool = False) -> None:
     if vdf_path:
         config["STEAM_VDF_PATH"] = vdf_path
 
-    print("\n  IGDB (opcional — scores para jogos delisted/sem Metacritic):")
-    print("  1. Acesse https://dev.twitch.tv/console e crie um app")
+    print("\n  IGDB (optional — scores for delisted/Metacritic-less games):")
+    print("  1. Go to https://dev.twitch.tv/console and create an app")
     print("  2. Category: Website Integration, OAuth Redirect URL: http://localhost")
-    print("  3. Copie o Client ID e gere um Client Secret")
-    setup_igdb = input("  Configurar IGDB agora? [s/N] ").strip().lower()
+    print("  3. Copy the Client ID and generate a Client Secret")
+    setup_igdb = input("  Configure IGDB now? [y/N] ").strip().lower()
     if setup_igdb in ("s", "sim", "y", "yes"):
         igdb_client_id = input("  IGDB Client ID: ").strip()
         igdb_client_secret = input("  IGDB Client Secret: ").strip()
@@ -111,24 +111,24 @@ def _run_setup_inner(verbose: bool = False) -> None:
             config["IGDB_CLIENT_ID"] = igdb_client_id
             config["IGDB_CLIENT_SECRET"] = igdb_client_secret
 
-    print("\n--- Resumo ---")
+    print("\n--- Summary ---")
     for k, v in config.items():
         display = f"***{v[-4:]}" if "KEY" in k else v
         print(f"  {k}={display}")
 
     env_path = _write_env(config)
-    print(f"\n  Salvo em {env_path}")
-    print("\nSetup concluído! Rode 'howl' para começar.\n")
+    print(f"\n  Saved to {env_path}")
+    print("\nSetup complete! Run 'howl' to get started.\n")
 
 
 def run_setup(verbose: bool = False) -> None:
     try:
         _run_setup_inner(verbose=verbose)
     except (KeyboardInterrupt, EOFError):
-        print("\n\n  Setup cancelado.")
+        print("\n\n  Setup cancelled.")
     except Exception as exc:
         _log_error(traceback.format_exc())
-        print(f"\n  Erro inesperado durante o setup: {exc}")
-        print(f"  Detalhes registrados em {_log_path()}")
+        print(f"\n  Unexpected error during setup: {exc}")
+        print(f"  Details logged to {_log_path()}")
         if verbose:
             traceback.print_exc()

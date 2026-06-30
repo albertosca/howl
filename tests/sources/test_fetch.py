@@ -493,7 +493,7 @@ def test_migrate_steam_details_verbose_prints_progress(capsys, monkeypatch):
     migrate_steam_details(cache, verbose=True)
     out = capsys.readouterr().out
     assert "Half-Life 2" in out
-    assert "Migrando" in out or "incompletas" in out
+    assert "Migrating" in out or "incomplete" in out
 
 
 def test_build_library_verbose_false_silent_for_new_games(capsys, monkeypatch):
@@ -694,7 +694,7 @@ def test_migrate_igdb_verbose_no_credentials(capsys, monkeypatch):
     monkeypatch.delenv("IGDB_CLIENT_ID", raising=False)
     monkeypatch.delenv("IGDB_CLIENT_SECRET", raising=False)
     migrate_igdb_data({}, verbose=True)
-    assert "pulando" in capsys.readouterr().out
+    assert "skipping" in capsys.readouterr().out
 
 
 def test_migrate_igdb_verbose_token_failure(capsys, monkeypatch):
@@ -702,7 +702,7 @@ def test_migrate_igdb_verbose_token_failure(capsys, monkeypatch):
 
     monkeypatch.setattr(fetch.igdb, "get_token", lambda cid, cs: None)
     fetch.migrate_igdb_data({}, client_id="x", client_secret="y", verbose=True)
-    assert "Falha ao obter token" in capsys.readouterr().out
+    assert "Failed to get IGDB token" in capsys.readouterr().out
 
 
 def test_migrate_igdb_verbose_found(capsys, tmp_path, monkeypatch):
@@ -717,7 +717,7 @@ def test_migrate_igdb_verbose_found(capsys, tmp_path, monkeypatch):
     cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
     fetch.migrate_igdb_data(cache, client_id="x", client_secret="y", verbose=True)
     out = capsys.readouterr().out
-    assert "Buscando dados IGDB" in out
+    assert "Fetching IGDB data" in out
     assert "88" in out
     assert cache["G"]["igdb"]["aggregated_rating"] == 88
 
@@ -732,11 +732,11 @@ def test_migrate_igdb_verbose_not_found(capsys, tmp_path, monkeypatch):
     monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
     cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
     fetch.migrate_igdb_data(cache, client_id="x", client_secret="y", verbose=True)
-    assert "não encontrado" in capsys.readouterr().out
+    assert "not found" in capsys.readouterr().out
 
 
 def test_migrate_igdb_verbose_partial(capsys, tmp_path, monkeypatch):
-    """Resultado parcial (genres/ano mas sem rating) aparece como '~ parcial' no log."""
+    """Partial result (genres/year but no rating) appears as '~ partial' in the log."""
     monkeypatch.chdir(tmp_path)
     from steam_hltb.sources import fetch
 
@@ -752,7 +752,7 @@ def test_migrate_igdb_verbose_partial(capsys, tmp_path, monkeypatch):
     cache = {"G": {"steam": {"appid": 5, "metacritic": None}}}
     fetch.migrate_igdb_data(cache, client_id="x", client_secret="y", verbose=True)
     out = capsys.readouterr().out
-    assert "parcial" in out
+    assert "partial" in out
     assert "Adventure" in out
     assert cache["G"]["igdb"]["aggregated_rating"] is None
 

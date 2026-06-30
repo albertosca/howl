@@ -1,4 +1,4 @@
-"""Client IGDB com OAuth automático via Twitch client_credentials."""
+"""IGDB client with automatic OAuth via Twitch client_credentials."""
 
 import json
 import re
@@ -15,26 +15,26 @@ from ..config import paths
 IGDB_API = "https://api.igdb.com/v4"
 TWITCH_URL = "https://id.twitch.tv/oauth2/token"
 MIN_RATING_COUNT = 3
-HTTP_TIMEOUT = 15  # segundos — evita travar indefinidamente se a API pendurar
-_TOKEN_EXPIRY_MARGIN_S = 60  # renova o token 60s antes de expirar (folga de relógio)
+HTTP_TIMEOUT = 15  # seconds — prevents hanging indefinitely if the API stalls
+_TOKEN_EXPIRY_MARGIN_S = 60  # renews token 60s before expiry (clock skew buffer)
 
-# Sufixos após separador (-–:) que indicam edição especial/DLC.
-# (?:the\s+)? cobre "The Definitive Edition", "The Complete Edition", etc.
+# Edition suffixes after a separator (-–:) indicating special edition/DLC.
+# (?:the\s+)? covers "The Definitive Edition", "The Complete Edition", etc.
 _EDITION_RE = re.compile(
     r"\s*[-–:]\s*(?:the\s+)?(?:gold|deluxe|complete|goty|game of the year|enhanced|"
     r"definitive|ultimate|special|premium|season pass|anniversary|director'?s cut|"
     r"legendary|commander|titans?|remaster(?:ed)?|censored)(?:\s+(?:edition|version))?\s*$",
     re.IGNORECASE,
 )
-# Palavras-chave de edição coladas ao nome sem separador: "Borderlands GOTY Enhanced".
-# Aplicado após _EDITION_RE; aceita múltiplas keywords em sequência.
+# Edition keywords attached to the name without a separator: "Borderlands GOTY Enhanced".
+# Applied after _EDITION_RE; accepts multiple keywords in sequence.
 _STANDALONE_EDITION_RE = re.compile(
     r"(?:\s+(?:goty|enhanced|remastered?|deluxe|ultimate|gold|complete|"
     r"definitive|special|anniversary|legendary))+\s*$",
     re.IGNORECASE,
 )
 _TRADEMARK_RE = re.compile(r"[™®©]")
-_IGDB_MIN_SIMILARITY = 0.6  # abaixo disso o resultado é um jogo diferente
+_IGDB_MIN_SIMILARITY = 0.6  # below this the result is a different game
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ def _post(client_id: str, token: str, endpoint: str, body: str) -> list[dict[str
 
 
 def _parse_result(data: dict[str, Any]) -> dict[str, Any] | None:
-    # Com count < MIN_RATING_COUNT, ainda salva gêneros/ano — rating seria pouco confiável.
+    # With count < MIN_RATING_COUNT, still saves genres/year — rating would be unreliable.
     genres = [g["name"] for g in data.get("genres") or []]
     ts = data.get("first_release_date")
     release_year: int | None = datetime.fromtimestamp(ts, tz=UTC).year if ts else None
@@ -138,7 +138,7 @@ def _parse_result(data: dict[str, Any]) -> dict[str, Any] | None:
     if count < MIN_RATING_COUNT:
         if not genres and release_year is None:
             return None
-        # Rating insuficiente mas tem gêneros/ano — retorna resultado parcial
+        # Insufficient rating but has genres/year — return partial result
         return {
             "aggregated_rating": None,
             "aggregated_rating_count": count,
@@ -158,7 +158,7 @@ def _parse_result(data: dict[str, Any]) -> dict[str, Any] | None:
 def fetch_by_appid(
     client_id: str | None, token: str | None, appid: int, *, verbose: bool = False
 ) -> dict[str, Any] | None:
-    # external_games.category = 1 é o código Steam na API do IGDB.
+    # external_games.category = 1 is the Steam platform code in the IGDB API.
     if not client_id or not token:
         return None
 
@@ -169,7 +169,7 @@ def fetch_by_appid(
     results = _post(client_id, token, "games", body)
     if not results:
         if verbose:
-            print(f"    appid {appid}: não encontrado no IGDB", file=sys.stderr)
+            print(f"    appid {appid}: not found on IGDB", file=sys.stderr)
         return None
     igdb_name = results[0].get("name", "")
     result = _parse_result(results[0])
@@ -177,8 +177,8 @@ def fetch_by_appid(
         count = results[0].get("aggregated_rating_count", 0) or 0
         if result is None:
             print(
-                f"    appid {appid}: '{igdb_name}' encontrado mas descartado"
-                f" (count={count} < {MIN_RATING_COUNT}, sem gêneros/ano)",
+                f"    appid {appid}: '{igdb_name}' found but discarded"
+                f" (count={count} < {MIN_RATING_COUNT}, no genres/year)",
                 file=sys.stderr,
             )
         else:
@@ -201,7 +201,7 @@ def fetch_by_name(
     results = _post(client_id, token, "games", body)
     if not results:
         if verbose:
-            print(f"    nome '{normalized}': sem resultados na API", file=sys.stderr)
+            print(f"    name '{normalized}': no results from API", file=sys.stderr)
         return None
 
     igdb_name = results[0].get("name", "")
@@ -209,8 +209,8 @@ def fetch_by_name(
     if sim < _IGDB_MIN_SIMILARITY:
         if verbose:
             print(
-                f"    nome '{normalized}': API retornou '{igdb_name}'"
-                f" (sim={sim:.2f} < {_IGDB_MIN_SIMILARITY}, descartado)",
+                f"    name '{normalized}': API returned '{igdb_name}'"
+                f" (sim={sim:.2f} < {_IGDB_MIN_SIMILARITY}, rejected)",
                 file=sys.stderr,
             )
         return None
@@ -220,13 +220,13 @@ def fetch_by_name(
         count = results[0].get("aggregated_rating_count", 0) or 0
         if result is None:
             print(
-                f"    nome '{normalized}' → '{igdb_name}' (sim={sim:.2f})"
-                f" mas descartado (count={count} < {MIN_RATING_COUNT}, sem gêneros/ano)",
+                f"    name '{normalized}' → '{igdb_name}' (sim={sim:.2f})"
+                f" but discarded (count={count} < {MIN_RATING_COUNT}, no genres/year)",
                 file=sys.stderr,
             )
         else:
             print(
-                f"    nome '{normalized}' → '{igdb_name}' (sim={sim:.2f}) ✓",
+                f"    name '{normalized}' → '{igdb_name}' (sim={sim:.2f}) ✓",
                 file=sys.stderr,
             )
     return result

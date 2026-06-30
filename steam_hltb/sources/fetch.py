@@ -11,11 +11,11 @@ from howlongtobeatpy import HowLongToBeat
 from . import igdb
 
 CACHE_FILE = ".cache/games_cache.json"
-HTTP_TIMEOUT = 15  # segundos — evita travar indefinidamente se a API pendurar
-HLTB_MIN_SIMILARITY = 0.6  # abaixo disso o match do HowLongToBeat é fraco demais
-_STEAM_RATE_LIMIT_S = 1.0  # pausa entre jogos novos no build_library
-_IGDB_RATE_LIMIT_S = 0.25  # pausa entre buscas IGDB
-_DETAILS_RATE_LIMIT_S = 0.5  # pausa entre buscas de detalhes na migração
+HTTP_TIMEOUT = 15  # seconds — prevents hanging indefinitely if the API stalls
+HLTB_MIN_SIMILARITY = 0.6  # below this the HowLongToBeat match is too weak
+_STEAM_RATE_LIMIT_S = 1.0  # pause between new games in build_library
+_IGDB_RATE_LIMIT_S = 0.25  # pause between IGDB lookups
+_DETAILS_RATE_LIMIT_S = 0.5  # pause between detail lookups in migration
 
 
 def load_cache() -> dict[str, Any]:
@@ -33,7 +33,7 @@ def save_cache(cache: dict[str, Any]) -> None:
 
 
 def _hltb_hours(val: float | None) -> int | None:
-    """Retorna horas como int, ou None se o HLTB não tem dado para este campo."""
+    """Returns hours as int, or None if HLTB has no data for this field."""
     return int(val) if val and val > 0 else None
 
 
@@ -186,18 +186,18 @@ def migrate_igdb_data(
     client_secret: str | None = None,
     verbose: bool = False,
 ) -> dict[str, Any]:
-    """Preenche campo 'igdb' para jogos sem metacritic no Steam."""
+    """Fills the 'igdb' field for games without Metacritic on Steam."""
     client_id = client_id or os.environ.get("IGDB_CLIENT_ID")
     client_secret = client_secret or os.environ.get("IGDB_CLIENT_SECRET")
     if not client_id or not client_secret:
         if verbose:
-            print("IGDB_CLIENT_ID / IGDB_CLIENT_SECRET não configurados — pulando.")
+            print("IGDB_CLIENT_ID / IGDB_CLIENT_SECRET not configured — skipping.")
         return cache
 
     token = igdb.get_token(client_id, client_secret)
     if not token:
         if verbose:
-            print("Falha ao obter token IGDB.")
+            print("Failed to get IGDB token.")
         return cache
 
     pending = [
@@ -206,7 +206,7 @@ def migrate_igdb_data(
         if entry.get("steam") and entry["steam"].get("metacritic") is None and "igdb" not in entry
     ]
     if verbose:
-        print(f"Buscando dados IGDB para {len(pending)} jogos sem metacritic...")
+        print(f"Fetching IGDB data for {len(pending)} games without Metacritic...")
 
     for idx, (name, entry) in enumerate(pending, 1):
         if verbose:
@@ -223,17 +223,17 @@ def migrate_igdb_data(
                     print(
                         f"    → ✓ rating={rating}"
                         f" (count={result.get('aggregated_rating_count')},"
-                        f" gêneros={result.get('genres')})"
+                        f" genres={result.get('genres')})"
                     )
                 else:
                     print(
-                        f"    → ~ parcial: gêneros={result.get('genres')},"
-                        f" ano={result.get('release_year')}"
-                        f" (sem avaliação: count={result.get('aggregated_rating_count')})"
+                        f"    → ~ partial: genres={result.get('genres')},"
+                        f" year={result.get('release_year')}"
+                        f" (no rating: count={result.get('aggregated_rating_count')})"
                     )
         else:
             if verbose:
-                print("    → ✗ não encontrado")
+                print("    → ✗ not found")
         save_cache(cache)
         time.sleep(_IGDB_RATE_LIMIT_S)
 
@@ -241,7 +241,7 @@ def migrate_igdb_data(
 
 
 def migrate_steam_details(cache: dict[str, Any], verbose: bool = False) -> dict[str, Any]:
-    """Preenche campos ausentes (genres, categories, release_year) em entradas incompletas."""
+    """Fills missing fields (genres, categories, release_year) in incomplete entries."""
 
     def _needs_migration(steam: dict[str, Any]) -> bool:
         return "genres" not in steam or "release_year" not in steam
@@ -252,7 +252,8 @@ def migrate_steam_details(cache: dict[str, Any], verbose: bool = False) -> dict[
         if entry.get("steam") and entry["steam"].get("appid") and _needs_migration(entry["steam"])
     ]
     if verbose:
-        print(f"Migrando {len(pending)} entradas incompletas (sem genres e/ou release_year)...")
+        n = len(pending)
+        print(f"Migrating {n} incomplete entries (missing genres and/or release_year)...")
     for idx, (name, appid) in enumerate(pending, 1):
         details = fetch_steam_app_details(appid)
         if details:

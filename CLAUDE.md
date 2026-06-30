@@ -1,11 +1,11 @@
-# howl — padrões de desenvolvimento
+# howl — development standards
 
-## Ciclo obrigatório
+## Mandatory cycle
 
-Antes de qualquer mudança: `./venv/bin/pytest` pra estabelecer baseline verde.
-Antes de reportar pronto: `./venv/bin/pytest` de novo. Nunca dizer "feito" sem rodar a suite.
+Before any change: `./venv/bin/pytest` to establish a green baseline.
+Before reporting done: `./venv/bin/pytest` again. Never say "done" without running the suite.
 
-## Gate de qualidade
+## Quality gate
 
 ```bash
 ./venv/bin/ruff check --fix steam_hltb/ tests/
@@ -14,76 +14,81 @@ Antes de reportar pronto: `./venv/bin/pytest` de novo. Nunca dizer "feito" sem r
 ./venv/bin/pytest
 ```
 
-Todos os quatro têm que passar antes de commitar. Na ordem acima.
+All four must pass before committing. In the order above.
 
-## Comentários e docstrings
+## Language
 
-**Regra**: só comentar quando o WHY é não-óbvio. Nunca explicar o WHAT.
+Everything in English — code, comments, docstrings, commits, docs, user-facing output.
+Exception: `README.pt-BR.md` stays in Portuguese (explicit bilingual copy).
+
+## Comments and docstrings
+
+**Rule**: only comment when the WHY is non-obvious. Never explain the WHAT.
 
 ```python
-# BOM — WHY não-óbvio
-_TOKEN_EXPIRY_MARGIN_S = 60  # renova 60s antes de expirar (folga de relógio)
-# external_games.category = 1 é o código Steam na API do IGDB.
+# GOOD — non-obvious WHY
+_TOKEN_EXPIRY_MARGIN_S = 60  # renews token 60s before expiry (clock skew buffer)
+# external_games.category = 1 is the Steam platform code in the IGDB API.
 
-# RUIM — WHAT (o nome já diz)
+# BAD — WHAT (the name already says it)
 def _load_token():
-    """Lê o token do disco."""  # ← delete
+    """Reads the token from disk."""  # ← delete
 
 def get_token():
     """
-    Retorna token válido.
-    - Se ausente: None
-    - Se em cache: usa cache
-    """  # ← delete; o código já mostra isso
+    Returns a valid token.
+    - If absent: None
+    - If cached: uses cache
+    """  # ← delete; the code already shows this
 ```
 
-Docstrings de uma linha: só quando a função tem comportamento surpreendente que não cabe em comentário inline. Exemplos concretos no docstring são permitidos quando o transform não é óbvio (ex: `_normalize_for_igdb` com o resultado antes/depois).
+Single-line docstrings: only when the function has surprising behaviour that doesn't fit an inline comment. Concrete examples in the docstring are allowed when the transform is non-obvious (e.g. `_normalize_for_igdb` with before/after result).
 
-Docstrings multi-linha com bullet-points descrevendo o fluxo: **nunca**.
+Multi-line docstrings with bullet-points describing the flow: **never**.
 
-## Cobertura
+## Coverage
 
-100% obrigatório, gate ativo (`--cov-fail-under=100`).
+100% mandatory, gate active (`--cov-fail-under=100`).
 
-`# pragma: no cover` só em ramos genuinamente inalcançáveis. Nunca pra fugir de teste difícil.
+`# pragma: no cover` only on genuinely unreachable branches. Never to escape a hard test.
 
 ## Type annotations
 
-mypy strict. `dict[str, Any]` onde o schema é heterogêneo (entradas de cache). Aliases em `core/types.py`:
-- `Game = dict[str, Any]` — linha do ranking (tem score, horas, etc.)
-- `Filters = dict[str, Any]` — parâmetros de filtro da UI
+mypy strict. `dict[str, Any]` where the schema is heterogeneous (cache entries). Aliases in `core/types.py`:
+- `Game = dict[str, Any]` — ranking row (has score, hours, etc.)
+- `Filters = dict[str, Any]` — filter parameters from the UI
 
-`steam_games: list[dict[str, Any]]` — dicts crus da API Steam, **não** `list[Game]`.
+`steam_games: list[dict[str, Any]]` — raw dicts from the Steam API, **not** `list[Game]`.
 
-## Sem código defensivo
+## No defensive code
 
-Não validar o que não pode acontecer. Não adicionar fallbacks para cenários impossíveis internamente. Validação só na fronteira com o usuário ou APIs externas.
+Don't validate what can't happen. Don't add fallbacks for internally impossible scenarios. Validate only at system boundaries (user input, external APIs).
 
-## Sem drive-by
+## No drive-by
 
-Bug fix não autoriza cleanup ao redor. Refactor não autoriza adicionar feature. Se notar algo ruim fora do escopo, mencionar como follow-up e deixar pra depois.
+Bug fix doesn't authorize cleanup around it. Refactor doesn't authorize adding a feature. If something bad is spotted out of scope, mention it as a follow-up and leave it for later.
 
-## Constantes nomeadas para magic values
+## Named constants for magic values
 
 ```python
-# RUIM
+# BAD
 if count < 3:
 if sim < 0.6:
 
-# BOM
+# GOOD
 if count < MIN_RATING_COUNT:
 if sim < _IGDB_MIN_SIMILARITY:
 ```
 
-## Mocks em testes
+## Mocks in tests
 
-Lambdas que simulam funções com `**kwargs` devem refletir a assinatura real:
+Lambdas simulating functions with `**kwargs` must reflect the real signature:
 ```python
-# Quando a função real tem verbose=False como default:
-lambda c, t, name, **kw: result   # aceita kwargs extras sem quebrar
+# When the real function has verbose=False as default:
+lambda c, t, name, **kw: result   # accepts extra kwargs without breaking
 ```
 
-## Estrutura do pacote
+## Package structure
 
 ```
 steam_hltb/
@@ -92,22 +97,24 @@ steam_hltb/
   config/    — paths, prompts, setup
   ui/        — args, report, tui, interactive
   main.py
-tests/       # espelha steam_hltb/
+tests/       # mirrors steam_hltb/
 ```
 
-## Flags CLI
+## CLI flags
 
-- `--verbose` / `-v`: controla output detalhado em operações longas (`--migrate-igdb`, `--migrate-cache`, `--refresh`)
-- Nunca hardcodar `verbose=True` no main — sempre `verbose=args.verbose`
+- `--verbose` / `-v`: controls detailed output in long operations (`--migrate-igdb`, `--migrate-cache`, `--refresh`)
+- Never hardcode `verbose=True` in main — always `verbose=args.verbose`
+- `--refresh`: fetches new games only (same as default behaviour)
+- `--refresh-all`: re-fetches all games including cached ones (slow)
 
 ## Commits
 
-Propor mensagem antes de executar. Esperar OK explícito. HEREDOC para preservar formatação:
+Propose message before executing. Wait for explicit OK. HEREDOC to preserve formatting:
 ```bash
 git commit -m "$(cat <<'EOF'
-tipo(escopo): descrição curta
+type(scope): short description
 
-Corpo explicando o WHY se relevante.
+Body explaining the WHY if relevant.
 EOF
 )"
 ```

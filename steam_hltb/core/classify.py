@@ -26,7 +26,7 @@ MULTIPLAYER_ONLY_CATEGORIES: frozenset[str] = frozenset(
 
 ERA_LABELS: list[str] = ["pre-2005", "2005-2010", "2010-2015", "2015-2020", "2020+", "unknown"]
 
-# "iniciado" / "não terminado" = jogou até metade do main+extra (com piso de 1h)
+# "in progress" = played up to half of main+extra (floor of 1h)
 _IN_PROGRESS_FRACTION = 0.5
 
 
@@ -43,12 +43,12 @@ def _category(categories: list[str], main_story: int) -> str:
 
 
 def _normalize_name(name: str) -> str:
-    """Remove ™ e ® do nome do jogo para matching tolerante com Steam."""
+    """Strips ™ and ® for tolerant Steam name matching."""
     return name.replace("™", "").replace("®", "").strip()
 
 
 def _load_overrides() -> dict[str, Any]:
-    """Carrega howl_overrides.json com chaves normalizadas (sem ™/®)."""
+    """Loads howl_overrides.json with normalized keys (no ™/®)."""
     path = Path(OVERRIDES_FILE)
     if not path.exists():
         return {}
@@ -57,10 +57,10 @@ def _load_overrides() -> dict[str, Any]:
 
 
 def _resolve_source_fields(entry: dict[str, Any]) -> dict[str, Any]:
-    """Resolve genres/categories/metacritic/release_year de uma entrada do cache.
+    """Resolves genres/categories/metacritic/release_year from a cache entry.
 
-    Prioriza Steam (formato novo), cai pra RAWG (cache legado) ou vazio, e usa
-    IGDB como fallback para metacritic/genres ausentes.
+    Prefers Steam (new format), falls back to RAWG (legacy cache) or empty,
+    then uses IGDB as fallback for missing metacritic/genres.
     """
     steam = entry.get("steam") or {}
     rawg = entry.get("rawg") or {}
@@ -95,7 +95,7 @@ def _resolve_source_fields(entry: dict[str, Any]) -> dict[str, Any]:
 
 
 def _apply_overrides(row: Game, overrides: dict[str, Any], name: str) -> None:
-    """Sobrescreve campos da row com howl_overrides.json (ignora a chave 'comment')."""
+    """Merges howl_overrides.json fields into the row (ignores the 'comment' key)."""
     ov = overrides.get(_normalize_name(name), {})
     if isinstance(ov, dict):
         for key, val in ov.items():
@@ -148,18 +148,18 @@ def filter_genre(
     result = games
     if must_have:
         wanted = {g.lower() for g in must_have}
-        result = [g for g in result if wanted <= _genres_of(g)]  # todos presentes
+        result = [g for g in result if wanted <= _genres_of(g)]  # all must be present
     if any_of:
         wanted = {g.lower() for g in any_of}
-        result = [g for g in result if wanted & _genres_of(g)]  # ao menos um
+        result = [g for g in result if wanted & _genres_of(g)]  # at least one
     if exclude:
         unwanted = {g.lower() for g in exclude}
-        result = [g for g in result if not (unwanted & _genres_of(g))]  # nenhum proibido
+        result = [g for g in result if not (unwanted & _genres_of(g))]  # none allowed
     return result
 
 
 def _halfway_hours(game: Game) -> float:
-    """Metade do main+extra (piso de 1h) — limiar de 'ainda não terminado'."""
+    """Half of main+extra (floor 1h) — threshold for 'not yet finished'."""
     return _IN_PROGRESS_FRACTION * max(game["main_extra"] or 0, 1)
 
 
@@ -207,7 +207,7 @@ def _era_label(year: int | None) -> str:
 
 
 def filter_era(games: list[Game], eras: list[str] | None = None) -> list[Game]:
-    """Mantém apenas jogos cuja era de lançamento está em `eras`. None = sem filtro."""
+    """Keeps only games whose release era is in `eras`. None = no filter."""
     if eras is None:
         return games
     era_set = set(eras)
@@ -215,7 +215,7 @@ def filter_era(games: list[Game], eras: list[str] | None = None) -> list[Game]:
 
 
 def _fuzzy(query: str, name: str) -> bool:
-    """Subsequência fzf-style: cada char do query deve aparecer em ordem em name."""
+    """fzf-style subsequence: every char in query must appear in order in name."""
     q = query.lower()
     qi = 0
     for c in name.lower():

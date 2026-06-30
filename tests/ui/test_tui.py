@@ -238,15 +238,15 @@ async def test_tui_show_genres_toggle_adds_column():
 
     app = SteamHLTBApp(SAMPLE_GAMES, INITIAL_FILTERS)
     async with app.run_test() as pilot:
-        # show_genres começa True → coluna Gêneros existe
+        # show_genres starts True → Genres column exists
         table = app.query_one(DataTable)
         col_keys = [c.label.plain for c in table.columns.values()]
-        assert "Gêneros" in col_keys
+        assert "Genres" in col_keys
         # toggle off
         await pilot.press("g")
         await pilot.pause()
         col_keys_after = [c.label.plain for c in table.columns.values()]
-        assert "Gêneros" not in col_keys_after
+        assert "Genres" not in col_keys_after
 
 
 async def test_tui_status_bar_shows_count():

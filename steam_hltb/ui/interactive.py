@@ -29,31 +29,31 @@ def run_interactive(base_args: argparse.Namespace) -> None:
     from .args import _weights
     from .report import print_table, save_results
 
-    print("\n=== Modo Interativo ===\n")
+    print("\n=== Interactive Mode ===\n")
 
-    genre_raw = _ask("Gêneros obrigatórios (vírgula-sep, vazio=todos)", default="")
-    genre_any_raw = _ask("Qualquer um desses gêneros (vírgula-sep, vazio=ignorar)", default="")
-    excl_raw = _ask("Excluir gêneros (vírgula-sep, vazio=nenhum)", default="")
+    genre_raw = _ask("Required genres (comma-sep, empty=all)", default="")
+    genre_any_raw = _ask("Any of these genres (comma-sep, empty=ignore)", default="")
+    excl_raw = _ask("Exclude genres (comma-sep, empty=none)", default="")
 
     progress = _ask(
-        "Filtro de progresso",
+        "Progress filter",
         options=["default", "not_started", "in_progress", "all"],
         default="default",
     )
 
-    category = _ask("Categoria", options=["all", "singleplayer", "coop"], default="all")
+    category = _ask("Category", options=["all", "singleplayer", "coop"], default="all")
 
-    min_hours_raw = _ask("Mínimo de horas (vazio=sem limite)", default="")
-    max_hours_raw = _ask("Máximo de horas (vazio=sem limite)", default="")
+    min_hours_raw = _ask("Minimum hours (empty=no limit)", default="")
+    max_hours_raw = _ask("Maximum hours (empty=no limit)", default="")
 
-    sort_by = _ask("Ordenar por", options=SORT_OPTIONS, default="shortest")
+    sort_by = _ask("Sort by", options=SORT_OPTIONS, default="shortest")
 
-    top_raw = _ask("Quantos jogos mostrar", default="10")
+    top_raw = _ask("How many games to show", default="10")
     top = int(top_raw) if top_raw.isdigit() else 10
 
-    collection_raw = _ask("Filtrar por coleção (vazio=todas, ex: Jogando)", default="")
+    collection_raw = _ask("Filter by collection (empty=all, e.g. Playing)", default="")
 
-    output = _ask("Nome base do arquivo de saída", default="how_long_to_beat_output")
+    output = _ask("Output file base name", default="how_long_to_beat_output")
 
     from ..core.classify import build_game_rows
     from ..sources.fetch import build_library, get_api_key, load_cache

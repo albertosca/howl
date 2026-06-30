@@ -77,7 +77,7 @@ def test_list_available_empty_cache(capsys):
 
     list_available({}, "genres")
     out = capsys.readouterr().out
-    assert "Tente --refresh" in out
+    assert "Try --refresh" in out
 
 
 def test_list_collections_cmd_prints_names(capsys):
@@ -221,4 +221,4 @@ def test_list_collections_cmd_empty(capsys):
     from steam_hltb.ui.report import list_collections_cmd
 
     list_collections_cmd({})
-    assert "Nenhuma" in capsys.readouterr().out
+    assert "No collections" in capsys.readouterr().out

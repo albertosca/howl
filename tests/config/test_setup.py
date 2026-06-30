@@ -124,7 +124,7 @@ def test_run_setup_graceful_on_interrupt(capsys, monkeypatch):
         setup, "_run_setup_inner", lambda verbose: (_ for _ in ()).throw(KeyboardInterrupt)
     )
     setup.run_setup()  # não deve propagar
-    assert "cancelado" in capsys.readouterr().out.lower()
+    assert "cancelled" in capsys.readouterr().out.lower()
 
 
 def test_run_setup_logs_unexpected_error(tmp_path, capsys, monkeypatch):

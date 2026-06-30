@@ -51,9 +51,9 @@ class FilterPanel(Vertical):
         )
         yield Label("Top N")
         yield Input(value="10", id="top-input")
-        yield Label("Gêneros (vírgula-sep)")
+        yield Label("Genres (comma-sep)")
         yield Input(placeholder="action, rpg", id="genre-input")
-        yield Label("Excluir gêneros")
+        yield Label("Exclude genres")
         yield Input(placeholder="sports", id="exclude-genre-input")
         yield Label("Progress")
         yield Select(
@@ -114,7 +114,7 @@ class SteamHLTBApp(App[None]):
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit", "Sair"),
         Binding("f", "toggle_filters", "Filtros"),
-        Binding("g", "toggle_genres", "Gêneros"),
+        Binding("g", "toggle_genres", "Genres"),
         Binding("t", "toggle_tags", "Tags"),
         Binding("s", "save", "Salvar"),
     ]
@@ -140,7 +140,7 @@ class SteamHLTBApp(App[None]):
         self.filters.setdefault("show_finished", False)
         self.filters.setdefault("collection", None)
         self.filters.setdefault("name_query", None)
-        self.filters.setdefault("eras", None)  # None = todas as eras
+        self.filters.setdefault("eras", None)  # None = all eras
         self._games: list[Game] = []
 
     def compose(self) -> ComposeResult:
@@ -168,7 +168,7 @@ class SteamHLTBApp(App[None]):
         table.add_column("Jog", width=6)
         table.add_column("Score", width=7)
         if self.show_genres:
-            table.add_column("Gêneros", width=22)
+            table.add_column("Genres", width=22)
         if self.show_tags:
             table.add_column("Tags", width=22)
 
@@ -219,11 +219,11 @@ class SteamHLTBApp(App[None]):
             self.query_one("#min-hours-input", Input).value = str(f["min_hours"])
         if f["max_hours"] is not None:
             self.query_one("#max-hours-input", Input).value = str(f["max_hours"])
-        # --collection é livre; só pré-seleciona se for uma opção do Select
+        # --collection is free-form; only pre-selects if it matches a Select option
         collection = f.get("collection") or "todas"
         if collection in ("todas", "Jogando", "Multiplayer"):
             self.query_one("#collection-select", Select).value = collection
-        # eras != None → desmarca as épocas fora da lista
+        # eras != None → unchecks eras not in the list
         eras = f.get("eras")
         if eras is not None:
             for era in ERA_LABELS:

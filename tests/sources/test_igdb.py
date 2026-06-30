@@ -339,26 +339,26 @@ def test_name_similarity_missing_hyphen():
 
 
 def test_name_similarity_extra_subtitle_proportional():
-    """Subtítulo curto relativo ao nome base → passa. Extensão desproporcional → rejeita.
+    """Short subtitle relative to base name → passes. Disproportionate extension → rejects.
 
     SequenceMatcher: ratio = 2*matches / (len(a)+len(b)).
     'Ticket to Ride' (14) vs '...Europe' (22) → ~0.78 ✓
-    'Portal 2' (8) vs '...Still Alive' (21) → ~0.55 ✗ (corretamente descartado;
-    busca por appid teria encontrado antes do fallback por nome).
+    'Portal 2' (8) vs '...Still Alive' (21) → ~0.55 ✗ (correctly rejected;
+    appid lookup would have found it before the name fallback).
     """
     assert _name_similarity("Ticket to Ride", "Ticket to Ride: Europe") >= 0.6
-    assert _name_similarity("Portal 2", "Portal 2: Still Alive") < 0.6  # extensão desproporcional
+    assert _name_similarity("Portal 2", "Portal 2: Still Alive") < 0.6  # disproportionate extension
 
 
 def test_name_similarity_different_sequel_acknowledged_limitation():
-    """Sequências da mesma série têm similaridade alta — limitação do SequenceMatcher.
-    A API de busca do IGDB é responsável por retornar o jogo correto para a query;
-    a similaridade só filtra resultados completamente errados."""
-    assert _name_similarity("Civilization V", "Civilization VI") >= 0.6  # limitação documentada
+    """Same-series sequels have high similarity — known SequenceMatcher limitation.
+    The IGDB search API is responsible for returning the right game for the query;
+    similarity only filters out completely wrong results."""
+    assert _name_similarity("Civilization V", "Civilization VI") >= 0.6  # documented limitation
 
 
 def test_name_similarity_completely_different_games():
-    """Jogos sem relação: similaridade < 0.6 → descartado."""
+    """Unrelated games: similarity < 0.6 → rejected."""
     assert _name_similarity("Portal 2", "The Elder Scrolls V: Skyrim") < 0.6
     assert _name_similarity("Dota 2", "Stardew Valley") < 0.6
     assert _name_similarity("Batman", "Superman Returns") < 0.6
@@ -400,7 +400,7 @@ def test_fetch_by_appid_verbose_not_found(capsys):
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_appid("cid", "tok", 99999, verbose=True)
     assert result is None
-    assert "não encontrado" in capsys.readouterr().err
+    assert "not found" in capsys.readouterr().err
 
 
 def test_fetch_by_name_verbose_no_api_results(capsys):
@@ -411,11 +411,11 @@ def test_fetch_by_name_verbose_no_api_results(capsys):
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_name("cid", "tok", "Nonexistent Game", verbose=True)
     assert result is None
-    assert "sem resultados" in capsys.readouterr().err
+    assert "no results" in capsys.readouterr().err
 
 
 def test_fetch_by_name_verbose_similarity_rejected(capsys):
-    """verbose=True imprime no stderr quando similaridade < threshold."""
+    """verbose=True prints to stderr when similarity < threshold."""
     mock_resp = MagicMock()
     mock_resp.ok = True
     mock_resp.json.return_value = [{"name": "Completely Different Game", "aggregated_rating": 90}]
@@ -423,12 +423,12 @@ def test_fetch_by_name_verbose_similarity_rejected(capsys):
         result = fetch_by_name("cid", "tok", "Portal 2", verbose=True)
     assert result is None
     err = capsys.readouterr().err
-    assert "descartado" in err
+    assert "rejected" in err
     assert "sim=" in err
 
 
 def test_fetch_by_appid_verbose_found(capsys):
-    """verbose=True imprime ✓ quando appid é encontrado com resultado válido."""
+    """verbose=True prints ✓ when appid is found with a valid result."""
     mock_resp = MagicMock()
     mock_resp.ok = True
     mock_resp.json.return_value = [
@@ -449,7 +449,7 @@ def test_fetch_by_appid_verbose_found(capsys):
 
 
 def test_fetch_by_appid_verbose_found_but_parse_none(capsys):
-    """verbose=True imprime 'descartado' quando appid encontrado mas _parse_result → None."""
+    """verbose=True prints 'discarded' when appid found but _parse_result → None."""
     mock_resp = MagicMock()
     mock_resp.ok = True
     mock_resp.json.return_value = [
@@ -464,11 +464,11 @@ def test_fetch_by_appid_verbose_found_but_parse_none(capsys):
     with patch("requests.post", return_value=mock_resp):
         result = fetch_by_appid("cid", "tok", 12345, verbose=True)
     assert result is None
-    assert "descartado" in capsys.readouterr().err
+    assert "discarded" in capsys.readouterr().err
 
 
 def test_fetch_by_name_verbose_found(capsys):
-    """verbose=True imprime ✓ quando nome passa similaridade e _parse_result é válido."""
+    """verbose=True prints ✓ when name passes similarity and _parse_result is valid."""
     mock_resp = MagicMock()
     mock_resp.ok = True
     mock_resp.json.return_value = [
@@ -489,7 +489,7 @@ def test_fetch_by_name_verbose_found(capsys):
 
 
 def test_fetch_by_name_verbose_parse_none(capsys):
-    """verbose=True imprime 'descartado' quando similaridade OK mas _parse_result → None."""
+    """verbose=True prints 'discarded' when similarity OK but _parse_result → None."""
     mock_resp = MagicMock()
     mock_resp.ok = True
     mock_resp.json.return_value = [
@@ -505,7 +505,7 @@ def test_fetch_by_name_verbose_parse_none(capsys):
         result = fetch_by_name("cid", "tok", "Ticket to Ride", verbose=True)
     assert result is None
     err = capsys.readouterr().err
-    assert "descartado" in err
+    assert "discarded" in err
     assert "sim=" in err
 
 
@@ -547,7 +547,7 @@ def test_fetch_by_name_normalizes_before_search():
 
 
 def test_fetch_by_name_rejects_wrong_game():
-    """Resultado IGDB com nome muito diferente do query é descartado."""
+    """IGDB result with a very different name from the query is rejected."""
     mock_resp = MagicMock()
     mock_resp.ok = True
     mock_resp.json.return_value = [
@@ -584,12 +584,12 @@ def test_fetch_by_name_accepts_similar_game():
 
 
 # ---------------------------------------------------------------------------
-# _parse_result — resultado parcial quando rating insuficiente mas tem gêneros
+# _parse_result — partial result when rating is insufficient but genres are present
 # ---------------------------------------------------------------------------
 
 
 def test_parse_result_partial_when_genres_present_low_rating():
-    """Rating count < 3 mas com gêneros → resultado parcial sem rating."""
+    """Rating count < 3 but with genres → partial result without rating."""
     data = {
         "name": "Indie Game",
         "aggregated_rating": 80.0,
@@ -599,7 +599,7 @@ def test_parse_result_partial_when_genres_present_low_rating():
     }
     result = igdb._parse_result(data)
     assert result is not None
-    assert result["aggregated_rating"] is None  # rating descartado (count insuficiente)
+    assert result["aggregated_rating"] is None  # rating discarded (insufficient count)
     assert "Indie" in result["genres"]
     assert result["release_year"] == 2017
 
