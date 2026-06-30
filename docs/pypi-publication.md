@@ -1,15 +1,19 @@
 # Publicação no PyPI — howl-steam-backlog
 
-## Status (atualizado 2026-06-25, commit 525d5eb)
+## Status (atualizado 2026-06-30)
 
 - [x] pyproject.toml completo (`howl-steam-backlog`, v0.2.0, MIT SPDX, authors, classifiers, urls)
 - [x] LICENSE criado (MIT)
 - [x] workflow publish.yml criado (Trusted Publisher OIDC)
 - [x] READMEs atualizados (badge PyPI + pip/pipx install)
-- [ ] Conta PyPI + 2FA criada
-- [ ] Trusted Publisher configurado no PyPI
-- [ ] Environment `pypi` criado no GitHub
-- [ ] Release v0.2.0 publicada no GitHub
+- [x] Conta PyPI + 2FA criada
+- [x] **v0.2.0 publicado no PyPI** (manual via twine + API token)
+- [x] Git tag `v0.2.0` criado e pushed
+- [x] Environment `pypi` criado no GitHub
+- [ ] **Trusted Publisher configurado no PyPI** ← único passo restante (ver seção 4a)
+
+> **Nota:** a publicação de v0.2.0 foi feita manualmente via `twine`. O workflow do GitHub Actions
+> estará ativo para versões futuras assim que o Trusted Publisher for configurado.
 
 ---
 
