@@ -6,8 +6,8 @@
 
 [![CI](https://github.com/albertosca/howl/actions/workflows/ci.yml/badge.svg)](https://github.com/albertosca/howl/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/howl-steam-backlog)](https://pypi.org/project/howl-steam-backlog/)
-![Coverage](.github/badges/coverage.svg)
-![Ruff](.github/badges/ruff.svg)
+![Coverage](https://raw.githubusercontent.com/albertosca/howl/main/.github/badges/coverage.svg)
+![Ruff](https://raw.githubusercontent.com/albertosca/howl/main/.github/badges/ruff.svg)
 
 <!-- Coverage/Ruff são SVGs locais (sem serviço externo). Regenerar com:
        pip install "genbadge[coverage]" anybadge

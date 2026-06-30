@@ -115,7 +115,7 @@ def test_weights_normalization_warns_and_normalizes(capsys):
 
     w = _weights(args)
     err = capsys.readouterr().err
-    assert "Aviso" in err
+    assert "Warning" in err
     assert abs(sum(w.values()) - 1.0) < 0.01
 
 
