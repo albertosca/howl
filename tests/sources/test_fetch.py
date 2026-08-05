@@ -496,7 +496,8 @@ def test_migrate_steam_details_verbose_prints_progress(capsys, monkeypatch):
     assert "Migrating" in out or "incomplete" in out
 
 
-def test_build_library_verbose_false_silent_for_new_games(capsys, monkeypatch):
+def test_build_library_verbose_false_still_shows_progress_for_new_games(capsys, monkeypatch):
+    """Fetching new games is the slow part — must show progress even without --verbose."""
     monkeypatch.setattr(
         "steam_hltb.sources.fetch.resolve_steamid", lambda key, user: "76561198000000"
     )
@@ -508,6 +509,29 @@ def test_build_library_verbose_false_silent_for_new_games(capsys, monkeypatch):
     monkeypatch.setattr("steam_hltb.sources.fetch.fetch_hltb", lambda name: None)
 
     cache = {}
+
+    from steam_hltb.sources import fetch
+
+    fetch.build_library("key", "user", cache, verbose=False)
+
+    out = capsys.readouterr().out
+    assert "[1/1] Half-Life 2" in out
+    assert "1 new game(s) to fetch" in out
+    assert "(cache)" not in out
+
+
+def test_build_library_verbose_false_silent_when_nothing_pending(capsys, monkeypatch):
+    """All games already cached and no refresh → no output at all (fast path, no games to fetch)."""
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.resolve_steamid", lambda key, user: "76561198000000"
+    )
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.get_steam_games",
+        lambda key, sid: [{"name": "Half-Life 2", "appid": 220, "hours_played": 1.0}],
+    )
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
+
+    cache = {"Half-Life 2": {"hltb": {}, "steam": {"appid": 220}}}
 
     from steam_hltb.sources import fetch
 

@@ -149,8 +149,13 @@ def build_library(
     steamid = resolve_steamid(steam_key, username)
     steam_games = get_steam_games(steam_key, steamid)
     total = len(steam_games)
+    pending = sum(1 for g in steam_games if g["name"] not in cache or refresh)
     if verbose:
         print(f"{total} games in library. {len(cache)} already cached.\n")
+    elif pending:
+        # Fetching new games is the slow, network-bound part — always show progress
+        # for it, even without --verbose, so a long first run isn't silent.
+        print(f"{pending} new game(s) to fetch (of {total} in library)...\n")
     for idx, game in enumerate(steam_games, 1):
         name = game["name"]
         appid = game["appid"]
@@ -158,8 +163,7 @@ def build_library(
             if verbose:
                 print(f"[{idx}/{total}] {name} (cache)")
             continue
-        if verbose:
-            print(f"[{idx}/{total}] {name}")
+        print(f"[{idx}/{total}] {name}")
         hltb = fetch_hltb(name)
         if not hltb:
             cache[name] = {"hltb": None, "steam": None}
