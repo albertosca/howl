@@ -91,3 +91,15 @@ data_file = ".cache/coverage"
 [tool.coverage.report]
 show_missing = true
 fail_under = 100
+
+
+# The dev/CI environment is uv-managed (.venv), resolved from uv.lock.
+# only-system keeps uv on an interpreter this machine already has instead of
+# downloading a managed CPython of its own; with .python-version pinned to
+# 3.14 that resolves to asdf's python 3.14.6 -- measured, not assumed, by
+# deleting .venv and reading `readlink -f .venv/bin/python3` after uv
+# recreated it. The weekly-update TSV tags this project `python` (the asdf
+# plugin) to match, so an asdf Python bump selects it for re-testing and a
+# Homebrew python@3.14 bump correctly does not.
+[tool.uv]
+python-preference = "only-system"

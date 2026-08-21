@@ -49,10 +49,14 @@ pipx install howl-steam-backlog
 ```bash
 git clone https://github.com/albertosca/howl.git
 cd howl
-python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
-pip install -e ".[dev]"
+uv sync --extra dev               # resolves from uv.lock into .venv
+uv run --extra dev pytest         # run the suite
 ```
+
+Dependencies are pinned in `uv.lock`, so `uv sync` reproduces the exact
+versions the tests were last green against. `pip install -e ".[dev]"` in a
+plain venv still works and is what CI does, but it resolves fresh and
+ignores the lock.
 
 After installing, the `howl` command becomes available:
 

@@ -1,6 +1,9 @@
 # Roda o ruff antes de cada commit (lint + format). Instalar uma vez:
-#   pip install -e ".[dev]" && pre-commit install
-# Rodar manualmente em tudo: pre-commit run --all-files
+#   uv sync --extra dev && uv run --extra dev pre-commit install
+# Rodar manualmente em tudo: uv run --extra dev pre-commit run --all-files
+# O hook gerado guarda o caminho absoluto do interpretador em INSTALL_PYTHON:
+# trocar de ambiente exige reinstalar o hook, senao todo commit falha com
+# "`pre-commit` not found" apontando para um venv que nao existe mais.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.17
