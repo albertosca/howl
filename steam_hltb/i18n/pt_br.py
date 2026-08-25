@@ -1,6 +1,23 @@
 MESSAGES: dict[str, str] = {
     "test.plain": "português puro",
     "test.interpolated": "{count} itens",
+    "report.header": " TOP {top} — ordem: {sort}  ({shown} de {total} filtrados)",
+    "report.too_few": " ⚠  Apenas {total} jogos passaram nos filtros (pedido: {top})",
+    "report.col_name": "Nome",
+    "report.col_year": "Ano",
+    "report.col_played": "Jogado",
+    "report.col_score": "Nota",
+    "report.no_collections": "Nenhuma coleção encontrada. Confira --vdf-path.",
+    "report.available_collections": " Coleções disponíveis ({count} únicas)",
+    "report.no_items": "Nenhum {field} no cache. Tente --refresh ou --migrate-cache.",
+    "report.available_items": " {field} disponíveis ({count} únicos)",
+    "report.saved": "\nSalvo em '{csv}' e '{md}'",
+    "report.interactive_header": "\n=== Modo Interativo ===\n",
+    "migrate.slow_warning": (
+        "⚠  Isso pode demorar 15-30 min. Ctrl+C para interromper (progresso salvo)."
+    ),
+    "migrate.done": "Migração concluída.",
+    "migrate.igdb_done": "Migração IGDB concluída.",
 }
 
 # Keyed by argparse's own English source strings, which is what the gettext

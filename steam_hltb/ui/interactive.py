@@ -2,6 +2,7 @@ import argparse
 
 from ..core.classify import apply_filters
 from ..core.score import SORT_OPTIONS, compute_score
+from ..i18n import t
 
 
 def _ask(prompt: str, options: list[str] | None = None, default: str | None = None) -> str:
@@ -29,7 +30,7 @@ def run_interactive(base_args: argparse.Namespace) -> None:
     from .args import _weights
     from .report import print_table, save_results
 
-    print("\n=== Interactive Mode ===\n")
+    print(t("report.interactive_header"))
 
     genre_raw = _ask("Required genres (comma-sep, empty=all)", default="")
     genre_any_raw = _ask("Any of these genres (comma-sep, empty=ignore)", default="")
@@ -93,7 +94,7 @@ def run_interactive(base_args: argparse.Namespace) -> None:
     top_games = rows[:top]
 
     print(f"\n{'=' * 60}")
-    print(f" TOP {top} — sort: {sort_by}  ({len(top_games)} de {len(rows)} filtrados)")
+    print(t("report.header", top=top, sort=sort_by, shown=len(top_games), total=len(rows)))
     print(f"{'=' * 60}")
     print_table(top_games, sort_by)
     save_results(rows, output)
