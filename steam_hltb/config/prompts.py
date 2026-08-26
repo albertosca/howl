@@ -20,6 +20,17 @@ def _is_no(answer: str) -> bool:
     return answer.strip().lower() in (*_NO, t("setup.answer_no"))
 
 
+_LANGUAGE_CHOICES: dict[str, str] = {"1": "en", "2": "pt-BR"}
+
+
+def _prompt_language() -> str:
+    """The one prompt that cannot use the catalog: it runs before a language exists."""
+    print("\n  Language / Idioma:")
+    print("    [1] English")
+    print("    [2] Português")
+    return _LANGUAGE_CHOICES.get(input("  Choose / Escolha [1]: ").strip(), "en")
+
+
 def _detect_vdf_paths() -> list[str]:
     system = platform.system()
     if system == "Darwin":

@@ -2,7 +2,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-from ..i18n import t
+from ..i18n import set_language, t
 from .paths import (
     config_path as _config_path,
 )
@@ -16,6 +16,7 @@ from .prompts import (
     _is_no,
     _is_yes,
     _prompt_api_key,
+    _prompt_language,
     _prompt_username,
     _prompt_vdf_path,
 )
@@ -91,6 +92,9 @@ def _maybe_migrate_legacy_env() -> None:
 
 
 def _run_setup_inner(verbose: bool = False) -> None:
+    language = _prompt_language()
+    set_language(language)
+
     print(t("setup.header"))
 
     _maybe_migrate_legacy_env()
@@ -100,6 +104,7 @@ def _run_setup_inner(verbose: bool = False) -> None:
     vdf_path = _prompt_vdf_path()
 
     config: dict[str, str] = {
+        "HOWL_LANG": language,
         "STEAM_API_KEY": api_key,
         "STEAM_USERNAME": username,
     }
