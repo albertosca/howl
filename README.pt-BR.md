@@ -17,14 +17,7 @@
 
 Ranqueia sua biblioteca Steam por qualidade × tempo investido usando dados do [HowLongToBeat](https://howlongtobeat.com), Metacritic e Steam Reviews. Chega de paralisia de decisão na frente da backlog.
 
-```
-  #  Nome                                            Ano    MC   Steam   HLTB   Jogadas     Score
----  ---------------------------------------------- ----  ----  ------  -----  --------  --------
-  1  Hades                                          2020    93     97%    22h        0h      20.3
-     ↳ action, roguelike
-  2  Hollow Knight                                  2017    87     95%    40h        5h      14.4
-     ↳ action, platformer
-```
+![howl ranqueando um backlog da Steam](https://raw.githubusercontent.com/albertosca/howl/main/demo/howl.gif)
 
 ## Requisitos
 
