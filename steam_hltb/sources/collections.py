@@ -46,7 +46,7 @@ def exclude_finished(
     games: list[dict[str, Any]],
     vdf_path: str = DEFAULT_VDF_PATH,
 ) -> list[dict[str, Any]]:
-    """Remove games na coleção 'Terminados'. Silencioso se VDF não existir."""
+    """Drops games in the FINISHED_COLLECTION. Silent when the VDF is absent."""
     collection_map = load_collections(vdf_path)
     if not collection_map:
         return games

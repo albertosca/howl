@@ -1,4 +1,4 @@
-"""Pipeline de seleção: filtra, pontua e ordena jogos. Sem dependência de UI."""
+"""Selection pipeline: filters, scores and sorts games. No UI dependency."""
 
 from ..sources.collections import exclude_finished, filter_collection, load_collections
 from .classify import apply_filters, filter_name
@@ -7,9 +7,9 @@ from .types import Filters, Game
 
 
 def select_games(all_games: list[Game], filters: Filters) -> list[Game]:
-    """Aplica filtros, calcula `_score` e ordena (desc). Não corta no top — o
-    chamador fatia `[: filters['top']]` conforme precisa (CLI salva tudo, TUI
-    mostra o top)."""
+    """Applies filters, computes `_score` and sorts descending. Does not truncate
+    to the top — the caller slices `[: filters['top']]` as needed (the CLI saves
+    everything, the TUI shows the top)."""
     rows = apply_filters(
         all_games,
         genre=filters.get("genre"),
