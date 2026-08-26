@@ -140,6 +140,20 @@ MESSAGES: dict[str, str] = {
     "setup.prompt_retry": "  Tentar de novo? [S/n] ",
     "setup.answer_no": "não",
     "setup.answer_yes": "sim",
+    "tui.filters_title": "── Filtros ──────────────",
+    "tui.label_name": "Nome (fuzzy)",
+    "tui.label_sort": "Ordem",
+    "tui.label_top": "Top N",
+    "tui.label_genres": "Gêneros (por vírgula)",
+    "tui.label_exclude": "Excluir gêneros",
+    "tui.label_progress": "Progresso",
+    "tui.label_category": "Categoria",
+    "tui.label_min_hours": "Horas mín.",
+    "tui.label_max_hours": "Horas máx.",
+    "tui.label_collection": "Coleção",
+    "tui.label_era": "Era de lançamento",
+    "tui.saved": "Salvo em output/howl.csv e .md",
+    "tui.status_bar": " Mostrando {shown} de {total} filtrados · ordem: {sort}",
 }
 
 # Keyed by argparse's own English source strings, which is what the gettext
