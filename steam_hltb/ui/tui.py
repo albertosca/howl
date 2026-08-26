@@ -10,10 +10,11 @@ from ..core.classify import ERA_LABELS
 from ..core.score import SORT_OPTIONS
 from ..core.selection import select_games
 from ..core.types import Filters, Game
+from ..i18n import t
 
 
 def _era_id(era: str) -> str:
-    """Sanitiza era label para uso como ID Textual (sem +, sem espaços)."""
+    """Sanitises an era label for use as a Textual ID (no +, no spaces)."""
     return "era-" + era.replace("+", "plus").replace(" ", "_")
 
 
@@ -40,22 +41,22 @@ class FilterPanel(Vertical):
     """
 
     def compose(self) -> ComposeResult:
-        yield Label("── Filtros ──────────────")
-        yield Label("Nome (fuzzy)")
+        yield Label(t("tui.filters_title"))
+        yield Label(t("tui.label_name"))
         yield Input(placeholder="ex: hl2, por", id="name-input")
-        yield Label("Sort")
+        yield Label(t("tui.label_sort"))
         yield Select(
             [(opt, opt) for opt in SORT_OPTIONS],
             id="sort-select",
             value="shortest",
         )
-        yield Label("Top N")
+        yield Label(t("tui.label_top"))
         yield Input(value="10", id="top-input")
-        yield Label("Genres (comma-sep)")
+        yield Label(t("tui.label_genres"))
         yield Input(placeholder="action, rpg", id="genre-input")
-        yield Label("Exclude genres")
+        yield Label(t("tui.label_exclude"))
         yield Input(placeholder="sports", id="exclude-genre-input")
-        yield Label("Progress")
+        yield Label(t("tui.label_progress"))
         yield Select(
             [
                 ("default", "default"),
@@ -66,17 +67,17 @@ class FilterPanel(Vertical):
             id="progress-select",
             value="default",
         )
-        yield Label("Categoria")
+        yield Label(t("tui.label_category"))
         yield Select(
             [("all", "all"), ("singleplayer", "singleplayer"), ("coop", "coop")],
             id="category-select",
             value="all",
         )
-        yield Label("Min horas")
+        yield Label(t("tui.label_min_hours"))
         yield Input(placeholder="0", id="min-hours-input")
-        yield Label("Max horas")
+        yield Label(t("tui.label_max_hours"))
         yield Input(placeholder="100", id="max-hours-input")
-        yield Label("Coleção")
+        yield Label(t("tui.label_collection"))
         yield Select(
             [
                 ("todas", "todas"),
@@ -86,7 +87,7 @@ class FilterPanel(Vertical):
             id="collection-select",
             value="todas",
         )
-        yield Label("Era de lançamento")
+        yield Label(t("tui.label_era"))
         for era in ERA_LABELS:
             yield Checkbox(era, value=True, id=_era_id(era))
 
@@ -202,7 +203,7 @@ class SteamHLTBApp(App[None]):
             table.add_row(*row_data)
 
         self.query_one("#status-bar", Static).update(
-            f" Mostrando {len(self._games)} de {len(rows)} filtrados · sort: {sort_by}"
+            t("tui.status_bar", shown=len(self._games), total=len(rows), sort=sort_by)
         )
 
     def _sync_panel_to_filters(self) -> None:
@@ -285,7 +286,7 @@ class SteamHLTBApp(App[None]):
         from .report import save_results
 
         save_results(self._games, "output/howl")
-        self.notify("Salvo em output/howl.csv e .md")
+        self.notify(t("tui.saved"))
 
 
 def run_tui(all_games: list[Game], initial_filters: Filters | None = None) -> None:

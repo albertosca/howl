@@ -2,6 +2,7 @@ import argparse
 
 from .core.classify import build_game_rows
 from .core.selection import select_games
+from .i18n import t
 from .sources.collections import load_collections
 from .sources.fetch import build_library, get_api_key, load_cache
 from .ui.args import _resolve_username, filters_from_args, parse_args
@@ -23,9 +24,9 @@ def run(args: argparse.Namespace) -> None:
 
     total_filtered = len(rows)
     print(f"\n{'=' * 60}")
-    print(f" TOP {args.top} — sort: {args.sort}  ({len(top)} de {total_filtered} filtrados)")
+    print(t("report.header", top=args.top, sort=args.sort, shown=len(top), total=total_filtered))
     if len(top) < args.top and total_filtered < args.top:
-        print(f" ⚠  Apenas {total_filtered} jogos passaram nos filtros (pedido: {args.top})")
+        print(t("report.too_few", total=total_filtered, top=args.top))
     print(f"{'=' * 60}")
     print_table(top, args.sort, show_tags=args.show_tags)
     save_results(rows, args.output)
@@ -61,9 +62,9 @@ def main() -> None:
     if args.migrate_cache:
         from .sources.fetch import migrate_steam_details
 
-        print("⚠  Isso pode demorar 15-30 min. Ctrl+C para interromper (progresso salvo).")
+        print(t("migrate.slow_warning"))
         migrate_steam_details(load_cache(), verbose=args.verbose)
-        print("Migração concluída.")
+        print(t("migrate.done"))
         return
 
     if args.migrate_igdb:
@@ -71,7 +72,7 @@ def main() -> None:
 
         cache = load_cache()
         migrate_igdb_data(cache, verbose=args.verbose)
-        print("Migração IGDB concluída.")
+        print(t("migrate.igdb_done"))
         return
 
     if args.list_tags or args.list_genres or args.list_collections:

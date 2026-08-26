@@ -1,4 +1,4 @@
-"""Caminhos de configuração do howl (~/.config/howl, respeitando XDG_CONFIG_HOME)."""
+"""Configuration paths for howl (~/.config/howl, honouring XDG_CONFIG_HOME)."""
 
 import os
 from pathlib import Path
@@ -23,7 +23,7 @@ def token_path() -> Path:
 
 
 def ensure_config_dir() -> Path:
-    """Cria ~/.config/howl com permissões restritivas (0700) e retorna o path."""
+    """Creates ~/.config/howl with restrictive permissions (0700) and returns the path."""
     d = config_dir()
     d.mkdir(mode=0o700, parents=True, exist_ok=True)
     return d

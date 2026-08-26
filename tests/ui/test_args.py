@@ -155,3 +155,49 @@ def test_resolve_username_exits_when_empty(monkeypatch):
     monkeypatch.setattr("builtins.input", lambda _: "")
     with pytest.raises(SystemExit):
         _resolve_username(args)
+
+
+def test_help_renders_in_portuguese(capsys, monkeypatch):
+    import sys
+
+    import pytest
+
+    from steam_hltb.ui.args import parse_args
+
+    monkeypatch.setattr(sys, "argv", ["howl", "--lang", "pt-BR", "--help"])
+    with pytest.raises(SystemExit):
+        parse_args()
+    out = capsys.readouterr().out
+    assert "uso:" in out
+    assert "opções:" in out
+    assert "mostra esta ajuda e sai" in out
+
+
+def test_help_renders_in_english_by_default(capsys, monkeypatch):
+    import sys
+
+    import pytest
+
+    from steam_hltb.ui.args import parse_args
+
+    monkeypatch.setattr(sys, "argv", ["howl", "--help"])
+    monkeypatch.delenv("HOWL_LANG", raising=False)
+    monkeypatch.setenv("LANG", "en_US.UTF-8")
+    with pytest.raises(SystemExit):
+        parse_args()
+    out = capsys.readouterr().out
+    assert "usage:" in out
+    assert "show this help message and exit" in out
+
+
+def test_lang_flag_appears_in_help(capsys, monkeypatch):
+    import sys
+
+    import pytest
+
+    from steam_hltb.ui.args import parse_args
+
+    monkeypatch.setattr(sys, "argv", ["howl", "--help"])
+    with pytest.raises(SystemExit):
+        parse_args()
+    assert "--lang" in capsys.readouterr().out

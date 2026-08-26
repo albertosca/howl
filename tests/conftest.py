@@ -63,3 +63,12 @@ def sample_steam_games():
         {"name": "Portal 2", "appid": 620, "hours_played": 3.0},
         {"name": "Dota 2", "appid": 570, "hours_played": 100.0},
     ]
+
+
+@pytest.fixture(autouse=True)
+def reset_language():
+    from steam_hltb import i18n
+
+    i18n.set_language("en")
+    yield
+    i18n.set_language("en")

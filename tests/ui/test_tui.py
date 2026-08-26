@@ -373,3 +373,37 @@ def test_run_tui_constructs_and_runs(monkeypatch):
     monkeypatch.setattr(SteamHLTBApp, "run", lambda self: ran.append(True))
     run_tui(SAMPLE_GAMES, INITIAL_FILTERS)
     assert ran == [True]
+
+
+def test_filter_labels_are_english_by_default():
+    from steam_hltb import i18n
+    from steam_hltb.i18n import t
+
+    i18n.set_language("en")
+    assert t("tui.label_collection") == "Collection"
+    assert t("tui.label_era") == "Release era"
+    assert t("tui.label_category") == "Category"
+
+
+def test_filter_labels_are_portuguese_when_selected():
+    from steam_hltb import i18n
+    from steam_hltb.i18n import t
+
+    i18n.set_language("pt-BR")
+    assert t("tui.label_collection") == "Coleção"
+    assert t("tui.label_era") == "Era de lançamento"
+    assert t("tui.label_category") == "Categoria"
+
+
+def test_status_bar_interpolates_in_both_languages():
+    from steam_hltb import i18n
+    from steam_hltb.i18n import t
+
+    i18n.set_language("en")
+    assert t("tui.status_bar", shown=10, total=134, sort="shortest") == (
+        " Showing 10 of 134 filtered · sort: shortest"
+    )
+    i18n.set_language("pt-BR")
+    assert t("tui.status_bar", shown=10, total=134, sort="shortest") == (
+        " Mostrando 10 de 134 filtrados · ordem: shortest"
+    )

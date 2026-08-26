@@ -173,13 +173,14 @@ def test_run_setup_inner_full_flow(tmp_path, monkeypatch):
     monkeypatch.setattr(setup, "_prompt_api_key", lambda verbose=False: "KEY123")
     monkeypatch.setattr(setup, "_prompt_username", lambda api, verbose=False: "bob")
     monkeypatch.setattr(setup, "_prompt_vdf_path", lambda: "/x.vdf")
-    inputs = iter(["s", "cid", "csec"])  # IGDB sim + client id/secret
+    inputs = iter(["1", "s", "cid", "csec"])  # idioma EN + IGDB sim + client id/secret
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
     setup._run_setup_inner()
     env = (tmp_path / "howl" / ".env").read_text()
     assert "STEAM_API_KEY=KEY123" in env
     assert "STEAM_USERNAME=bob" in env
     assert "STEAM_VDF_PATH=/x.vdf" in env
+    assert "HOWL_LANG=en" in env
     assert "IGDB_CLIENT_ID=cid" in env
     assert "IGDB_CLIENT_SECRET=csec" in env
 
@@ -190,7 +191,7 @@ def test_run_setup_inner_igdb_empty_credentials(tmp_path, monkeypatch):
     monkeypatch.setattr(setup, "_prompt_api_key", lambda verbose=False: "K")
     monkeypatch.setattr(setup, "_prompt_username", lambda api, verbose=False: "u")
     monkeypatch.setattr(setup, "_prompt_vdf_path", lambda: None)
-    inputs = iter(["s", "", ""])  # IGDB sim mas id/secret vazios → não grava
+    inputs = iter(["1", "s", "", ""])  # idioma EN + IGDB sim mas id/secret vazios → não grava
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
     setup._run_setup_inner()
     assert "IGDB_CLIENT_ID" not in (tmp_path / "howl" / ".env").read_text()
@@ -207,3 +208,27 @@ def test_run_setup_inner_skips_optional(tmp_path, monkeypatch):
     env = (tmp_path / "howl" / ".env").read_text()
     assert "STEAM_VDF_PATH" not in env
     assert "IGDB_CLIENT_ID" not in env
+
+
+def test_language_prompt_offers_both_languages(monkeypatch, capsys):
+    from steam_hltb.config.prompts import _prompt_language
+
+    monkeypatch.setattr("builtins.input", lambda _: "1")
+    assert _prompt_language() == "en"
+    out = capsys.readouterr().out
+    assert "English" in out
+    assert "Português" in out
+
+
+def test_language_prompt_selects_portuguese(monkeypatch):
+    from steam_hltb.config.prompts import _prompt_language
+
+    monkeypatch.setattr("builtins.input", lambda _: "2")
+    assert _prompt_language() == "pt-BR"
+
+
+def test_language_prompt_defaults_to_english_on_empty_input(monkeypatch):
+    from steam_hltb.config.prompts import _prompt_language
+
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    assert _prompt_language() == "en"

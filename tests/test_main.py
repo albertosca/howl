@@ -198,3 +198,23 @@ def test_setup_flag_invokes_run_setup(monkeypatch):
     importlib.reload(m)
     m.main()
     assert called == [True]
+
+
+def test_report_header_is_english_by_default():
+    from steam_hltb import i18n
+    from steam_hltb.i18n import t
+
+    i18n.set_language("en")
+    assert t("report.header", top=10, sort="shortest", shown=10, total=134) == (
+        " TOP 10 — sort: shortest  (10 of 134 filtered)"
+    )
+
+
+def test_report_header_is_portuguese_when_selected():
+    from steam_hltb import i18n
+    from steam_hltb.i18n import t
+
+    i18n.set_language("pt-BR")
+    assert t("report.header", top=10, sort="shortest", shown=10, total=134) == (
+        " TOP 10 — ordem: shortest  (10 de 134 filtrados)"
+    )

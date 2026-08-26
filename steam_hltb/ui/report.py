@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core.types import Game
+from ..i18n import t
 
 # Steam infrastructure categories — not relevant for gameplay
 STEAM_NOISE_CATEGORIES: frozenset[str] = frozenset(
@@ -32,8 +33,8 @@ def _gameplay_categories(game: Game) -> list[str]:
 
 def print_table(games: list[Game], sort_by: str, show_tags: bool = False) -> None:
     header = (
-        f"{'#':>3}  {'Name':<45}  {'Year':>4}  {'MC':>4}  "
-        f"{'Steam':>6}  {'HLTB':>5}  {'Played':>8}  {'Score':>8}"
+        f"{'#':>3}  {t('report.col_name'):<45}  {t('report.col_year'):>4}  {'MC':>4}  "
+        f"{'Steam':>6}  {'HLTB':>5}  {t('report.col_played'):>8}  {t('report.col_score'):>8}"
     )
     print(header)
     print("-" * len(header))
@@ -65,10 +66,10 @@ def list_collections_cmd(collection_map: dict[str, list[str]]) -> None:
 
     counter: Counter[str] = Counter(tag for tags in collection_map.values() for tag in tags)
     if not counter:
-        print("No collections found. Check --vdf-path.")
+        print(t("report.no_collections"))
         return
     print(f"\n{'─' * 40}")
-    print(f" Available collections ({len(counter)} unique)")
+    print(t("report.available_collections", count=len(counter)))
     print(f"{'─' * 40}")
     for name, count in counter.most_common():
         print(f"  {count:>4}x  {name}")
@@ -89,10 +90,10 @@ def list_available(cache: dict[str, Any], field: str) -> None:
             if v.lower() not in STEAM_NOISE_CATEGORIES:
                 counter[v] += 1
     if not counter:
-        print(f"No {field} found in cache. Try --refresh or --migrate-cache.")
+        print(t("report.no_items", field=field))
         return
     print(f"\n{'─' * 40}")
-    print(f" Available {field.upper()} ({len(counter)} unique)")
+    print(t("report.available_items", field=field.upper(), count=len(counter)))
     print(f"{'─' * 40}")
     for value, count in counter.most_common():
         print(f"  {count:>4}x  {value}")
@@ -123,7 +124,10 @@ def save_results(games: list[Game], output_base: str) -> None:
             )
 
     with md_path.open("w", encoding="utf-8") as f:
-        f.write("| # | Name | MC | Steam | HLTB | Played | Score |\n")
+        f.write(
+            f"| # | {t('report.col_name')} | MC | Steam | HLTB | "
+            f"{t('report.col_played')} | {t('report.col_score')} |\n"
+        )
         f.write("|---|------|----|-------|------|---------|-------|\n")
         for i, g in enumerate(games, 1):
             mc = str(g["metacritic"]) if g["metacritic"] else "-"
@@ -134,4 +138,4 @@ def save_results(games: list[Game], output_base: str) -> None:
                 f"{hltb_str} | {g['hours_played']}h | {g['_score']:.1f} |\n"
             )
 
-    print(f"\nSaved to '{csv_path}' and '{md_path}'")
+    print(t("report.saved", csv=csv_path, md=md_path))

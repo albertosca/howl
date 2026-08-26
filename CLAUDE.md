@@ -2,16 +2,16 @@
 
 ## Mandatory cycle
 
-Before any change: `./venv/bin/pytest` to establish a green baseline.
-Before reporting done: `./venv/bin/pytest` again. Never say "done" without running the suite.
+Before any change: `.venv/bin/pytest` to establish a green baseline.
+Before reporting done: `.venv/bin/pytest` again. Never say "done" without running the suite.
 
 ## Quality gate
 
 ```bash
-./venv/bin/ruff check --fix steam_hltb/ tests/
-./venv/bin/ruff format steam_hltb/ tests/
-./venv/bin/mypy steam_hltb
-./venv/bin/pytest
+.venv/bin/ruff check --fix steam_hltb/ tests/
+.venv/bin/ruff format steam_hltb/ tests/
+.venv/bin/mypy steam_hltb
+.venv/bin/pytest
 ```
 
 All four must pass before committing. In the order above.

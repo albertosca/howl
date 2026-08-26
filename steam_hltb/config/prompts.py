@@ -6,6 +6,30 @@ from pathlib import Path
 
 import requests
 
+from ..i18n import t
+
+_YES = ("y", "yes", "s", "sim")
+_NO = ("n", "no", "nao")
+
+
+def _is_yes(answer: str) -> bool:
+    return answer.strip().lower() in (*_YES, t("setup.answer_yes"))
+
+
+def _is_no(answer: str) -> bool:
+    return answer.strip().lower() in (*_NO, t("setup.answer_no"))
+
+
+_LANGUAGE_CHOICES: dict[str, str] = {"1": "en", "2": "pt-BR"}
+
+
+def _prompt_language() -> str:
+    """The one prompt that cannot use the catalog: it runs before a language exists."""
+    print("\n  Language / Idioma:")
+    print("    [1] English")
+    print("    [2] Português")
+    return _LANGUAGE_CHOICES.get(input("  Choose / Escolha [1]: ").strip(), "en")
+
 
 def _detect_vdf_paths() -> list[str]:
     system = platform.system()
@@ -28,11 +52,11 @@ def _validate_api_key(key: str, verbose: bool = False) -> bool:
             timeout=5,
         )
         if verbose:
-            print(f"\n  [debug] GET ResolveVanityURL (valve) → HTTP {resp.status_code}")
+            print(t("setup.debug_valve", status=resp.status_code))
         return resp.status_code == 200
     except Exception as e:
         if verbose:
-            print(f"\n  [debug] network error validating key: {e}")
+            print(t("setup.debug_key_neterr", error=e))
         return False
 
 
@@ -44,7 +68,7 @@ def _validate_username(key: str, username: str, verbose: bool = False) -> str | 
             timeout=5,
         )
         if verbose:
-            print(f"\n  [debug] GET ResolveVanityURL ({username}) → HTTP {resp.status_code}")
+            print(t("setup.debug_resolve", host=username, status=resp.status_code))
         data = resp.json().get("response", {})
         if data.get("success") == 1:
             steamid: str = data["steamid"]
@@ -52,86 +76,86 @@ def _validate_username(key: str, username: str, verbose: bool = False) -> str | 
         return None
     except Exception as e:
         if verbose:
-            print(f"\n  [debug] network error validating username: {e}")
+            print(t("setup.debug_user_neterr", error=e))
         return None
 
 
 def _prompt_api_key(verbose: bool = False) -> str:
     existing = os.environ.get("STEAM_API_KEY", "")
     if existing:
-        print(f"  STEAM_API_KEY already set (***{existing[-4:]})")
-        choice = input("  Use existing? [Y/n] ").strip().lower()
-        if choice not in ("n", "não", "nao", "no"):
+        print(t("setup.api_key_present", suffix=existing[-4:]))
+        choice = input(t("setup.prompt_use_existing")).strip().lower()
+        if not _is_no(choice):
             return existing
 
-    print("\n  STEAM_API_KEY:")
-    print("  1. Go to https://steamcommunity.com/dev/apikey")
-    print("  2. Log in with your Steam account")
-    print("  3. Fill 'Domain Name' with any value (e.g. localhost)")
-    print("  4. Copy the generated key")
+    print(t("setup.api_key_title"))
+    print(t("setup.api_key_step1"))
+    print(t("setup.api_key_step2"))
+    print(t("setup.api_key_step3"))
+    print(t("setup.api_key_step4"))
     while True:
-        key = input("\n  Paste your key: ").strip()
+        key = input(t("setup.prompt_key")).strip()
         if not key:
-            print("  Key is required.")
+            print(t("setup.key_required"))
             continue
-        print("  Validating...", end=" ", flush=True)
+        print(t("setup.validating"), end=" ", flush=True)
         if _validate_api_key(key, verbose=verbose):
             print("OK")
             return key
-        print("invalid or no internet.")
-        retry = input("  Try again? [Y/n] ").strip().lower()
-        if retry in ("n", "não", "nao", "no"):
-            print("  Proceeding with the provided key (not validated).")
+        print(t("setup.key_invalid"))
+        retry = input(t("setup.prompt_retry")).strip().lower()
+        if _is_no(retry):
+            print(t("setup.key_unvalidated"))
             return key
 
 
 def _prompt_username(api_key: str, verbose: bool = False) -> str:
     existing = os.environ.get("STEAM_USERNAME", "")
     if existing:
-        print(f"\n  STEAM_USERNAME already set: {existing}")
-        choice = input("  Use existing? [Y/n] ").strip().lower()
-        if choice not in ("n", "não", "nao", "no"):
+        print(t("setup.username_present", username=existing))
+        choice = input(t("setup.prompt_use_existing")).strip().lower()
+        if not _is_no(choice):
             return existing
 
-    print("\n  STEAM_USERNAME:")
-    print("  This is the vanity URL of your Steam profile.")
-    print("  e.g. steamcommunity.com/id/gabelogannewell → username is gabelogannewell")
+    print(t("setup.username_title"))
+    print(t("setup.username_explain"))
+    print(t("setup.username_example"))
     while True:
-        username = input("\n  Your username: ").strip()
+        username = input(t("setup.prompt_username")).strip()
         if not username:
-            print("  Username is required.")
+            print(t("setup.username_required"))
             continue
-        print("  Validating...", end=" ", flush=True)
+        print(t("setup.validating"), end=" ", flush=True)
         steamid = _validate_username(api_key, username, verbose=verbose)
         if steamid:
-            print(f"OK (SteamID: {steamid})")
+            print(t("setup.username_ok", steamid=steamid))
             return username
-        print("not found.")
-        retry = input("  Try again? [Y/n] ").strip().lower()
-        if retry in ("n", "não", "nao", "no"):
-            print("  Proceeding with the provided username (not validated).")
+        print(t("setup.username_not_found"))
+        retry = input(t("setup.prompt_retry")).strip().lower()
+        if _is_no(retry):
+            print(t("setup.username_unvalidated"))
             return username
 
 
 def _prompt_vdf_path() -> str | None:
     existing = os.environ.get("STEAM_VDF_PATH", "")
     if existing:
-        print(f"\n  STEAM_VDF_PATH already set: {existing}")
-        choice = input("  Use existing? [Y/n] ").strip().lower()
-        if choice not in ("n", "não", "nao", "no"):
+        print(t("setup.vdf_present", path=existing))
+        choice = input(t("setup.prompt_use_existing")).strip().lower()
+        if not _is_no(choice):
             return existing
 
-    print("\n  STEAM_VDF_PATH (optional — required for collection filters):")
+    print(t("setup.vdf_title"))
     detected = _detect_vdf_paths()
     if detected:
-        print(f"  Found {len(detected)} VDF file(s):")
+        print(t("setup.vdf_found", count=len(detected)))
         for i, path in enumerate(detected, 1):
             print(f"  {i}. {path}")
-        choice = input(f"  Choose [1-{len(detected)}] or Enter to skip: ").strip()
+        choice = input(t("setup.prompt_vdf_choice", max=len(detected))).strip()
         if choice.isdigit() and 1 <= int(choice) <= len(detected):
             return detected[int(choice) - 1]
         return None
 
-    print("  No VDF detected automatically.")
-    manual = input("  Paste the path manually (or Enter to skip): ").strip()
+    print(t("setup.vdf_none_found"))
+    manual = input(t("setup.prompt_vdf_manual")).strip()
     return manual if manual else None
