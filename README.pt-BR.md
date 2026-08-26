@@ -136,6 +136,18 @@ STEAM_VDF_PATH=/caminho/para/sharedconfig.vdf
 
 Prefira isso a exportar as chaves no seu shell profile (`~/.zshenv`, `~/.bashrc`): exports de shell vazam os valores pra todos os processos do sistema.
 
+## Idioma
+
+O `howl` fala inglês e português brasileiro. O `howl --setup` pergunta qual você prefere e guarda a resposta em `~/.config/howl/.env`.
+
+Para trocar em uma execução só:
+
+```bash
+howl --lang en
+```
+
+Ordem de resolução, da maior para a menor precedência: `--lang` → variável de ambiente `HOWL_LANG` → `HOWL_LANG` em `~/.config/howl/.env` → locale do sistema operacional → inglês.
+
 ## Uso
 
 ```bash

@@ -136,6 +136,18 @@ STEAM_VDF_PATH=/path/to/sharedconfig.vdf
 
 Prefer this over exporting the keys in your shell profile (`~/.zshenv`, `~/.bashrc`): shell exports leak the values to every process on your system.
 
+## Language
+
+`howl` speaks English and Brazilian Portuguese. `howl --setup` asks which one you want and stores the answer in `~/.config/howl/.env`.
+
+To override it for a single run:
+
+```bash
+howl --lang pt-BR
+```
+
+Resolution order, highest first: `--lang` → `HOWL_LANG` environment variable → `HOWL_LANG` in `~/.config/howl/.env` → your operating system locale → English.
+
 ## Usage
 
 ```bash
