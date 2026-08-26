@@ -228,3 +228,36 @@ def test_prompt_vdf_manual_empty(monkeypatch):
     monkeypatch.setattr(prompts, "_detect_vdf_paths", lambda: [])
     monkeypatch.setattr("builtins.input", lambda _: "")
     assert prompts._prompt_vdf_path() is None
+
+
+def test_api_key_prompt_is_portuguese(monkeypatch, capsys):
+    from steam_hltb import i18n
+    from steam_hltb.config.prompts import _prompt_api_key
+
+    i18n.set_language("pt-BR")
+    monkeypatch.setenv("STEAM_API_KEY", "abcd1234")
+    monkeypatch.setattr("builtins.input", lambda _: "s")
+    assert _prompt_api_key() == "abcd1234"
+    assert "já definida" in capsys.readouterr().out
+
+
+def test_api_key_prompt_is_english_by_default(monkeypatch, capsys):
+    from steam_hltb.config.prompts import _prompt_api_key
+
+    monkeypatch.setenv("STEAM_API_KEY", "abcd1234")
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    assert _prompt_api_key() == "abcd1234"
+    assert "already set" in capsys.readouterr().out
+
+
+def test_yes_no_helpers_accept_both_languages():
+    from steam_hltb import i18n
+    from steam_hltb.config.prompts import _is_no, _is_yes
+
+    for answer in ("y", "yes", "s", "sim", "SIM", " Y "):
+        assert _is_yes(answer)
+    for answer in ("n", "no", "nao", "NAO", " n "):
+        assert _is_no(answer)
+    i18n.set_language("pt-BR")
+    assert _is_no("não")
+    assert _is_yes("sim")
