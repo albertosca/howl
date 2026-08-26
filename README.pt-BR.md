@@ -19,6 +19,15 @@ Ranqueia sua biblioteca Steam por qualidade × tempo investido usando dados do [
 
 ![howl ranqueando um backlog da Steam](https://raw.githubusercontent.com/albertosca/howl/main/demo/howl.gif)
 
+## Por que
+
+Tenho mais jogos do que vou conseguir jogar. Toda vez que eu abria a Steam, rolava a mesma lista, não reconhecia nada e fechava — a biblioteca tinha virado um problema de decisão, não uma coleção.
+
+A informação para resolver isso já existe, só está espalhada: o Metacritic sabe se um jogo é bom, as reviews da Steam sabem se as pessoas de fato gostaram, e o HowLongToBeat sabe quantas horas ele vai custar. O `howl` junta as três e ordena o que sobra.
+
+É uma ferramenta pessoal que acabou valendo a pena compartilhar. Ela lê sua biblioteca, nunca escreve nela.
+
+
 ## Requisitos
 
 - Python 3.11+
@@ -56,6 +65,84 @@ Após instalar, o comando `howl` fica disponível:
 ```bash
 howl --help
 ```
+
+## Uso
+
+Rode o `howl --setup` uma vez antes — ele te guia pela chave da API da Steam e escreve a configuração pra você. Detalhes em [Configuração](#configuração).
+
+```bash
+# Primeiro uso: popula o cache (pode demorar ~5 min para 300 jogos)
+howl --username meu_id_steam --verbose
+
+# Top 10 jogos bons e curtos (padrão)
+howl --username meu_id_steam
+
+# Interface visual interativa
+howl --username meu_id_steam --tui
+
+# Filtrar por gênero, progresso e fórmula
+howl --username meu_id_steam --genre "action,rpg" --not-started --sort quick-wins
+
+# Filtrar por época de lançamento
+howl --username meu_id_steam --era "2010-2015,2015-2020"
+
+# Ver o que está disponível no cache
+howl --list-genres
+howl --list-tags
+howl --list-collections
+```
+
+Com `STEAM_USERNAME` definido no ambiente, `--username` pode ser omitido.
+
+## Fórmulas de ordenação (`--sort`)
+
+| Nome | Fórmula | Quando usar |
+|------|---------|-------------|
+| `shortest` | composite / √h | Jogos bons e curtos — default |
+| `longest` | composite × √h | Épicos que valem cada hora |
+| `rated` | Metacritic puro | Mais aclamados pela crítica |
+| `loved` | Steam % positivo | Mais amados pelos jogadores |
+| `quick-wins` | composite² / h | Qualidade máxima em menos tempo |
+| `hidden-gems` | steam × (1 − mc/100) | Amados pelos players, ignorados pela crítica |
+| `composto` | 0.5×mc + 0.5×steam | Média ponderada configurável |
+
+`composite` = média ponderada de Metacritic e Steam reviews (ajuste com `--weight-mc` / `--weight-steam`).
+
+Jogos sem Metacritic ou Steam reviews recebem peso zero naquela fonte (o outro assume 100%).
+
+## Filtros disponíveis
+
+| Flag | Valores | Default |
+|------|---------|---------|
+| `--sort` | ver tabela acima | `shortest` |
+| `--genre` | vírgula-separado | — |
+| `--genre-any` | vírgula-separado | — |
+| `--exclude-genre` | vírgula-separado | — |
+| `--era` | `pre-2005` `2005-2010` `2010-2015` `2015-2020` `2020+` `unknown` | todas |
+| `--not-started` | — | — |
+| `--in-progress` | — | — |
+| `--all-progress` | — | não-zerados |
+| `--category` | `all` `singleplayer` `coop` | `all` |
+| `--min-hours` / `--max-hours` | horas (HLTB) | — |
+| `--collection` | nome da coleção Steam | — |
+| `--top` | inteiro | `10` |
+| `--show-finished` | — | excluídos |
+
+## TUI (interface visual)
+
+```bash
+howl --username meu_id_steam --tui
+```
+
+| Tecla | Ação |
+|-------|------|
+| `f` | Abrir/fechar painel de filtros |
+| `g` | Toggle coluna de gêneros |
+| `t` | Toggle coluna de categorias Steam |
+| `s` | Salvar resultado atual em CSV + Markdown |
+| `q` | Sair |
+
+O painel de filtros aplica todas as mudanças em tempo real.
 
 ## Configuração
 
@@ -141,82 +228,6 @@ howl --lang en
 
 Ordem de resolução, da maior para a menor precedência: `--lang` → variável de ambiente `HOWL_LANG` → `HOWL_LANG` em `~/.config/howl/.env` → locale do sistema operacional → inglês.
 
-## Uso
-
-```bash
-# Primeiro uso: popula o cache (pode demorar ~5 min para 300 jogos)
-howl --username meu_id_steam --verbose
-
-# Top 10 jogos bons e curtos (padrão)
-howl --username meu_id_steam
-
-# Interface visual interativa
-howl --username meu_id_steam --tui
-
-# Filtrar por gênero, progresso e fórmula
-howl --username meu_id_steam --genre "action,rpg" --not-started --sort quick-wins
-
-# Filtrar por época de lançamento
-howl --username meu_id_steam --era "2010-2015,2015-2020"
-
-# Ver o que está disponível no cache
-howl --list-genres
-howl --list-tags
-howl --list-collections
-```
-
-Com `STEAM_USERNAME` definido no ambiente, `--username` pode ser omitido.
-
-## Fórmulas de ordenação (`--sort`)
-
-| Nome | Fórmula | Quando usar |
-|------|---------|-------------|
-| `shortest` | composite / √h | Jogos bons e curtos — default |
-| `longest` | composite × √h | Épicos que valem cada hora |
-| `rated` | Metacritic puro | Mais aclamados pela crítica |
-| `loved` | Steam % positivo | Mais amados pelos jogadores |
-| `quick-wins` | composite² / h | Qualidade máxima em menos tempo |
-| `hidden-gems` | steam × (1 − mc/100) | Amados pelos players, ignorados pela crítica |
-| `composto` | 0.5×mc + 0.5×steam | Média ponderada configurável |
-
-`composite` = média ponderada de Metacritic e Steam reviews (ajuste com `--weight-mc` / `--weight-steam`).
-
-Jogos sem Metacritic ou Steam reviews recebem peso zero naquela fonte (o outro assume 100%).
-
-## Filtros disponíveis
-
-| Flag | Valores | Default |
-|------|---------|---------|
-| `--sort` | ver tabela acima | `shortest` |
-| `--genre` | vírgula-separado | — |
-| `--genre-any` | vírgula-separado | — |
-| `--exclude-genre` | vírgula-separado | — |
-| `--era` | `pre-2005` `2005-2010` `2010-2015` `2015-2020` `2020+` `unknown` | todas |
-| `--not-started` | — | — |
-| `--in-progress` | — | — |
-| `--all-progress` | — | não-zerados |
-| `--category` | `all` `singleplayer` `coop` | `all` |
-| `--min-hours` / `--max-hours` | horas (HLTB) | — |
-| `--collection` | nome da coleção Steam | — |
-| `--top` | inteiro | `10` |
-| `--show-finished` | — | excluídos |
-
-## TUI (interface visual)
-
-```bash
-howl --username meu_id_steam --tui
-```
-
-| Tecla | Ação |
-|-------|------|
-| `f` | Abrir/fechar painel de filtros |
-| `g` | Toggle coluna de gêneros |
-| `t` | Toggle coluna de categorias Steam |
-| `s` | Salvar resultado atual em CSV + Markdown |
-| `q` | Sair |
-
-O painel de filtros aplica todas as mudanças em tempo real.
-
 ## Cache
 
 Os dados de HLTB, Steam Reviews e detalhes do jogo são cacheados em `games_cache.json` para evitar requisições repetidas. Para atualizar:
@@ -250,9 +261,23 @@ O cache já está completo. Se acabou de criar o cache com `howl --verbose`, tod
 **Cache com poucos jogos**
 Se a biblioteca Steam está como privada, a API retorna 0 jogos. Acesse Steam → Perfil → Editar → deixe jogos como público (pode voltar a privado depois).
 
-## Desenvolvimento
+## Como foi construído
+
+Python 3.11+, [Textual](https://textual.textualize.io/) para a TUI, `argparse` para o CLI, sem dependência de runtime além dos quatro clientes de API.
+
+O portão de qualidade roda nesta ordem e os quatro precisam passar antes de qualquer commit:
 
 ```bash
-pytest                          # rodar todos os testes
-pytest tests/test_score.py -v   # módulo específico
+.venv/bin/ruff check --fix steam_hltb/ tests/
+.venv/bin/ruff format steam_hltb/ tests/
+.venv/bin/mypy steam_hltb          # strict
+.venv/bin/pytest                   # 402 testes, --cov-fail-under=100
+```
+
+A cobertura está em 100% com o portão ativo, então o badge não consegue divergir da realidade — se a cobertura cair, o CI quebra. O `mypy` roda em modo strict. As dependências são travadas com [uv](https://docs.astral.sh/uv/).
+
+Uma decisão de projeto que vale destacar, por ser a parte menos óbvia do código: os dois catálogos de tradução somam 294 entradas e nenhuma delas é verificada individualmente. Três testes estruturais cobrem todas — paridade de chaves entre catálogos, paridade de placeholders dentro de cada par, e um teste de fronteira contra as internas do `argparse` da versão de Python em uso. Uma tradução faltando ou malformada quebra a suíte em vez de chegar num terminal.
+
+```bash
+.venv/bin/pytest tests/test_score.py -v   # um módulo só
 ```

@@ -9,15 +9,24 @@
 ![Coverage](https://raw.githubusercontent.com/albertosca/howl/main/.github/badges/coverage.svg)
 ![Ruff](https://raw.githubusercontent.com/albertosca/howl/main/.github/badges/ruff.svg)
 
-<!-- Coverage/Ruff são SVGs locais (sem serviço externo). Regenerar com:
+<!-- Coverage/Ruff are local SVGs (no external service). Regenerate with:
        pip install "genbadge[coverage]" anybadge
        pytest --cov-report=xml && genbadge coverage --local -i coverage.xml -o .github/badges/coverage.svg
        anybadge --label="code style" --value=ruff --file=.github/badges/ruff.svg --color="#261230" -o
-     O coverage fica sempre correto: o gate --cov-fail-under=100 quebra o CI se cair de 100%. -->
+     Coverage stays honest: the --cov-fail-under=100 gate breaks CI if it ever drops below 100%. -->
 
 Ranks your Steam library by quality × time invested using data from [HowLongToBeat](https://howlongtobeat.com), Metacritic and Steam Reviews. No more decision paralysis staring at your backlog.
 
 ![howl ranking a Steam backlog](https://raw.githubusercontent.com/albertosca/howl/main/demo/howl.gif)
+
+## Why
+
+I own more games than I will ever play. Every time I opened Steam I scrolled the same list, recognised nothing, and closed it — the library had become a decision problem, not a collection.
+
+The information to solve it already exists, just scattered: Metacritic knows whether a game is good, Steam reviews know whether people actually enjoyed it, and HowLongToBeat knows what it will cost me in hours. `howl` puts the three together and sorts what is left.
+
+It is a personal tool that turned out to be worth sharing. It reads your library, never writes to it.
+
 
 ## Requirements
 
@@ -56,6 +65,84 @@ After installing, the `howl` command becomes available:
 ```bash
 howl --help
 ```
+
+## Usage
+
+Run `howl --setup` once first — it walks you through the Steam API key and writes the config for you. Details in [Configuration](#configuration).
+
+```bash
+# First run: populates the cache (may take ~5 min for 300 games)
+howl --username my_steam_id --verbose
+
+# Top 10 good and short games (default)
+howl --username my_steam_id
+
+# Interactive visual interface
+howl --username my_steam_id --tui
+
+# Filter by genre, progress and formula
+howl --username my_steam_id --genre "action,rpg" --not-started --sort quick-wins
+
+# Filter by release era
+howl --username my_steam_id --era "2010-2015,2015-2020"
+
+# See what's available in the cache
+howl --list-genres
+howl --list-tags
+howl --list-collections
+```
+
+With `STEAM_USERNAME` set in the environment, `--username` can be omitted.
+
+## Sort formulas (`--sort`)
+
+| Name | Formula | When to use |
+|------|---------|-------------|
+| `shortest` | composite / √h | Good and short games — default |
+| `longest` | composite × √h | Epics worth every hour |
+| `rated` | Metacritic only | Most critically acclaimed |
+| `loved` | Steam % positive | Most loved by players |
+| `quick-wins` | composite² / h | Maximum quality in less time |
+| `hidden-gems` | steam × (1 − mc/100) | Loved by players, ignored by critics |
+| `composto` | 0.5×mc + 0.5×steam | Configurable weighted average |
+
+`composite` = weighted average of Metacritic and Steam reviews (tune with `--weight-mc` / `--weight-steam`).
+
+Games without Metacritic or Steam reviews get zero weight on that source (the other takes 100%).
+
+## Available filters
+
+| Flag | Values | Default |
+|------|---------|---------|
+| `--sort` | see table above | `shortest` |
+| `--genre` | comma-separated | — |
+| `--genre-any` | comma-separated | — |
+| `--exclude-genre` | comma-separated | — |
+| `--era` | `pre-2005` `2005-2010` `2010-2015` `2015-2020` `2020+` `unknown` | all |
+| `--not-started` | — | — |
+| `--in-progress` | — | — |
+| `--all-progress` | — | not-finished |
+| `--category` | `all` `singleplayer` `coop` | `all` |
+| `--min-hours` / `--max-hours` | hours (HLTB) | — |
+| `--collection` | Steam collection name | — |
+| `--top` | integer | `10` |
+| `--show-finished` | — | excluded |
+
+## TUI (visual interface)
+
+```bash
+howl --username my_steam_id --tui
+```
+
+| Key | Action |
+|-------|--------|
+| `f` | Open/close filter panel |
+| `g` | Toggle genres column |
+| `t` | Toggle Steam categories column |
+| `s` | Save current result to CSV + Markdown |
+| `q` | Quit |
+
+The filter panel applies all changes in real time.
 
 ## Configuration
 
@@ -141,82 +228,6 @@ howl --lang pt-BR
 
 Resolution order, highest first: `--lang` → `HOWL_LANG` environment variable → `HOWL_LANG` in `~/.config/howl/.env` → your operating system locale → English.
 
-## Usage
-
-```bash
-# First run: populates the cache (may take ~5 min for 300 games)
-howl --username my_steam_id --verbose
-
-# Top 10 good and short games (default)
-howl --username my_steam_id
-
-# Interactive visual interface
-howl --username my_steam_id --tui
-
-# Filter by genre, progress and formula
-howl --username my_steam_id --genre "action,rpg" --not-started --sort quick-wins
-
-# Filter by release era
-howl --username my_steam_id --era "2010-2015,2015-2020"
-
-# See what's available in the cache
-howl --list-genres
-howl --list-tags
-howl --list-collections
-```
-
-With `STEAM_USERNAME` set in the environment, `--username` can be omitted.
-
-## Sort formulas (`--sort`)
-
-| Name | Formula | When to use |
-|------|---------|-------------|
-| `shortest` | composite / √h | Good and short games — default |
-| `longest` | composite × √h | Epics worth every hour |
-| `rated` | Metacritic only | Most critically acclaimed |
-| `loved` | Steam % positive | Most loved by players |
-| `quick-wins` | composite² / h | Maximum quality in less time |
-| `hidden-gems` | steam × (1 − mc/100) | Loved by players, ignored by critics |
-| `composto` | 0.5×mc + 0.5×steam | Configurable weighted average |
-
-`composite` = weighted average of Metacritic and Steam reviews (tune with `--weight-mc` / `--weight-steam`).
-
-Games without Metacritic or Steam reviews get zero weight on that source (the other takes 100%).
-
-## Available filters
-
-| Flag | Values | Default |
-|------|---------|---------|
-| `--sort` | see table above | `shortest` |
-| `--genre` | comma-separated | — |
-| `--genre-any` | comma-separated | — |
-| `--exclude-genre` | comma-separated | — |
-| `--era` | `pre-2005` `2005-2010` `2010-2015` `2015-2020` `2020+` `unknown` | all |
-| `--not-started` | — | — |
-| `--in-progress` | — | — |
-| `--all-progress` | — | not-finished |
-| `--category` | `all` `singleplayer` `coop` | `all` |
-| `--min-hours` / `--max-hours` | hours (HLTB) | — |
-| `--collection` | Steam collection name | — |
-| `--top` | integer | `10` |
-| `--show-finished` | — | excluded |
-
-## TUI (visual interface)
-
-```bash
-howl --username my_steam_id --tui
-```
-
-| Key | Action |
-|-------|--------|
-| `f` | Open/close filter panel |
-| `g` | Toggle genres column |
-| `t` | Toggle Steam categories column |
-| `s` | Save current result to CSV + Markdown |
-| `q` | Quit |
-
-The filter panel applies all changes in real time.
-
 ## Cache
 
 HLTB, Steam Reviews and game detail data are cached in `games_cache.json` to avoid repeated requests. To update:
@@ -250,9 +261,23 @@ The cache is already complete. If you just built the cache with `howl --verbose`
 **Cache with few games**
 If the Steam library is set to private, the API returns 0 games. Go to Steam → Profile → Edit → set games to public (you can switch back to private afterwards).
 
-## Development
+## How it's built
+
+Python 3.11+, [Textual](https://textual.textualize.io/) for the TUI, `argparse` for the CLI, no runtime dependency beyond the four API clients.
+
+The quality gate runs in this order and all four must pass before anything is committed:
 
 ```bash
-pytest                          # run all tests
-pytest tests/test_score.py -v   # specific module
+.venv/bin/ruff check --fix steam_hltb/ tests/
+.venv/bin/ruff format steam_hltb/ tests/
+.venv/bin/mypy steam_hltb          # strict
+.venv/bin/pytest                   # 402 tests, --cov-fail-under=100
+```
+
+Coverage is at 100% with the gate enforced, so the badge cannot drift from reality — if coverage drops, CI fails. `mypy` runs in strict mode. Dependencies are locked with [uv](https://docs.astral.sh/uv/).
+
+One design note worth calling out, since it is the least obvious part of the codebase: the two translation catalogs hold 294 entries between them, and none of them is asserted individually. Three structural tests cover all of them — key parity between catalogs, placeholder parity within each pair, and a boundary test against the running Python's `argparse` internals. A missing or malformed translation fails the suite instead of reaching a terminal.
+
+```bash
+.venv/bin/pytest tests/test_score.py -v   # a single module
 ```
