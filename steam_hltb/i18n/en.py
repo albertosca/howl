@@ -9,7 +9,7 @@ Examples:
 
 Input formats:
   --genre / --genre-any / --exclude-genre  comma-separated names (e.g. "action,rpg")
-  --sort      shortest | longest | rated | loved | quick-wins | hidden-gems | composto
+  --sort      shortest | longest | rated | loved | quick-wins | hidden-gems | composite
   --era       comma-separated: pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown
   --weight-mc / --weight-steam             weights 0.0-1.0 that sum to 1.0 (e.g. 0.6 and 0.4)
 """
@@ -60,7 +60,9 @@ MESSAGES: dict[str, str] = {
     "args.vdf_path": (
         "Path to Steam's sharedconfig.vdf (default: STEAM_VDF_PATH env or sharedconfig.vdf)"
     ),
-    "args.show_finished": "Include games from the 'Finished' collection (excluded by default)",
+    "args.show_finished": (
+        "Include games from your finished collection (excluded once one is configured)"
+    ),
     "args.list_tags": "List all Steam categories available in cache and exit",
     "args.list_genres": "List all genres available in cache and exit",
     "args.list_collections": "List Steam collections available in the VDF and exit",
@@ -78,6 +80,9 @@ MESSAGES: dict[str, str] = {
     "args.interactive": "Interactive mode via prompts",
     "args.tui": "Open interactive visual interface (htop-style)",
     "args.setup": "Configure environment variables interactively",
+    "args.finished_collection": (
+        "Name of your Steam collection for finished games (or HOWL_FINISHED_COLLECTION)"
+    ),
     "setup.legacy_found": "\n  Found a legacy .env at {path}",
     "setup.legacy_now_reads": "  From now on howl reads from {path}.",
     "setup.legacy_migrated": "  Migrated to {path}",

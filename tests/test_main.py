@@ -23,6 +23,7 @@ def _ns(**over):
         "weight_steam": 0.5,
         "vdf_path": "no.vdf",
         "show_finished": True,
+        "finished_collection": None,
         "collection": None,
         "output": "out",
         "show_tags": False,

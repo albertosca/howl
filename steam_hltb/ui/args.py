@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 
-from ..core.score import SORT_OPTIONS
+from ..core.score import SORT_OPTIONS, normalize_sort
 from ..core.types import Filters
 from ..i18n import LANGUAGES, set_language, t
 from ..i18n.resolve import resolve_language
@@ -33,6 +33,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--sort",
         default="shortest",
+        # type runs before choices, so a deprecated name is mapped to its canonical
+        # form and an unknown one still fails against the documented list.
+        type=normalize_sort,
         choices=SORT_OPTIONS,
         help=t("args.sort"),
     )
@@ -89,6 +92,11 @@ def parse_args() -> argparse.Namespace:
         "--show-finished",
         action="store_true",
         help=t("args.show_finished"),
+    )
+    p.add_argument(
+        "--finished-collection",
+        default=os.environ.get("HOWL_FINISHED_COLLECTION"),
+        help=t("args.finished_collection"),
     )
     p.add_argument(
         "--list-tags",
@@ -193,6 +201,7 @@ def filters_from_args(args: argparse.Namespace) -> Filters:
         "weights": _weights(args),
         "vdf_path": args.vdf_path,
         "show_finished": args.show_finished,
+        "finished_collection": args.finished_collection,
         "collection": args.collection,
         "eras": _csv_list(args.era),
     }

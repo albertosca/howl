@@ -727,3 +727,64 @@ def test_build_game_rows_skips_games_without_any_timing():
     cache = {"Portal 2": {"timing": None, "hltb": None, "steam": None}}
     games = [{"name": "Portal 2", "appid": 620, "hours_played": 3.0}]
     assert build_game_rows(cache, games) == []
+
+
+def _dup_cache(name):
+    return {
+        name: {
+            "timing": {"source": "hltb", "game_name": name, "main_extra": 45},
+            "steam": {"appid": 3900, "positive_pct": 92},
+        }
+    }
+
+
+def test_build_game_rows_drops_a_repeated_appid():
+    from steam_hltb.core.classify import build_game_rows
+
+    games = [
+        {"name": "Civ IV", "appid": 3900, "hours_played": 4.4},
+        {"name": "Civ IV", "appid": 3900, "hours_played": 0.0},
+    ]
+    rows = build_game_rows(_dup_cache("Civ IV"), games)
+    assert len(rows) == 1
+
+
+def test_build_game_rows_merges_same_name_when_year_and_score_match():
+    """Two Steam entries for one game: keep the one that carries the playtime."""
+    from steam_hltb.core.classify import build_game_rows
+
+    cache = {
+        "Civ IV": {
+            "timing": {"source": "hltb", "game_name": "Civ IV", "main_extra": 45},
+            "steam": {"appid": 3900, "positive_pct": 92, "release_year": 2005, "metacritic": 94},
+        }
+    }
+    games = [
+        {"name": "Civ IV", "appid": 3900, "hours_played": 4.4},
+        {"name": "Civ IV", "appid": 3901, "hours_played": 0.0},
+    ]
+    rows = build_game_rows(cache, games)
+    assert len(rows) == 1
+    assert rows[0]["hours_played"] == 4.4
+
+
+def test_build_game_rows_keeps_same_name_when_the_year_differs():
+    """Resident Evil 2 (1998) and its 2019 remake share a name and are not duplicates."""
+    from steam_hltb.core.classify import build_game_rows
+
+    cache = {
+        "Resident Evil 2": {
+            "timing": {"source": "hltb", "game_name": "Resident Evil 2", "main_extra": 10},
+            "steam": {"appid": 1, "release_year": 1998, "metacritic": 91},
+        },
+        "Resident Evil 2 ": {
+            "timing": {"source": "hltb", "game_name": "Resident Evil 2", "main_extra": 12},
+            "steam": {"appid": 2, "release_year": 2019, "metacritic": 93},
+        },
+    }
+    games = [
+        {"name": "Resident Evil 2", "appid": 1, "hours_played": 0.0},
+        {"name": "Resident Evil 2 ", "appid": 2, "hours_played": 5.0},
+    ]
+    rows = build_game_rows(cache, games)
+    assert len(rows) == 2

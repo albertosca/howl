@@ -25,7 +25,7 @@ def select_games(all_games: list[Game], filters: Filters) -> list[Game]:
 
     vdf_path = filters.get("vdf_path", "sharedconfig.vdf")
     if not filters.get("show_finished", False):
-        rows = exclude_finished(rows, vdf_path)
+        rows = exclude_finished(rows, vdf_path, name=filters.get("finished_collection"))
     if filters.get("collection"):
         collection_map = load_collections(vdf_path)
         rows = filter_collection(rows, filters["collection"], collection_map)

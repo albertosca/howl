@@ -161,6 +161,7 @@ The interactive wizard walks you through the required variables, validates them 
 | `STEAM_API_KEY` | yes | Steam Web API key |
 | `STEAM_USERNAME` | yes | Vanity URL of your profile (e.g. `gabelogannewell`) |
 | `STEAM_VDF_PATH` | no | Path to `sharedconfig.vdf` (collection filters) |
+| `HOWL_FINISHED_COLLECTION` | no | Name of your Steam collection for finished games — they are excluded unless `--show-finished` |
 | `IGDB_CLIENT_ID` | no | Twitch app Client ID (scores for delisted games) |
 | `IGDB_CLIENT_SECRET` | no | Twitch app Client Secret |
 

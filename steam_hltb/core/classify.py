@@ -103,6 +103,31 @@ def _apply_overrides(row: Game, overrides: dict[str, Any], name: str) -> None:
                 row[key] = val
 
 
+def _deduplicate(rows: list[Game]) -> list[Game]:
+    """Collapses rows that describe the same game, keeping the one with the playtime.
+
+    Steam can list one title under more than one appid -- a re-release, a bundled
+    edition -- and each becomes its own row with identical data. Matching on appid
+    alone misses that; matching on name alone would merge Resident Evil 2 (1998)
+    into its 2019 remake, so the name only counts as a match when the release year
+    and Metacritic score agree too.
+    """
+    seen: set[tuple[Any, ...]] = set()
+    kept: list[Game] = []
+    # Highest playtime first, so the surviving row is the one actually played.
+    for row in sorted(rows, key=lambda r: -(r.get("hours_played") or 0)):
+        keys: set[tuple[Any, ...]] = {
+            ("name", row["name"], row.get("release_year"), row.get("metacritic"))
+        }
+        if row.get("appid") is not None:
+            keys.add(("appid", row["appid"]))
+        if keys & seen:
+            continue
+        seen |= keys
+        kept.append(row)
+    return kept
+
+
 def build_game_rows(cache: dict[str, Any], steam_games: list[dict[str, Any]]) -> list[Game]:
     overrides = _load_overrides()
     rows: list[dict[str, Any]] = []
@@ -134,7 +159,7 @@ def build_game_rows(cache: dict[str, Any], steam_games: list[dict[str, Any]]) ->
         }
         _apply_overrides(row, overrides, name)
         rows.append(row)
-    return rows
+    return _deduplicate(rows)
 
 
 def _genres_of(game: Game) -> set[str]:

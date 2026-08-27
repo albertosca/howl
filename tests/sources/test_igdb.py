@@ -724,3 +724,54 @@ def test_fetch_times_verbose_reports_missing_timing(capsys):
     with patch("requests.post", side_effect=[game_resp, times_resp]):
         assert fetch_times("cid", "tok", 5, verbose=True) is None
     assert "no IGDB timing recorded" in capsys.readouterr().err
+
+
+# --- schema guard -------------------------------------------------------------
+# The mocked tests above cannot catch a renamed IGDB field: they patch the HTTP
+# call, so the query string is never validated against anything. That is exactly
+# how external_games.category kept "working" after IGDB replaced it with
+# external_game_source -- the deprecated name matches zero rows instead of
+# erroring, so every appid lookup silently returned None.
+#
+# These tests pin the field names the queries depend on. They fail loudly when
+# someone edits a query, which is the moment to check the live API. They do not
+# and cannot prove the names are still correct upstream; only a credentialed
+# call does that. See docs/superpowers/BACKLOG.md.
+
+_EXPECTED_QUERY_FIELDS = {
+    "external_games.external_game_source",
+    "external_games.uid",
+    "game_time_to_beats",
+    "hastily",
+    "normally",
+    "completely",
+    "aggregated_rating",
+    "first_release_date",
+}
+
+_RETIRED_QUERY_FIELDS = {
+    "external_games.category",  # renamed to external_game_source
+}
+
+
+def _igdb_source() -> str:
+    import pathlib
+
+    import steam_hltb.sources.igdb as mod
+
+    return pathlib.Path(mod.__file__).read_text(encoding="utf-8")
+
+
+def test_igdb_queries_use_the_current_field_names():
+    source = _igdb_source()
+    missing = {f for f in _EXPECTED_QUERY_FIELDS if f not in source}
+    assert not missing, f"query fields disappeared from igdb.py: {sorted(missing)}"
+
+
+def test_igdb_queries_do_not_reference_retired_fields():
+    source = _igdb_source()
+    present = {f for f in _RETIRED_QUERY_FIELDS if f"{f} =" in source or f"{f}=" in source}
+    assert not present, (
+        f"igdb.py queries a field IGDB retired: {sorted(present)}. "
+        "It matches nothing instead of erroring, so lookups fail silently."
+    )

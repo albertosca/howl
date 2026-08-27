@@ -69,8 +69,25 @@ def test_applies_collection_filter(monkeypatch):
 def test_excludes_finished_when_not_show_finished(monkeypatch):
     from steam_hltb.core import selection
 
-    # show_finished ausente → exclude_finished roda (aqui mockado pra cortar 1)
-    monkeypatch.setattr(selection, "exclude_finished", lambda rows, vdf: rows[:1])
+    # show_finished absent -> exclude_finished runs (mocked here to drop one)
+    monkeypatch.setattr(selection, "exclude_finished", lambda rows, vdf, name=None: rows[:1])
     games = [_game("A", 90, 90, 10), _game("B", 90, 90, 10)]
     result = selection.select_games(games, {"sort": "rated", "weights": {"mc": 0.5, "steam": 0.5}})
     assert len(result) == 1
+
+
+def test_select_games_passes_the_finished_collection_through(monkeypatch):
+    from steam_hltb.core import selection
+
+    seen = {}
+
+    def _spy(rows, vdf_path, name=None):
+        seen["name"] = name
+        return rows
+
+    monkeypatch.setattr(selection, "exclude_finished", _spy)
+    selection.select_games(
+        [],
+        {"finished_collection": "Zerados", "sort": "rated", "weights": {"mc": 0.5, "steam": 0.5}},
+    )
+    assert seen["name"] == "Zerados"

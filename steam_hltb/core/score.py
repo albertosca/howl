@@ -9,8 +9,20 @@ SORT_OPTIONS = [
     "loved",  # pure Steam % positive
     "quick-wins",  # good game (≥75 composite) and short: composite / (1 + h/5)
     "hidden-gems",  # loved by players (≥80% steam), ignored by critics
-    "composto",  # configurable weighted average mc+steam
+    "composite",  # configurable weighted average mc+steam
 ]
+
+
+# "composto" shipped as a sort name before the CLI was standardised on English, and
+# "custom" was an undocumented alias for it. Both keep working; drop them at 1.0.
+_SORT_ALIASES = {"composto": "composite", "custom": "composite"}
+
+
+def normalize_sort(value: str) -> str:
+    """Maps deprecated sort names onto canonical ones, leaving unknown values untouched
+    so argparse reports them against the documented choices."""
+    return _SORT_ALIASES.get(value, value)
+
 
 # Fallback for games with no quality data (no MC and no Steam%).
 # Uses hours as proxy: HLTB (positive signal) + personal (weight 2×).
@@ -41,7 +53,7 @@ def _fallback_score(game: Game) -> float:
     return _FALLBACK_NEUTRAL + weighted * (_FALLBACK_MAX - _FALLBACK_NEUTRAL)
 
 
-def score_composto(game: Game, weights: dict[str, float] | None = None) -> float:
+def score_composite(game: Game, weights: dict[str, float] | None = None) -> float:
     if weights is None:
         weights = {"mc": 0.5, "steam": 0.5}
     sources = {}
@@ -68,7 +80,7 @@ def score_shortest(game: Game, weights: dict[str, float] | None = None) -> float
     The 1h floor prevents ultra-short games (e.g. 0.25h) from blowing up composite
     (without it, 90/√0.25 = 180). Score ≤ composite. No duration also yields
     the full composite (no time penalty)."""
-    score = score_composto(game, weights)
+    score = score_composite(game, weights)
     if score == 0:
         return 0.0
     hours = game.get("main_extra") or 0
@@ -85,7 +97,7 @@ def score_longest(game: Game, weights: dict[str, float] | None = None) -> float:
     endless/grind games with absurd HLTB hours (e.g. MOBAs at 1000h+) don't
     dominate, and quality breaks ties among long games. Score ≤ composite. No duration = 0.
     """
-    score = score_composto(game, weights)
+    score = score_composite(game, weights)
     hours = game.get("main_extra")
     if not score or not hours:
         return 0.0
@@ -105,7 +117,7 @@ def score_loved(game: Game) -> float:
 
 def score_quick_wins(game: Game, weights: dict[str, float] | None = None) -> float:
     """Good game (composite ≥ 75) and short: composite / (1 + hours/5). No data = excluded."""
-    score = score_composto(game, weights)
+    score = score_composite(game, weights)
     hours = game.get("main_extra")
     if not score or not hours or score < 75:
         return 0.0
@@ -123,6 +135,7 @@ def score_hidden_gems(game: Game) -> float:
 
 
 def compute_score(game: Game, sort_by: str, weights: dict[str, float] | None = None) -> float:
+    sort_by = normalize_sort(sort_by)
     if sort_by == "shortest":
         return score_shortest(game, weights)
     if sort_by == "longest":
@@ -135,6 +148,6 @@ def compute_score(game: Game, sort_by: str, weights: dict[str, float] | None = N
         return score_quick_wins(game, weights)
     if sort_by == "hidden-gems":
         return score_hidden_gems(game)
-    if sort_by in ("composto", "custom"):
-        return score_composto(game, weights)
+    if sort_by == "composite":
+        return score_composite(game, weights)
     raise ValueError(f"Unknown sort: {sort_by}")
