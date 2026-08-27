@@ -1,6 +1,20 @@
 # Backlog
 
-- **`--sort composto` is a Portuguese identifier in the public CLI API** (found 2026-08-25 during the i18n work). Users type `howl --sort composto`. Renaming it to `composite` breaks anyone already using it, so it needs a deliberate call: keep it, add an alias, or change it in a major release.
-- **`--show-finished` looks for a Portuguese collection name** (found 2026-08-25). `FINISHED_COLLECTION = "Terminados"` is hardcoded in `steam_hltb/sources/collections.py:7`, while `--help` promises "the 'Finished' collection". An English-speaking user's collection is never excluded. Predates the i18n branch. Fixing it changes behaviour, so it needs a decision: match both names, make it configurable, or follow the selected language.
-- **Duplicate rows for the same game** (found 2026-08-26 while recording the demo). `howl --sort rated --top 6` lists "Sid Meier's Civilization IV" twice, identical in year, Metacritic, Steam score and HLTB hours, differing only in playtime (4.4h vs 0.0h). The cache holds four distinct Civilization IV entries (base plus three expansions), all with different names, so the duplication does not come from there. **Hypothesis, not verified:** the Steam library returns two appids carrying the same name, and `build_game_rows` emits one row per Steam entry without deduplicating. Verifying needs a library fetch with credentials loaded. Visible in the tool's main output, so it is worth fixing before promoting the project.
-- **Mock-based tests cannot detect IGDB schema drift** (found 2026-08-26). `external_games.category` was renamed to `external_game_source` upstream, and every appid lookup silently returned nothing for an unknown period — the deprecated field matches zero rows instead of erroring. All IGDB tests passed throughout, because they patch `requests.post` and never exercise the query string. A unit test cannot cover this class. Options: a credentialed smoke test run manually before releases, or a periodic check that each queried field still appears in IGDB's schema endpoint. Until one exists, `fetch_by_appid` and `fetch_times` need a manual live check when IGDB announces API changes.
+All four items recorded during the 2026-08 outreach work are resolved. Kept here as
+context for the decisions rather than deleted outright.
+
+- ~~**`--sort composto` is a Portuguese identifier**~~ — resolved 2026-08-27. `composite` is
+  canonical; `composto` and the undocumented `custom` resolve to it through `normalize_sort`
+  and are dropped at 1.0. Flag values are API identifiers, so they stay English and the i18n
+  catalogs never touch them.
+- ~~**`--show-finished` looks for a Portuguese collection name**~~ — resolved 2026-08-27. It was
+  never a language problem: `"Terminados"` was one person's collection name hardcoded as a
+  constant. Now `HOWL_FINISHED_COLLECTION` / `--finished-collection`, with no default, since
+  any default is wrong for everyone who did not pick it.
+- ~~**Duplicate rows for the same game**~~ — resolved 2026-08-27. Deduplicated on appid, and on
+  name only when release year and Metacritic agree, so a remake sharing a title with its
+  original is not swallowed.
+- ~~**Mock-based tests cannot detect IGDB schema drift**~~ — partially resolved 2026-08-27. Two
+  guards pin the field names the queries depend on and fail when a query is edited. **They do
+  not prove the names are still correct upstream** — only a credentialed call does that, and
+  that remains a manual check before releases. Reopen this if IGDB announces API changes.
