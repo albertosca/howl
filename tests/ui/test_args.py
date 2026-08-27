@@ -201,3 +201,25 @@ def test_lang_flag_appears_in_help(capsys, monkeypatch):
     with pytest.raises(SystemExit):
         parse_args()
     assert "--lang" in capsys.readouterr().out
+
+
+def test_deprecated_composto_is_accepted_by_the_parser(monkeypatch):
+    import sys
+
+    from steam_hltb.ui.args import parse_args
+
+    monkeypatch.setattr(sys, "argv", ["howl", "--sort", "composto"])
+    assert parse_args().sort == "composite"
+
+
+def test_unknown_sort_is_still_rejected(monkeypatch, capsys):
+    import sys
+
+    import pytest
+
+    from steam_hltb.ui.args import parse_args
+
+    monkeypatch.setattr(sys, "argv", ["howl", "--sort", "nonsense"])
+    with pytest.raises(SystemExit):
+        parse_args()
+    assert "invalid choice" in capsys.readouterr().err

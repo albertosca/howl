@@ -6,7 +6,7 @@ from steam_hltb.core.score import (
     SORT_OPTIONS,
     _fallback_score,
     compute_score,
-    score_composto,
+    score_composite,
     score_hidden_gems,
     score_longest,
     score_loved,
@@ -24,51 +24,51 @@ def test_sort_options_contains_all_expected():
         "loved",
         "quick-wins",
         "hidden-gems",
-        "composto",
+        "composite",
     }
 
 
-def test_score_composto_default_weights():
+def test_score_composite_default_weights():
     game = {"metacritic": 80, "steam_pct": 60}
-    assert score_composto(game) == pytest.approx(70.0)  # 0.5*80 + 0.5*60
+    assert score_composite(game) == pytest.approx(70.0)  # 0.5*80 + 0.5*60
 
 
-def test_score_composto_custom_weights():
+def test_score_composite_custom_weights():
     game = {"metacritic": 80, "steam_pct": 60}
-    assert score_composto(game, weights={"mc": 0.7, "steam": 0.3}) == pytest.approx(74.0)
+    assert score_composite(game, weights={"mc": 0.7, "steam": 0.3}) == pytest.approx(74.0)
 
 
-def test_score_composto_redistributes_missing_source():
+def test_score_composite_redistributes_missing_source():
     game = {"metacritic": 80, "steam_pct": None}
-    assert score_composto(game, weights={"mc": 0.5, "steam": 0.5}) == pytest.approx(80.0)
+    assert score_composite(game, weights={"mc": 0.5, "steam": 0.5}) == pytest.approx(80.0)
 
 
 # --- fallback (sem dados de qualidade) ---
 
 
-def test_score_composto_no_scores_no_hours_returns_neutral():
+def test_score_composite_no_scores_no_hours_returns_neutral():
     """Sem MC, sem Steam%, sem horas → neutro (50) — desconhecido ≠ ruim."""
-    assert score_composto({"metacritic": None, "steam_pct": None}) == pytest.approx(50.0)
-    assert score_composto({}) == pytest.approx(50.0)
-    assert score_composto(
+    assert score_composite({"metacritic": None, "steam_pct": None}) == pytest.approx(50.0)
+    assert score_composite({}) == pytest.approx(50.0)
+    assert score_composite(
         {"metacritic": None, "steam_pct": None, "main_extra": 0, "hours_played": 0}
     ) == pytest.approx(50.0)
 
 
-def test_score_composto_no_scores_hltb_hours_above_neutral():
+def test_score_composite_no_scores_hltb_hours_above_neutral():
     """Sem MC/Steam% mas com horas HLTB → acima de 50."""
-    assert score_composto({"main_extra": 20}) > 50.0
+    assert score_composite({"main_extra": 20}) > 50.0
 
 
-def test_score_composto_no_scores_personal_hours_above_neutral():
+def test_score_composite_no_scores_personal_hours_above_neutral():
     """Sem MC/Steam% mas com horas pessoais → acima de 50."""
-    assert score_composto({"hours_played": 10}) > 50.0
+    assert score_composite({"hours_played": 10}) > 50.0
 
 
-def test_score_composto_personal_outweighs_hltb():
+def test_score_composite_personal_outweighs_hltb():
     """Horas pessoais têm peso 2× — mesmo volume em horas rende mais que HLTB."""
-    hltb_only = score_composto({"main_extra": 20, "hours_played": 0})
-    personal_only = score_composto({"main_extra": 0, "hours_played": 20})
+    hltb_only = score_composite({"main_extra": 20, "hours_played": 0})
+    personal_only = score_composite({"main_extra": 0, "hours_played": 20})
     assert personal_only > hltb_only
 
 
@@ -275,7 +275,7 @@ def test_compute_score_dispatches_correctly():
     assert compute_score(game, "longest") == pytest.approx(90 * math.log1p(9) / math.log1p(100))
     assert compute_score(game, "rated") == 90.0
     assert compute_score(game, "loved") == 90.0
-    assert compute_score(game, "composto") == pytest.approx(90.0)
+    assert compute_score(game, "composite") == pytest.approx(90.0)
 
 
 def test_compute_score_quick_wins():
@@ -289,7 +289,7 @@ def test_compute_score_hidden_gems():
     assert compute_score(game, "hidden-gems") == pytest.approx(45.0)
 
 
-def test_compute_score_custom_uses_composto():
+def test_compute_score_custom_uses_composite():
     game = {"metacritic": 100, "steam_pct": 0}
     result = compute_score(game, "custom", weights={"mc": 1.0, "steam": 0.0})
     assert result == pytest.approx(100.0)
@@ -300,11 +300,11 @@ def test_compute_score_raises_on_unknown_sort():
         compute_score({}, "invalid_sort")
 
 
-def test_score_composto_zero_total_weight():
-    from steam_hltb.core.score import score_composto
+def test_score_composite_zero_total_weight():
+    from steam_hltb.core.score import score_composite
 
     # mc presente mas peso zero → total_weight == 0 → 0.0
-    assert score_composto({"metacritic": 80}, {"mc": 0.0, "steam": 0.0}) == 0.0
+    assert score_composite({"metacritic": 80}, {"mc": 0.0, "steam": 0.0}) == 0.0
 
 
 # --- propriedades transversais ---
@@ -319,9 +319,9 @@ def test_scorers_return_zero_for_empty_game(sort):
     assert compute_score({}, sort) == 0.0
 
 
-def test_composto_returns_neutral_for_empty_game():
-    """Sem qualquer dado, composto retorna neutro (50) — desconhecido ≠ ruim."""
-    assert compute_score({}, "composto") == pytest.approx(50.0)
+def test_composite_returns_neutral_for_empty_game():
+    """With no data at all, composite returns neutral (50) -- unknown is not bad."""
+    assert compute_score({}, "composite") == pytest.approx(50.0)
 
 
 def test_shortest_returns_neutral_for_empty_game():
@@ -329,7 +329,7 @@ def test_shortest_returns_neutral_for_empty_game():
     assert compute_score({}, "shortest") == pytest.approx(50.0)
 
 
-@pytest.mark.parametrize("sort", [*_ZERO_FOR_EMPTY_SORTS, "composto", "shortest"])
+@pytest.mark.parametrize("sort", [*_ZERO_FOR_EMPTY_SORTS, "composite", "shortest"])
 def test_all_scorers_never_negative(sort):
     g = {"metacritic": 70, "steam_pct": 60, "main_extra": 30}
     assert compute_score(g, sort) >= 0.0
@@ -356,14 +356,14 @@ def test_hidden_gems_at_steam_floor_included():
 
 
 def test_bounded_scorers_stay_within_0_100():
-    """rated/loved/composto/longest ficam em [0, 100] mesmo com horas absurdas."""
+    """rated/loved/composite/longest stay within [0, 100] even with absurd hours."""
     g = {"metacritic": 100, "steam_pct": 100, "main_extra": 100000}
     for sort in ("rated", "loved", "composto", "longest", "shortest"):
         assert 0.0 <= compute_score(g, sort) <= 100.0
 
 
 def test_shortest_zero_total_weight_returns_zero():
-    """score_composto retorna 0 quando total_weight=0 → score_shortest também retorna 0."""
+    """score_composite retorna 0 quando total_weight=0 → score_shortest também retorna 0."""
     assert score_shortest({"metacritic": 80}, {"mc": 0.0, "steam": 0.0}) == 0.0
 
 
@@ -371,4 +371,38 @@ def test_fallback_never_beats_rated_game():
     """Jogo com qualquer score real sempre supera um jogo sem score com max fallback."""
     rated = {"metacritic": 61, "steam_pct": 61}
     fallback = {"main_extra": 9999, "hours_played": 9999}
-    assert score_composto(rated) > score_composto(fallback)
+    assert score_composite(rated) > score_composite(fallback)
+
+
+def test_sort_options_are_all_english():
+    from steam_hltb.core.score import SORT_OPTIONS
+
+    assert "composite" in SORT_OPTIONS
+    assert "composto" not in SORT_OPTIONS
+
+
+def test_composto_still_resolves_as_a_deprecated_alias():
+    from steam_hltb.core.score import normalize_sort
+
+    assert normalize_sort("composto") == "composite"
+    assert normalize_sort("custom") == "composite"
+
+
+def test_normalize_sort_passes_canonical_names_through():
+    from steam_hltb.core.score import normalize_sort
+
+    for name in ("shortest", "longest", "rated", "loved", "quick-wins", "hidden-gems", "composite"):
+        assert normalize_sort(name) == name
+
+
+def test_normalize_sort_leaves_unknown_values_for_argparse_to_reject():
+    from steam_hltb.core.score import normalize_sort
+
+    assert normalize_sort("nonsense") == "nonsense"
+
+
+def test_score_composite_is_reachable_by_both_names():
+    from steam_hltb.core.score import compute_score
+
+    game = {"metacritic": 80, "steam_pct": 90, "main_extra": 10}
+    assert compute_score(game, "composite") == compute_score(game, "composto")

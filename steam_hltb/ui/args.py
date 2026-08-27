@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 
-from ..core.score import SORT_OPTIONS
+from ..core.score import SORT_OPTIONS, normalize_sort
 from ..core.types import Filters
 from ..i18n import LANGUAGES, set_language, t
 from ..i18n.resolve import resolve_language
@@ -33,6 +33,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--sort",
         default="shortest",
+        # type runs before choices, so a deprecated name is mapped to its canonical
+        # form and an unknown one still fails against the documented list.
+        type=normalize_sort,
         choices=SORT_OPTIONS,
         help=t("args.sort"),
     )

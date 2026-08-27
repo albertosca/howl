@@ -9,7 +9,7 @@ Exemplos:
 
 Formatos de entrada:
   --genre / --genre-any / --exclude-genre  nomes separados por vírgula (ex: "action,rpg")
-  --sort      shortest | longest | rated | loved | quick-wins | hidden-gems | composto
+  --sort      shortest | longest | rated | loved | quick-wins | hidden-gems | composite
   --era       separadas por vírgula: pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown
   --weight-mc / --weight-steam             pesos 0.0-1.0 que somam 1.0 (ex: 0.6 e 0.4)
 """

@@ -9,7 +9,7 @@ Examples:
 
 Input formats:
   --genre / --genre-any / --exclude-genre  comma-separated names (e.g. "action,rpg")
-  --sort      shortest | longest | rated | loved | quick-wins | hidden-gems | composto
+  --sort      shortest | longest | rated | loved | quick-wins | hidden-gems | composite
   --era       comma-separated: pre-2005, 2005-2010, 2010-2015, 2015-2020, 2020+, unknown
   --weight-mc / --weight-steam             weights 0.0-1.0 that sum to 1.0 (e.g. 0.6 and 0.4)
 """
