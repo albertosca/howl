@@ -94,6 +94,11 @@ def parse_args() -> argparse.Namespace:
         help=t("args.show_finished"),
     )
     p.add_argument(
+        "--finished-collection",
+        default=os.environ.get("HOWL_FINISHED_COLLECTION"),
+        help=t("args.finished_collection"),
+    )
+    p.add_argument(
         "--list-tags",
         action="store_true",
         help=t("args.list_tags"),
@@ -196,6 +201,7 @@ def filters_from_args(args: argparse.Namespace) -> Filters:
         "weights": _weights(args),
         "vdf_path": args.vdf_path,
         "show_finished": args.show_finished,
+        "finished_collection": args.finished_collection,
         "collection": args.collection,
         "eras": _csv_list(args.era),
     }

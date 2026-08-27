@@ -161,6 +161,7 @@ O wizard interativo guia você pelas variáveis necessárias, valida ao vivo con
 | `STEAM_API_KEY` | sim | Chave da Steam Web API |
 | `STEAM_USERNAME` | sim | Vanity URL do seu perfil (ex: `gabelogannewell`) |
 | `STEAM_VDF_PATH` | não | Caminho para o `sharedconfig.vdf` (filtros de coleção) |
+| `HOWL_FINISHED_COLLECTION` | não | Nome da sua coleção Steam de jogos terminados — são excluídos, a menos que `--show-finished` |
 | `IGDB_CLIENT_ID` | não | Client ID do app Twitch (para scores de jogos delisted) |
 | `IGDB_CLIENT_SECRET` | não | Client Secret do app Twitch |
 

@@ -63,7 +63,9 @@ MESSAGES: dict[str, str] = {
     "args.vdf_path": (
         "Caminho do sharedconfig.vdf da Steam (padrão: variável STEAM_VDF_PATH ou sharedconfig.vdf)"
     ),
-    "args.show_finished": "Inclui jogos da coleção 'Finished' (excluídos por padrão)",
+    "args.show_finished": (
+        "Inclui jogos da sua coleção de terminados (excluídos quando uma está configurada)"
+    ),
     "args.list_tags": "Lista todas as categorias Steam disponíveis no cache e sai",
     "args.list_genres": "Lista todos os gêneros disponíveis no cache e sai",
     "args.list_collections": "Lista as coleções Steam disponíveis no VDF e sai",
@@ -82,6 +84,9 @@ MESSAGES: dict[str, str] = {
     "args.interactive": "Modo interativo por perguntas",
     "args.tui": "Abre a interface visual interativa (estilo htop)",
     "args.setup": "Configura as variáveis de ambiente interativamente",
+    "args.finished_collection": (
+        "Nome da sua coleção Steam de jogos terminados (ou HOWL_FINISHED_COLLECTION)"
+    ),
     "setup.legacy_found": "\n  Encontrei um .env legado em {path}",
     "setup.legacy_now_reads": "  De agora em diante o howl lê de {path}.",
     "setup.legacy_migrated": "  Migrado para {path}",

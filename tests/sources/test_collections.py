@@ -93,13 +93,14 @@ def test_filter_collection_returns_empty_when_no_match(vdf_file):
     assert filter_collection(games, "NaoExiste", collection_map) == []
 
 
-def test_exclude_finished_removes_terminados(vdf_file):
+def test_exclude_finished_removes_the_configured_collection(vdf_file, monkeypatch):
     from steam_hltb.sources.collections import exclude_finished
 
+    monkeypatch.setenv("HOWL_FINISHED_COLLECTION", "Terminados")
     games = [
-        {"appid": 220, "name": "Half-Life 2"},  # Terminados
-        {"appid": 620, "name": "Portal 2"},  # Jogando + Terminados
-        {"appid": 570, "name": "Dota 2"},  # sem tag
+        {"appid": 220, "name": "Half-Life 2"},  # in the finished collection
+        {"appid": 620, "name": "Portal 2"},  # playing + finished
+        {"appid": 570, "name": "Dota 2"},  # untagged
     ]
     result = exclude_finished(games, vdf_file)
     names = [g["name"] for g in result]
@@ -108,18 +109,20 @@ def test_exclude_finished_removes_terminados(vdf_file):
     assert "Dota 2" in names
 
 
-def test_exclude_finished_silent_when_vdf_missing():
+def test_exclude_finished_silent_when_vdf_missing(monkeypatch):
     from steam_hltb.sources.collections import exclude_finished
 
+    monkeypatch.setenv("HOWL_FINISHED_COLLECTION", "Terminados")
     games = [{"appid": 220, "name": "Half-Life 2"}]
     result = exclude_finished(games, "/nonexistent/path.vdf")
     assert result == games
 
 
-def test_exclude_finished_no_op_when_no_terminados(vdf_file):
+def test_exclude_finished_no_op_when_the_game_is_untagged(vdf_file, monkeypatch):
     from steam_hltb.sources.collections import exclude_finished
 
-    games = [{"appid": 570, "name": "Dota 2"}]  # sem tag
+    monkeypatch.setenv("HOWL_FINISHED_COLLECTION", "Terminados")
+    games = [{"appid": 570, "name": "Dota 2"}]  # untagged
     result = exclude_finished(games, vdf_file)
     assert result == games
 
@@ -144,3 +147,60 @@ def test_load_collections_skips_blocks_without_tags(tmp_path):
     vdf.write_text('"123"\n{\n"tags"\n{\n}\n}\n')
     # bloco tem seção tags mas vazia → não entra no resultado
     assert load_collections(str(vdf)) == {}
+
+
+def test_finished_collection_defaults_to_unset(monkeypatch):
+    monkeypatch.delenv("HOWL_FINISHED_COLLECTION", raising=False)
+    from steam_hltb.sources import collections
+
+    assert collections.finished_collection() is None
+
+
+def test_finished_collection_reads_the_environment(monkeypatch):
+    monkeypatch.setenv("HOWL_FINISHED_COLLECTION", "Zerados")
+    from steam_hltb.sources import collections
+
+    assert collections.finished_collection() == "Zerados"
+
+
+def test_exclude_finished_drops_nothing_when_unconfigured(monkeypatch):
+    monkeypatch.delenv("HOWL_FINISHED_COLLECTION", raising=False)
+    from steam_hltb.sources.collections import exclude_finished
+
+    games = [{"appid": 1}, {"appid": 2}]
+    monkeypatch.setattr(
+        "steam_hltb.sources.collections.load_collections", lambda p: {"1": ["Terminados"]}
+    )
+    assert exclude_finished(games, "x.vdf") == games
+
+
+def test_exclude_finished_uses_the_configured_name(monkeypatch):
+    monkeypatch.setenv("HOWL_FINISHED_COLLECTION", "Finished")
+    from steam_hltb.sources.collections import exclude_finished
+
+    monkeypatch.setattr(
+        "steam_hltb.sources.collections.load_collections",
+        lambda p: {"1": ["Finished"], "2": ["Playing"]},
+    )
+    result = exclude_finished([{"appid": 1}, {"appid": 2}], "x.vdf")
+    assert [g["appid"] for g in result] == [2]
+
+
+def test_exclude_finished_matches_the_name_case_insensitively(monkeypatch):
+    monkeypatch.setenv("HOWL_FINISHED_COLLECTION", "finished")
+    from steam_hltb.sources.collections import exclude_finished
+
+    monkeypatch.setattr(
+        "steam_hltb.sources.collections.load_collections", lambda p: {"1": ["Finished"]}
+    )
+    assert exclude_finished([{"appid": 1}], "x.vdf") == []
+
+
+def test_exclude_finished_accepts_an_explicit_name(monkeypatch):
+    monkeypatch.delenv("HOWL_FINISHED_COLLECTION", raising=False)
+    from steam_hltb.sources.collections import exclude_finished
+
+    monkeypatch.setattr(
+        "steam_hltb.sources.collections.load_collections", lambda p: {"1": ["Done"]}
+    )
+    assert exclude_finished([{"appid": 1}], "x.vdf", name="Done") == []

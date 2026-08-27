@@ -4,7 +4,15 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_VDF_PATH = os.environ.get("STEAM_VDF_PATH", "sharedconfig.vdf")
-FINISHED_COLLECTION = "Terminados"
+_FINISHED_ENV_VAR = "HOWL_FINISHED_COLLECTION"
+
+
+def finished_collection() -> str | None:
+    """Name of the Steam collection holding games already finished.
+
+    There is no sensible default: it is whatever the user named their own
+    collection. Hardcoding one only ever worked for the person who picked it."""
+    return os.environ.get(_FINISHED_ENV_VAR) or None
 
 
 def load_collections(vdf_path: str = DEFAULT_VDF_PATH) -> dict[str, list[str]]:
@@ -45,10 +53,17 @@ def filter_collection(
 def exclude_finished(
     games: list[dict[str, Any]],
     vdf_path: str = DEFAULT_VDF_PATH,
+    name: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Drops games in the FINISHED_COLLECTION. Silent when the VDF is absent."""
+    """Drops games in the configured finished collection. Silent when unset or no VDF."""
+    target = name or finished_collection()
+    if not target:
+        return games
     collection_map = load_collections(vdf_path)
     if not collection_map:
         return games
-    finished_ids = {appid for appid, tags in collection_map.items() if FINISHED_COLLECTION in tags}
+    lowered = target.lower()
+    finished_ids = {
+        appid for appid, tags in collection_map.items() if lowered in [t.lower() for t in tags]
+    }
     return [g for g in games if str(g.get("appid", "")) not in finished_ids]
