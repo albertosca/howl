@@ -158,13 +158,15 @@ def _parse_result(data: dict[str, Any]) -> dict[str, Any] | None:
 def fetch_by_appid(
     client_id: str | None, token: str | None, appid: int, *, verbose: bool = False
 ) -> dict[str, Any] | None:
-    # external_games.category = 1 is the Steam platform code in the IGDB API.
+    # external_game_source = 1 is the Steam platform code in the IGDB API. The field
+    # was named `category` until IGDB renamed it; the old name silently matches
+    # nothing rather than erroring, so this lookup returned None for every game.
     if not client_id or not token:
         return None
 
     body = (
         f"fields name,aggregated_rating,aggregated_rating_count,genres.name,first_release_date; "
-        f'where external_games.category = 1 & external_games.uid = "{appid}"; limit 1;'
+        f'where external_games.external_game_source = 1 & external_games.uid = "{appid}"; limit 1;'
     )
     results = _post(client_id, token, "games", body)
     if not results:
@@ -230,3 +232,55 @@ def fetch_by_name(
                 file=sys.stderr,
             )
     return result
+
+
+_SECONDS_PER_HOUR = 3600
+# IGDB names its timings differently from HowLongToBeat. This pairing was chosen by
+# measurement, not by the labels: across 46 cached games, normally/main_extra has a
+# median ratio of 1.00, completely/completionist 1.05 and hastily/main_story 0.89.
+# main_extra is the only field score.py reads, so the ranking barely moves when a
+# game switches source. Pairing normally with main_story instead would skew it 1.35x.
+_TIME_FIELDS = (
+    ("hastily", "main_story"),
+    ("normally", "main_extra"),
+    ("completely", "completionist"),
+)
+
+
+def _seconds_to_hours(value: int | None) -> int | None:
+    return round(value / _SECONDS_PER_HOUR) if value else None
+
+
+def fetch_times(
+    client_id: str | None, token: str | None, appid: int, *, verbose: bool = False
+) -> dict[str, Any] | None:
+    """Completion times from IGDB's licensed API, as an alternative to scraping HowLongToBeat."""
+    if not client_id or not token:
+        return None
+
+    body = (
+        f"fields id,name; "
+        f'where external_games.external_game_source = 1 & external_games.uid = "{appid}"; limit 1;'
+    )
+    games = _post(client_id, token, "games", body)
+    if not games:
+        if verbose:
+            print(f"    appid {appid}: not found on IGDB", file=sys.stderr)
+        return None
+
+    game_id = games[0]["id"]
+    timings = _post(
+        client_id,
+        token,
+        "game_time_to_beats",
+        f"fields hastily,normally,completely; where game_id = {game_id}; limit 1;",
+    )
+    if not timings:
+        if verbose:
+            print(f"    appid {appid}: no IGDB timing recorded", file=sys.stderr)
+        return None
+
+    hours = {dest: _seconds_to_hours(timings[0].get(src)) for src, dest in _TIME_FIELDS}
+    if not any(hours.values()):
+        return None
+    return {"source": "igdb", "game_name": games[0].get("name"), **hours}

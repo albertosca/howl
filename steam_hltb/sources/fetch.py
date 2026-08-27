@@ -139,6 +139,29 @@ def get_steam_games(api_key: str, steamid: str) -> list[dict[str, Any]]:
     ]
 
 
+def _igdb_credentials() -> tuple[str, str] | None:
+    client_id = os.environ.get("IGDB_CLIENT_ID")
+    client_secret = os.environ.get("IGDB_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        return None
+    token = igdb.get_token(client_id, client_secret)
+    return (client_id, token) if token else None
+
+
+def _fetch_timing(
+    appid: int, name: str, igdb_creds: tuple[str, str] | None, verbose: bool
+) -> dict[str, Any] | None:
+    """IGDB first: its API is licensed, while HowLongToBeat is reached by scraping."""
+    if igdb_creds:
+        times = igdb.fetch_times(igdb_creds[0], igdb_creds[1], appid, verbose=verbose)
+        if times:
+            return times
+    hltb = fetch_hltb(name)
+    if hltb:
+        return {"source": "hltb", **hltb}
+    return None
+
+
 def build_library(
     steam_key: str,
     username: str,
@@ -148,6 +171,7 @@ def build_library(
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     steamid = resolve_steamid(steam_key, username)
     steam_games = get_steam_games(steam_key, steamid)
+    igdb_creds = _igdb_credentials()
     total = len(steam_games)
     pending = sum(1 for g in steam_games if g["name"] not in cache or refresh)
     if verbose:
@@ -164,16 +188,16 @@ def build_library(
                 print(f"[{idx}/{total}] {name} (cache)")
             continue
         print(f"[{idx}/{total}] {name}")
-        hltb = fetch_hltb(name)
-        if not hltb:
-            cache[name] = {"hltb": None, "steam": None}
+        timing = _fetch_timing(appid, name, igdb_creds, verbose)
+        if not timing:
+            cache[name] = {"hltb": None, "steam": None, "timing": None}
             save_cache(cache)
             continue
         steam_reviews = fetch_steam_reviews(appid)
         steam_details = fetch_steam_app_details(appid)
         time.sleep(_STEAM_RATE_LIMIT_S)
         cache[name] = {
-            "hltb": hltb,
+            "timing": timing,
             "steam": {
                 "appid": appid,
                 **(steam_reviews or {}),

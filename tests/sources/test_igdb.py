@@ -629,3 +629,98 @@ def test_parse_result_full_when_sufficient_rating():
     assert result is not None
     assert result["aggregated_rating"] == round(88.5)  # banker's rounding Python 3 → 88
     assert result["genres"] == ["RPG"]
+
+
+def test_fetch_times_converts_seconds_to_hours():
+    from steam_hltb.sources.igdb import fetch_times
+
+    game_resp = MagicMock(ok=True)
+    game_resp.json.return_value = [{"id": 1234}]
+    times_resp = MagicMock(ok=True)
+    times_resp.json.return_value = [
+        {"game_id": 1234, "hastily": 14400, "normally": 28800, "completely": 32400}
+    ]
+    with patch("requests.post", side_effect=[game_resp, times_resp]):
+        result = fetch_times("cid", "tok", 892970)
+    assert result == {
+        "source": "igdb",
+        "game_name": None,
+        "main_story": 4,
+        "main_extra": 8,
+        "completionist": 9,
+    }
+
+
+def test_fetch_times_keeps_missing_fields_as_none():
+    from steam_hltb.sources.igdb import fetch_times
+
+    game_resp = MagicMock(ok=True)
+    game_resp.json.return_value = [{"id": 7, "name": "Portal"}]
+    times_resp = MagicMock(ok=True)
+    times_resp.json.return_value = [{"game_id": 7, "completely": 3600}]
+    with patch("requests.post", side_effect=[game_resp, times_resp]):
+        result = fetch_times("cid", "tok", 400)
+    assert result["main_story"] is None
+    assert result["main_extra"] is None
+    assert result["completionist"] == 1
+    assert result["game_name"] == "Portal"
+
+
+def test_fetch_times_returns_none_when_game_unknown():
+    from steam_hltb.sources.igdb import fetch_times
+
+    resp = MagicMock(ok=True)
+    resp.json.return_value = []
+    with patch("requests.post", return_value=resp):
+        assert fetch_times("cid", "tok", 999) is None
+
+
+def test_fetch_times_returns_none_when_no_timing_recorded():
+    from steam_hltb.sources.igdb import fetch_times
+
+    game_resp = MagicMock(ok=True)
+    game_resp.json.return_value = [{"id": 5}]
+    times_resp = MagicMock(ok=True)
+    times_resp.json.return_value = []
+    with patch("requests.post", side_effect=[game_resp, times_resp]):
+        assert fetch_times("cid", "tok", 5) is None
+
+
+def test_fetch_times_returns_none_when_every_field_is_zero():
+    from steam_hltb.sources.igdb import fetch_times
+
+    game_resp = MagicMock(ok=True)
+    game_resp.json.return_value = [{"id": 5}]
+    times_resp = MagicMock(ok=True)
+    times_resp.json.return_value = [{"game_id": 5, "hastily": 0, "normally": 0}]
+    with patch("requests.post", side_effect=[game_resp, times_resp]):
+        assert fetch_times("cid", "tok", 5) is None
+
+
+def test_fetch_times_returns_none_without_credentials():
+    from steam_hltb.sources.igdb import fetch_times
+
+    assert fetch_times(None, "tok", 1) is None
+    assert fetch_times("cid", None, 1) is None
+
+
+def test_fetch_times_verbose_reports_unknown_game(capsys):
+    from steam_hltb.sources.igdb import fetch_times
+
+    resp = MagicMock(ok=True)
+    resp.json.return_value = []
+    with patch("requests.post", return_value=resp):
+        assert fetch_times("cid", "tok", 999, verbose=True) is None
+    assert "not found on IGDB" in capsys.readouterr().err
+
+
+def test_fetch_times_verbose_reports_missing_timing(capsys):
+    from steam_hltb.sources.igdb import fetch_times
+
+    game_resp = MagicMock(ok=True)
+    game_resp.json.return_value = [{"id": 5}]
+    times_resp = MagicMock(ok=True)
+    times_resp.json.return_value = []
+    with patch("requests.post", side_effect=[game_resp, times_resp]):
+        assert fetch_times("cid", "tok", 5, verbose=True) is None
+    assert "no IGDB timing recorded" in capsys.readouterr().err

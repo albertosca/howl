@@ -707,7 +707,8 @@ def test_build_library_fetches_new_game_with_hltb(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
     cache, _ = fetch.build_library("k", "u", {})
-    assert cache["G"]["hltb"]["game_name"] == "G"
+    assert cache["G"]["timing"]["game_name"] == "G"
+    assert cache["G"]["timing"]["source"] == "hltb"
     assert cache["G"]["steam"]["appid"] == 7
     assert cache["G"]["steam"]["metacritic"] == 90
 
@@ -828,3 +829,104 @@ def test_steam_http_calls_use_timeout(monkeypatch):
     fetch.fetch_steam_app_details(1)
     fetch.fetch_steam_reviews(1)
     assert seen and all(t == fetch.HTTP_TIMEOUT for t in seen)
+
+
+def _library_stubs(monkeypatch):
+    """Stubs the Steam calls so build_library only exercises the timing sources."""
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.resolve_steamid", lambda key, user: "76561198000000"
+    )
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.get_steam_games",
+        lambda key, sid: [{"name": "Portal 2", "appid": 620, "hours_played": 3.0}],
+    )
+    monkeypatch.setattr("steam_hltb.sources.fetch.save_cache", lambda c: None)
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.fetch_steam_reviews", lambda a: {"positive_pct": 98}
+    )
+    monkeypatch.setattr("steam_hltb.sources.fetch.fetch_steam_app_details", lambda a: {})
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+
+def test_build_library_prefers_igdb_timing(monkeypatch):
+    from steam_hltb.sources.fetch import build_library
+
+    _library_stubs(monkeypatch)
+    monkeypatch.setenv("IGDB_CLIENT_ID", "cid")
+    monkeypatch.setenv("IGDB_CLIENT_SECRET", "csec")
+    monkeypatch.setattr("steam_hltb.sources.igdb.get_token", lambda c, s: "tok")
+    monkeypatch.setattr(
+        "steam_hltb.sources.igdb.fetch_times",
+        lambda c, t, appid, verbose=False: {
+            "source": "igdb",
+            "game_name": "Portal 2",
+            "main_story": 9,
+            "main_extra": 12,
+            "completionist": 17,
+        },
+    )
+
+    def _hltb_must_not_run(name):
+        raise AssertionError("HowLongToBeat was called even though IGDB had the timing")
+
+    monkeypatch.setattr("steam_hltb.sources.fetch.fetch_hltb", _hltb_must_not_run)
+
+    cache, _ = build_library("key", "user", {})
+    assert cache["Portal 2"]["timing"]["source"] == "igdb"
+    assert cache["Portal 2"]["timing"]["main_extra"] == 12
+
+
+def test_build_library_falls_back_to_hltb_when_igdb_has_no_timing(monkeypatch):
+    from steam_hltb.sources.fetch import build_library
+
+    _library_stubs(monkeypatch)
+    monkeypatch.setenv("IGDB_CLIENT_ID", "cid")
+    monkeypatch.setenv("IGDB_CLIENT_SECRET", "csec")
+    monkeypatch.setattr("steam_hltb.sources.igdb.get_token", lambda c, s: "tok")
+    monkeypatch.setattr(
+        "steam_hltb.sources.igdb.fetch_times", lambda c, t, appid, verbose=False: None
+    )
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.fetch_hltb",
+        lambda name: {
+            "game_name": "Portal 2",
+            "main_story": 9,
+            "main_extra": 12,
+            "completionist": 17,
+        },
+    )
+
+    cache, _ = build_library("key", "user", {})
+    assert cache["Portal 2"]["timing"]["source"] == "hltb"
+    assert cache["Portal 2"]["timing"]["main_extra"] == 12
+
+
+def test_build_library_uses_hltb_when_igdb_is_not_configured(monkeypatch):
+    from steam_hltb.sources.fetch import build_library
+
+    _library_stubs(monkeypatch)
+    monkeypatch.delenv("IGDB_CLIENT_ID", raising=False)
+    monkeypatch.delenv("IGDB_CLIENT_SECRET", raising=False)
+    monkeypatch.setattr(
+        "steam_hltb.sources.fetch.fetch_hltb",
+        lambda name: {
+            "game_name": "Portal 2",
+            "main_story": 9,
+            "main_extra": 12,
+            "completionist": 17,
+        },
+    )
+
+    cache, _ = build_library("key", "user", {})
+    assert cache["Portal 2"]["timing"]["source"] == "hltb"
+
+
+def test_build_library_records_nothing_when_neither_source_has_the_game(monkeypatch):
+    from steam_hltb.sources.fetch import build_library
+
+    _library_stubs(monkeypatch)
+    monkeypatch.delenv("IGDB_CLIENT_ID", raising=False)
+    monkeypatch.setattr("steam_hltb.sources.fetch.fetch_hltb", lambda name: None)
+
+    cache, _ = build_library("key", "user", {})
+    assert cache["Portal 2"] == {"hltb": None, "steam": None, "timing": None}

@@ -109,25 +109,27 @@ def build_game_rows(cache: dict[str, Any], steam_games: list[dict[str, Any]]) ->
     for game in steam_games:
         name = game["name"]
         entry = cache.get(name, {})
-        hltb = entry.get("hltb")
-        if not hltb:
+        # "timing" is the current key; "hltb" is what caches written before the
+        # IGDB timing source used, and they must keep working without migration.
+        timing = entry.get("timing") or entry.get("hltb")
+        if not timing:
             continue
         steam = entry.get("steam")
         fields = _resolve_source_fields(entry)
         row: Game = {
-            "name": hltb["game_name"],
+            "name": timing.get("game_name") or name,
             "steam_name": name,
             "appid": steam.get("appid") if steam else game.get("appid"),
             "hours_played": game["hours_played"],
-            "category": _category(fields["categories"], hltb.get("main_story") or 0),
+            "category": _category(fields["categories"], timing.get("main_story") or 0),
             "genres": fields["genres"],
             "tags": fields["categories"],
             "metacritic": fields["metacritic"],
             "steam_pct": steam.get("positive_pct") if steam else None,
             "steam_total_reviews": steam.get("total_reviews") if steam else None,
-            "main_story": hltb.get("main_story"),
-            "main_extra": hltb.get("main_extra"),
-            "completionist": hltb.get("completionist"),
+            "main_story": timing.get("main_story"),
+            "main_extra": timing.get("main_extra"),
+            "completionist": timing.get("completionist"),
             "release_year": fields["release_year"],
         }
         _apply_overrides(row, overrides, name)
