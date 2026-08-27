@@ -661,3 +661,69 @@ def test_build_game_rows_no_genres_no_rawg(tmp_path, monkeypatch):
     rows = classify.build_game_rows(cache, steam_games)
     assert rows[0]["genres"] == []
     assert rows[0]["metacritic"] is None
+
+
+def test_build_game_rows_reads_the_timing_key():
+    from steam_hltb.core.classify import build_game_rows
+
+    cache = {
+        "Portal 2": {
+            "timing": {
+                "source": "igdb",
+                "game_name": "Portal 2",
+                "main_story": 9,
+                "main_extra": 12,
+                "completionist": 17,
+            },
+            "steam": {"appid": 620, "positive_pct": 98, "total_reviews": 100},
+        }
+    }
+    games = [{"name": "Portal 2", "appid": 620, "hours_played": 3.0}]
+    rows = build_game_rows(cache, games)
+    assert len(rows) == 1
+    assert rows[0]["main_extra"] == 12
+    assert rows[0]["name"] == "Portal 2"
+
+
+def test_build_game_rows_still_reads_legacy_hltb_caches():
+    """Caches written before the timing key must keep working without migration."""
+    from steam_hltb.core.classify import build_game_rows
+
+    cache = {
+        "Portal 2": {
+            "hltb": {
+                "game_name": "Portal 2",
+                "main_story": 9,
+                "main_extra": 12,
+                "completionist": 17,
+            },
+            "steam": {"appid": 620, "positive_pct": 98, "total_reviews": 100},
+        }
+    }
+    games = [{"name": "Portal 2", "appid": 620, "hours_played": 3.0}]
+    rows = build_game_rows(cache, games)
+    assert len(rows) == 1
+    assert rows[0]["main_extra"] == 12
+
+
+def test_build_game_rows_falls_back_to_the_steam_name():
+    """IGDB may return timings without a name; the Steam name is always present."""
+    from steam_hltb.core.classify import build_game_rows
+
+    cache = {
+        "Portal 2": {
+            "timing": {"source": "igdb", "game_name": None, "main_extra": 12},
+            "steam": {"appid": 620},
+        }
+    }
+    games = [{"name": "Portal 2", "appid": 620, "hours_played": 3.0}]
+    rows = build_game_rows(cache, games)
+    assert rows[0]["name"] == "Portal 2"
+
+
+def test_build_game_rows_skips_games_without_any_timing():
+    from steam_hltb.core.classify import build_game_rows
+
+    cache = {"Portal 2": {"timing": None, "hltb": None, "steam": None}}
+    games = [{"name": "Portal 2", "appid": 620, "hours_played": 3.0}]
+    assert build_game_rows(cache, games) == []
