@@ -6,7 +6,7 @@
 # "`pre-commit` not found" apontando para um venv que nao existe mais.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.17
+    rev: v0.16.8
     hooks:
       - id: ruff
         args: [--fix]
