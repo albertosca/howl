@@ -2,9 +2,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ..config.paths import migrate_legacy_file, overrides_path
 from .types import Game
 
-OVERRIDES_FILE = "howl_overrides.json"
+_LEGACY_OVERRIDES_FILE = "howl_overrides.json"  # cwd-relative location used by older versions
 
 COOP_CATEGORIES: frozenset[str] = frozenset(
     {
@@ -49,7 +50,8 @@ def _normalize_name(name: str) -> str:
 
 def _load_overrides() -> dict[str, Any]:
     """Loads howl_overrides.json with normalized keys (no ™/®)."""
-    path = Path(OVERRIDES_FILE)
+    path = overrides_path()
+    migrate_legacy_file(Path.cwd() / _LEGACY_OVERRIDES_FILE, path)
     if not path.exists():
         return {}
     raw = json.loads(path.read_text(encoding="utf-8"))

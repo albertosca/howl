@@ -91,6 +91,9 @@ MESSAGES: dict[str, str] = {
     "setup.legacy_now_reads": "  De agora em diante o howl lê de {path}.",
     "setup.legacy_migrated": "  Migrado para {path}",
     "setup.legacy_remove_hint": "  Pode remover o antigo quando quiser: rm {path}",
+    "paths.legacy_copied": (
+        "Copiado {legacy} para {target} — o howl agora lê de lá. A cópia antiga pode ser removida."
+    ),
     "setup.header": "\n=== configuração do howl ===\n",
     "setup.igdb_intro": "\n  IGDB (opcional — notas para jogos removidos ou sem Metacritic):",
     "setup.igdb_step1": "  1. Acesse https://dev.twitch.tv/console e crie um app",

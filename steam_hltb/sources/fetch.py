@@ -8,9 +8,10 @@ from typing import Any
 import requests
 from howlongtobeatpy import HowLongToBeat
 
+from ..config.paths import games_cache_path, migrate_legacy_file
 from . import igdb
 
-CACHE_FILE = ".cache/games_cache.json"
+_LEGACY_CACHE_FILE = ".cache/games_cache.json"  # cwd-relative location used by older versions
 HTTP_TIMEOUT = 15  # seconds — prevents hanging indefinitely if the API stalls
 HLTB_MIN_SIMILARITY = 0.6  # below this the HowLongToBeat match is too weak
 _STEAM_RATE_LIMIT_S = 1.0  # pause between new games in build_library
@@ -19,7 +20,8 @@ _DETAILS_RATE_LIMIT_S = 0.5  # pause between detail lookups in migration
 
 
 def load_cache() -> dict[str, Any]:
-    path = Path(CACHE_FILE)
+    path = games_cache_path()
+    migrate_legacy_file(Path.cwd() / _LEGACY_CACHE_FILE, path)
     if path.exists():
         data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
         return data
@@ -27,7 +29,7 @@ def load_cache() -> dict[str, Any]:
 
 
 def save_cache(cache: dict[str, Any]) -> None:
-    path = Path(CACHE_FILE)
+    path = games_cache_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
 

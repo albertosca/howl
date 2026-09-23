@@ -72,3 +72,12 @@ def reset_language():
     i18n.set_language("en")
     yield
     i18n.set_language("en")
+
+
+@pytest.fixture(autouse=True)
+def isolate_user_dirs(tmp_path, monkeypatch):
+    # Cache and overrides resolve to the user's home; without this a test run
+    # would read or overwrite the real ~/.cache/howl/games_cache.json.
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg-cache"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
+    monkeypatch.delenv("HOWL_CACHE_DIR", raising=False)
