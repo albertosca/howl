@@ -1,3 +1,5 @@
+import pytest
+
 from steam_hltb.core.classify import (
     ERA_LABELS,
     _era_label,
@@ -396,13 +398,20 @@ def test_filter_progress_none_main_extra_treated_as_zero():
 # --- overrides ---
 
 
-def test_build_game_rows_applies_overrides(tmp_path, monkeypatch):
+@pytest.mark.parametrize("location", ["config_dir", "legacy_cwd"])
+def test_build_game_rows_applies_overrides(tmp_path, monkeypatch, location):
     """howl_overrides.json deve sobrescrever metacritic/release_year na row."""
     import json as json_mod
 
+    from steam_hltb.config.paths import overrides_path
+
     overrides = {"Half-Life 2": {"metacritic": 99, "release_year": 2004, "comment": "test"}}
-    (tmp_path / "howl_overrides.json").write_text(json_mod.dumps(overrides))
-    monkeypatch.chdir(tmp_path)
+    cwd = tmp_path / "elsewhere"
+    cwd.mkdir()
+    target = overrides_path() if location == "config_dir" else cwd / "howl_overrides.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json_mod.dumps(overrides))
+    monkeypatch.chdir(cwd)
 
     cache = {
         "Half-Life 2": {
