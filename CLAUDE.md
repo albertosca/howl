@@ -111,7 +111,7 @@ tests/       # mirrors steam_hltb/
 
 ## Commits
 
-Propose message before executing. Wait for explicit OK. HEREDOC to preserve formatting:
+Commit without asking once the quality gate is green; show hash, files and message afterwards. Push only with explicit authorization. HEREDOC to preserve formatting:
 ```bash
 git commit -m "$(cat <<'EOF'
 type(scope): short description
