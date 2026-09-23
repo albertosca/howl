@@ -30,9 +30,11 @@ Exception: `README.pt-BR.md` stays in Portuguese (explicit bilingual copy).
 _TOKEN_EXPIRY_MARGIN_S = 60  # renews token 60s before expiry (clock skew buffer)
 # external_games.category = 1 is the Steam platform code in the IGDB API.
 
+
 # BAD — WHAT (the name already says it)
 def _load_token():
     """Reads the token from disk."""  # ← delete
+
 
 def get_token():
     """
@@ -85,7 +87,7 @@ if sim < _IGDB_MIN_SIMILARITY:
 Lambdas simulating functions with `**kwargs` must reflect the real signature:
 ```python
 # When the real function has verbose=False as default:
-lambda c, t, name, **kw: result   # accepts extra kwargs without breaking
+lambda c, t, name, **kw: result  # accepts extra kwargs without breaking
 ```
 
 ## Package structure
@@ -109,7 +111,7 @@ tests/       # mirrors steam_hltb/
 
 ## Commits
 
-Propose message before executing. Wait for explicit OK. HEREDOC to preserve formatting:
+Commit without asking once the quality gate is green; show hash, files and message afterwards. Push only with explicit authorization. HEREDOC to preserve formatting:
 ```bash
 git commit -m "$(cat <<'EOF'
 type(scope): short description

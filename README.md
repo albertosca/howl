@@ -231,7 +231,7 @@ Resolution order, highest first: `--lang` â†’ `HOWL_LANG` environment variable â
 
 ## Cache
 
-HLTB, Steam Reviews and game detail data are cached in `games_cache.json` to avoid repeated requests. To update:
+HLTB, Steam Reviews and game detail data are cached in `~/.cache/howl/games_cache.json` (or `$XDG_CACHE_HOME/howl/`, or `$HOWL_CACHE_DIR`) to avoid repeated requests, so howl finds it no matter which directory you run it from. Manual overrides live in `~/.config/howl/howl_overrides.json`. Files from older versions in the current directory (`.cache/games_cache.json`, `howl_overrides.json`) are copied there automatically on first run. To update:
 
 ```bash
 # Re-fetch everything from scratch

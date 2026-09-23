@@ -7,24 +7,40 @@ from steam_hltb.sources.fetch import migrate_igdb_data
 
 def test_load_cache_returns_empty_dict_when_file_missing(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    import importlib
-
     from steam_hltb.sources import fetch
 
-    importlib.reload(fetch)
     assert fetch.load_cache() == {}
 
 
 def test_save_and_load_cache_roundtrip(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    import importlib
-
     from steam_hltb.sources import fetch
 
-    importlib.reload(fetch)
     data = {"Half-Life 2": {"hltb": {"main_story": 12}}}
     fetch.save_cache(data)
     assert fetch.load_cache() == data
+
+
+def test_cache_is_found_regardless_of_cwd(tmp_path, monkeypatch):
+    from steam_hltb.config.paths import games_cache_path
+    from steam_hltb.sources import fetch
+
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    monkeypatch.chdir(tmp_path / "a")
+    fetch.save_cache({"Portal": {}})
+    monkeypatch.chdir(tmp_path / "b")
+    assert fetch.load_cache() == {"Portal": {}}
+    assert games_cache_path().exists()
+
+
+def test_load_cache_migrates_legacy_cwd_cache(tmp_path, monkeypatch):
+    from steam_hltb.sources import fetch
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".cache").mkdir()
+    (tmp_path / ".cache" / "games_cache.json").write_text('{"Hades": {}}')
+    assert fetch.load_cache() == {"Hades": {}}
 
 
 def test_fetch_hltb_returns_none_when_no_results():
